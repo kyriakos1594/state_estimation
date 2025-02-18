@@ -1,0 +1,2358 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense
+import matplotlib.pyplot as plt
+import os
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.model_selection import train_test_split
+# Evaluate performance on the validation set
+from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
+from sklearn.feature_selection import SelectFromModel
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.feature_selection import mutual_info_classif
+from tensorflow.keras import layers, models
+from tensorflow.keras.optimizers import Adam
+import sys
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+import numpy as np
+from torch_geometric.nn import MessagePassing, global_mean_pool, GCNConv, GATConv, GATv2Conv, SAGEConv, APPNP, GINConv, GraphNorm
+from torch_geometric.data import Data, DataLoader
+from torch_geometric.utils import degree
+from captum.attr import IntegratedGradients
+from torch_geometric.nn import MLP, EdgeConv # Multi-layer Perceptron
+from torch.nn import Linear, BatchNorm1d
+import shap
+# Set the device globally
+
+# Define branch data based on the given fixed structure
+# IEEE-33
+branch_data = {
+    0: {'sending_node': 0, 'receiving_node': 1},
+    1: {'sending_node': 1, 'receiving_node': 2},
+    2: {'sending_node': 2, 'receiving_node': 3},
+    3: {'sending_node': 3, 'receiving_node': 4},
+    4: {'sending_node': 4, 'receiving_node': 5},
+    5: {'sending_node': 5, 'receiving_node': 6},
+    6: {'sending_node': 6, 'receiving_node': 7},
+    7: {'sending_node': 7, 'receiving_node': 8},
+    8: {'sending_node': 8, 'receiving_node': 9},
+    9: {'sending_node': 9, 'receiving_node': 10},
+    10: {'sending_node': 10, 'receiving_node': 11},
+    11: {'sending_node': 11, 'receiving_node': 12},
+    12: {'sending_node': 12, 'receiving_node': 13},
+    13: {'sending_node': 13, 'receiving_node': 14},
+    14: {'sending_node': 14, 'receiving_node': 15},
+    15: {'sending_node': 15, 'receiving_node': 16},
+    16: {'sending_node': 16, 'receiving_node': 17},
+    17: {'sending_node': 17, 'receiving_node': 18},
+    18: {'sending_node': 18, 'receiving_node': 19},
+    19: {'sending_node': 19, 'receiving_node': 20},
+    20: {'sending_node': 20, 'receiving_node': 21},
+    21: {'sending_node': 2, 'receiving_node': 22},
+    22: {'sending_node': 22, 'receiving_node': 23},
+    23: {'sending_node': 23, 'receiving_node': 24},
+    24: {'sending_node': 5, 'receiving_node': 25},
+    25: {'sending_node': 25, 'receiving_node': 26},
+    26: {'sending_node': 26, 'receiving_node': 27},
+    27: {'sending_node': 27, 'receiving_node': 28},
+    28: {'sending_node': 28, 'receiving_node': 29},
+    29: {'sending_node': 29, 'receiving_node': 30},
+    30: {'sending_node': 30, 'receiving_node': 31},
+    31: {'sending_node': 31, 'receiving_node': 32},
+    32: {'sending_node': 20, 'receiving_node': 7},
+    33: {'sending_node': 11, 'receiving_node': 21},
+    34: {'sending_node': 24, 'receiving_node': 28}
+}
+
+# MESOGEIA
+branch_data = {
+    0: {"sending_node": 1, "receiving_node": 0},
+    1: {"sending_node": 1, "receiving_node": 2},
+    2: {"sending_node": 2, "receiving_node": 3},
+    3: {"sending_node": 2, "receiving_node": 4},
+    4: {"sending_node": 5, "receiving_node": 3},
+    5: {"sending_node": 3, "receiving_node": 6},
+    6: {"sending_node": 7, "receiving_node": 5},
+    7: {"sending_node": 6, "receiving_node": 8},
+    8: {"sending_node": 8, "receiving_node": 9},
+    9: {"sending_node": 8, "receiving_node": 10},
+    10: {"sending_node": 11, "receiving_node": 10},
+    11: {"sending_node": 10, "receiving_node": 12},
+    12: {"sending_node": 12, "receiving_node": 13},
+    13: {"sending_node": 14, "receiving_node": 11},
+    14: {"sending_node": 17, "receiving_node": 6},
+    15: {"sending_node": 15, "receiving_node": 12},
+    16: {"sending_node": 13, "receiving_node": 16},
+    17: {"sending_node": 13, "receiving_node": 18},
+    18: {"sending_node": 16, "receiving_node": 19},
+    19: {"sending_node": 16, "receiving_node": 21},
+    20: {"sending_node": 22, "receiving_node": 19},
+    21: {"sending_node": 20, "receiving_node": 17},
+    22: {"sending_node": 19, "receiving_node": 23},
+    23: {"sending_node": 23, "receiving_node": 24},
+    24: {"sending_node": 24, "receiving_node": 25},
+    25: {"sending_node": 26, "receiving_node": 23},
+    26: {"sending_node": 21, "receiving_node": 27},
+    27: {"sending_node": 24, "receiving_node": 28},
+    28: {"sending_node": 28, "receiving_node": 29},
+    29: {"sending_node": 29, "receiving_node": 30},
+    30: {"sending_node": 28, "receiving_node": 31},
+    31: {"sending_node": 30, "receiving_node": 32},
+    32: {"sending_node": 33, "receiving_node": 29},
+    33: {"sending_node": 32, "receiving_node": 34},
+    34: {"sending_node": 35, "receiving_node": 30},
+    35: {"sending_node": 34, "receiving_node": 37},
+    36: {"sending_node": 32, "receiving_node": 36},
+    37: {"sending_node": 35, "receiving_node": 40},
+    38: {"sending_node": 34, "receiving_node": 38},
+    39: {"sending_node": 36, "receiving_node": 39},
+    40: {"sending_node": 38, "receiving_node": 47},
+    41: {"sending_node": 39, "receiving_node": 41},
+    42: {"sending_node": 43, "receiving_node": 39},
+    43: {"sending_node": 45, "receiving_node": 35},
+    44: {"sending_node": 41, "receiving_node": 42},
+    45: {"sending_node": 44, "receiving_node": 45},
+    46: {"sending_node": 46, "receiving_node": 43},
+    47: {"sending_node": 48, "receiving_node": 46},
+    48: {"sending_node": 42, "receiving_node": 49},
+    49: {"sending_node": 52, "receiving_node": 48},
+    50: {"sending_node": 53, "receiving_node": 46},
+    51: {"sending_node": 49, "receiving_node": 50},
+    52: {"sending_node": 48, "receiving_node": 51},
+    53: {"sending_node": 54, "receiving_node": 44},
+    54: {"sending_node": 54, "receiving_node": 44},
+    55: {"sending_node": 47, "receiving_node": 55},
+    56: {"sending_node": 42, "receiving_node": 59},
+    57: {"sending_node": 51, "receiving_node": 56},
+    58: {"sending_node": 55, "receiving_node": 62},
+    59: {"sending_node": 57, "receiving_node": 49},
+    60: {"sending_node": 59, "receiving_node": 58},
+    61: {"sending_node": 60, "receiving_node": 52},
+    62: {"sending_node": 45, "receiving_node": 61},
+    63: {"sending_node": 47, "receiving_node": 65},
+    64: {"sending_node": 50, "receiving_node": 63},
+    65: {"sending_node": 58, "receiving_node": 64},
+    66: {"sending_node": 63, "receiving_node": 66},
+    67: {"sending_node": 67, "receiving_node": 50},
+    68: {"sending_node": 64, "receiving_node": 82},
+    69: {"sending_node": 51, "receiving_node": 70},
+    70: {"sending_node": 57, "receiving_node": 68},
+    71: {"sending_node": 69, "receiving_node": 57},
+    72: {"sending_node": 66, "receiving_node": 74},
+    73: {"sending_node": 75, "receiving_node": 66},
+    74: {"sending_node": 71, "receiving_node": 56},
+    75: {"sending_node": 70, "receiving_node": 72},
+    76: {"sending_node": 63, "receiving_node": 79},
+    77: {"sending_node": 74, "receiving_node": 73},
+    78: {"sending_node": 76, "receiving_node": 67},
+    79: {"sending_node": 71, "receiving_node": 83},
+    80: {"sending_node": 72, "receiving_node": 84},
+    81: {"sending_node": 77, "receiving_node": 54},
+    82: {"sending_node": 79, "receiving_node": 78},
+    83: {"sending_node": 73, "receiving_node": 85},
+    84: {"sending_node": 80, "receiving_node": 67},
+    85: {"sending_node": 69, "receiving_node": 81},
+    86: {"sending_node": 78, "receiving_node": 87},
+    87: {"sending_node": 89, "receiving_node": 69},
+    88: {"sending_node": 83, "receiving_node": 86},
+    89: {"sending_node": 84, "receiving_node": 91},
+    90: {"sending_node": 88, "receiving_node": 74},
+    91: {"sending_node": 86, "receiving_node": 90},
+    92: {"sending_node": 92, "receiving_node": 71},
+    93: {"sending_node": 87, "receiving_node": 98},
+    94: {"sending_node": 75, "receiving_node": 93},
+    95: {"sending_node": 81, "receiving_node": 94},
+    96: {"sending_node": 86, "receiving_node": 95},
+    97: {"sending_node": 90, "receiving_node": 96},
+    98: {"sending_node": 91, "receiving_node": 97},
+    99: {"sending_node": 85, "receiving_node": 99},
+    100: {"sending_node": 93, "receiving_node": 100},
+    101: {"sending_node": 93, "receiving_node": 104},
+    102: {"sending_node": 101, "receiving_node": 97},
+    103: {"sending_node": 102, "receiving_node": 87},
+    104: {"sending_node": 100, "receiving_node": 103},
+    105: {"sending_node": 105, "receiving_node": 91},
+    106: {"sending_node": 107, "receiving_node": 103},
+    107: {"sending_node": 108, "receiving_node": 101},
+    108: {"sending_node": 103, "receiving_node": 106},
+    109: {"sending_node": 97, "receiving_node": 111},
+    110: {"sending_node": 99, "receiving_node": 112},
+    111: {"sending_node": 109, "receiving_node": 99},
+    112: {"sending_node": 111, "receiving_node": 110},
+    113: {"sending_node": 81, "receiving_node": 113},
+    114: {"sending_node": 81, "receiving_node": 113},
+    115: {"sending_node": 110, "receiving_node": 114},
+    116: {"sending_node": 113, "receiving_node": 117},
+    117: {"sending_node": 106, "receiving_node": 115},
+    118: {"sending_node": 113, "receiving_node": 119},
+    119: {"sending_node": 117, "receiving_node": 116},
+    120: {"sending_node": 106, "receiving_node": 118},
+    121: {"sending_node": 121, "receiving_node": 107},
+    122: {"sending_node": 116, "receiving_node": 122},
+    123: {"sending_node": 112, "receiving_node": 120},
+    124: {"sending_node": 122, "receiving_node": 123},
+    125: {"sending_node": 122, "receiving_node": 124},
+    126: {"sending_node": 114, "receiving_node": 125},
+    127: {"sending_node": 123, "receiving_node": 128},
+    128: {"sending_node": 125, "receiving_node": 126},
+    129: {"sending_node": 126, "receiving_node": 129},
+    130: {"sending_node": 127, "receiving_node": 120},
+    131: {"sending_node": 127, "receiving_node": 128},
+    132: {"sending_node": 129, "receiving_node": 130},
+}
+
+branch_data = {
+    0: {'sending_node': 0, 'receiving_node': 1},
+    1: {'sending_node': 1, 'receiving_node': 2},
+    2: {'sending_node': 2, 'receiving_node': 3},
+    3: {'sending_node': 3, 'receiving_node': 4},
+    4: {'sending_node': 4, 'receiving_node': 5},
+    5: {'sending_node': 5, 'receiving_node': 6},
+    6: {'sending_node': 6, 'receiving_node': 7},
+    7: {'sending_node': 7, 'receiving_node': 8},
+    8: {'sending_node': 8, 'receiving_node': 9},
+    9: {'sending_node': 9, 'receiving_node': 10},
+    10: {'sending_node': 10, 'receiving_node': 11},
+    11: {'sending_node': 11, 'receiving_node': 12},
+    12: {'sending_node': 12, 'receiving_node': 13},
+    13: {'sending_node': 13, 'receiving_node': 14},
+    14: {'sending_node': 14, 'receiving_node': 15},
+    15: {'sending_node': 15, 'receiving_node': 16},
+    16: {'sending_node': 16, 'receiving_node': 17},
+    17: {'sending_node': 17, 'receiving_node': 18},
+    18: {'sending_node': 2, 'receiving_node': 19},
+    19: {'sending_node': 19, 'receiving_node': 20},
+    20: {'sending_node': 20, 'receiving_node': 21},
+    21: {'sending_node': 2, 'receiving_node': 22},
+    22: {'sending_node': 22, 'receiving_node': 23},
+    23: {'sending_node': 23, 'receiving_node': 24},
+    24: {'sending_node': 5, 'receiving_node': 25},
+    25: {'sending_node': 25, 'receiving_node': 26},
+    26: {'sending_node': 26, 'receiving_node': 27},
+    27: {'sending_node': 27, 'receiving_node': 28},
+    28: {'sending_node': 28, 'receiving_node': 29},
+    29: {'sending_node': 29, 'receiving_node': 30},
+    30: {'sending_node': 30, 'receiving_node': 31},
+    31: {'sending_node': 31, 'receiving_node': 32},
+    32: {'sending_node': 20, 'receiving_node': 7},
+    33: {'sending_node': 11, 'receiving_node': 21},
+    34: {'sending_node': 24, 'receiving_node': 28}
+}
+
+NUM_NODES    = 33 #131 #33
+NUM_BRANCHES = 35 #133 #35
+np.set_printoptions(threshold=np.inf)
+GLOBAL_BRANCH_LIST = [6]
+NUM_TOPOLOGIES = 15
+NUM_SIMULATIONS = 1000
+EXISTING_METER_BRANCHES = []
+EXISTING_METER_NODES    = []
+
+RAW_FILENAME    = "datasets/IEEE33_dataset.csv"
+
+input_filename  = "datasets/MESOGEIA_dataset_input.npy"
+output_filename = "datasets/MESOGEIA_dataset_output.npy"
+
+
+NODE_PICK_LIST   = [4, 7, 9, 14, 15, 17, 18, 20, 21, 22, 25, 26, 27, 31, 33, 37, 40, 45, 53, 59, 60, 62, 68, 70, 75, 76, 77, 79, 80, 82, 83, 85, 88, 89, 90, 92, 94, 95, 96, 98, 102, 104, 105, 107, 108, 109, 111, 112, 114, 115, 117, 118, 119, 121, 124, 127, 128, 129, 130]
+BRANCH_PICK_LIST = [key for key in branch_data.keys() if ((branch_data[key]["receiving_node"] in NODE_PICK_LIST) or (branch_data[key]["sending_node"] in NODE_PICK_LIST))]
+print(BRANCH_PICK_LIST)
+
+class Preprocess:
+
+    def __init__(self):
+
+        self.filename                  = RAW_FILENAME
+        self.topologies                = NUM_TOPOLOGIES
+        self.simulations               = NUM_SIMULATIONS
+        self.radial_topologies_zipfile = 'datasets/Radial topologies/'
+        self.meshed_topologies_zipfile = 'datasets/Meshed topologies'
+        self.dataset_filename          = RAW_FILENAME
+
+    def merge_datasets(self):
+
+        # List of topology frames
+        df_dict   = {}
+        file_list = []
+        dataset   = None
+
+        for folder in [self.radial_topologies_zipfile, self.meshed_topologies_zipfile]:
+            print("------------Folder-----------", folder)
+            for root, dirs, files in os.walk(folder):
+                for file in files:
+                    if file.split(".")[1] == "xlsx":
+                        print("Processed file: ---->", file)
+                        file_list.append(file)
+                        tmp_df = pd.read_excel(os.path.join(folder, file))
+                        df_dict[file] = tmp_df
+
+        print(file_list)
+        print("Choose files by hand")
+
+        file_list = ['completedatasetTopo1-3.xlsx', 'completedatasetTopo4.xlsx', 'completedatasetTopo5.xlsx',
+                     'completedatasetTopo6.xlsx', 'completedatasetTopo7.xlsx', 'completedatasetTopo8.xlsx',
+                     'completedatasetTopo9.xlsx', 'completedatasetTopo10.xlsx', 'completedatasetTopo11.xlsx',
+                     'completedatasetTopo12.xlsx', 'completedatasetTopo13.xlsx', 'completedatasetTopo14.xlsx',
+                     'completedatasetTopo15.xlsx']
+
+        print(file_list)
+
+        for file in file_list:
+            tmp_df = df_dict[file]
+            if dataset is None:
+                dataset = tmp_df
+            else:
+                dataset = pd.concat([dataset, tmp_df], axis=0)
+
+        dataset.to_csv(self.dataset_filename)
+
+
+    def store_data_themis(self):
+
+        df = pd.read_csv(self.dataset_filename)
+        # "Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"
+        df = df[["Vm_m", "Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopNo"]]
+        data = []
+        inputs = []
+        labels = []
+        for topology in range(1, self.topologies + 1):
+            for simulation in range(1, self.simulations + 1):
+                # TODO Input
+                Vm_m = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Vm_m"].values.tolist()[:-2]
+                Va_m = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Va_m"].values.tolist()[:-2]
+                Ifm_m = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Ifm_m"].values.tolist()
+                Ifa_m = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Ifa_m"].values.tolist()
+
+                # TODO Output
+                Vm_t = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Vm_t"].values.tolist()[:-2]
+                Va_t = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Va_t"].values.tolist()[:-2]
+
+                print(topology, simulation)
+
+                # Input, SE Output, TI Output
+                data.append([Vm_m + Va_m + Ifm_m + Ifa_m, Vm_t + Va_t, topology])
+                #data.append([If_real, topology])
+
+        for [x, y, z] in data:
+            inputs.append(np.array(x))
+            #if len(x)!=136: print("Issue on sample: ", x, y)
+            #print(y)
+            #print(z)
+            y = np.array(y)
+            z = np.array([z])
+            label = np.concatenate([y, z])
+            labels.append(label)
+
+        print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
+        print("Dataset Size", len(labels))
+
+        print(f"Saving input into datasets/MESOGEIA_dataset_input.npy")
+        np.save("datasets/MESOGEIA_dataset_input.npy", inputs)
+        print(f"Saving input into datasets/MESOGEIA_dataset_output.npy")
+        np.save("datasets/MESOGEIA_dataset_output.npy", labels)
+
+    def store_data_PMU_caseA(self):
+
+        df = pd.read_csv(self.dataset_filename)
+        # "Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"
+        df = df[["vm_pu","va_degree","P_pu","Q_pu","Im_inj","Ia_inj","Im_pu","Ia_pu","TopNo","Simulation"]]
+        data = []
+        inputs = []
+        labels = []
+        for topology in range(1, self.topologies + 1):
+            for simulation in range(1, self.simulations + 1):
+                # TODO Input
+                Vm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
+                Va_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
+                Ifm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Im_pu"].values.tolist()
+                Ifa_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Ia_pu"].values.tolist()
+
+                # TODO Output
+                Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
+                Va_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
+
+                # Input, SE Output, TI Output
+                data.append([Vm_m + Va_m + Ifm_m + Ifa_m, Vm_t + Va_t, topology])
+                # data.append([If_real, topology])
+
+        for [x, y, z] in data:
+            inputs.append(np.array(x))
+            if len(x) != 2*NUM_NODES+2*NUM_BRANCHES: print("Issue on sample: ", x, y)
+            y = np.array(y)
+            z = np.array([z])
+            label = np.concatenate([y, z])
+            labels.append(label)
+
+        print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
+        print("Dataset Size", len(labels))
+
+        print(f"Saving input into datasets/MESOGEIA_dataset_input.npy")
+        np.save("datasets/MESOGEIA_dataset_input.npy", inputs)
+        print(f"Saving input into datasets/MESOGEIA_dataset_output.npy")
+        np.save("datasets/MESOGEIA_dataset_output.npy", labels)
+
+    def store_data_PMU_caseB(self):
+
+        df = pd.read_csv(self.dataset_filename)
+        print(df.shape)
+        print("Entering case B")
+        # "Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"
+        df = df[["vm_pu","va_degree","P_pu","Q_pu","Im_inj","Ia_inj","Im_pu","Ia_pu","TopNo","Simulation"]]
+        data = []
+        inputs = []
+        labels = []
+        for topology in range(1, self.topologies + 1):
+            for simulation in range(1, self.simulations + 1):
+                # TODO Input
+                Vm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
+                Va_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
+                Iinjm = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Im_inj"].values.tolist()[:-2]
+                Iinja = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Ia_inj"].values.tolist()[:-2]
+
+                # TODO Output
+                Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
+                Va_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
+
+                # Input, SE Output, TI Output
+                data.append([Vm_m + Va_m + Iinjm + Iinja, Vm_t + Va_t, topology])
+                # data.append([If_real, topology])
+
+        for [x, y, z] in data:
+            inputs.append(np.array(x))
+            if len(x) != 4*NUM_NODES: print("Issue on sample: ", x, y)
+            y = np.array(y)
+            z = np.array([z])
+            label = np.concatenate([y, z])
+            labels.append(label)
+
+        print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
+        print("Dataset Size", len(labels))
+
+        print(f"Saving input into datasets " + input_filename)
+        print("Inputs:", len(inputs))
+        np.save(input_filename, inputs)
+        print(f"Saving input into " + output_filename)
+        np.save(output_filename, labels)
+
+    def store_data_conventional(self):
+
+        error = 0.05
+
+        df = pd.read_csv(self.dataset_filename)
+        # "Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"
+        df = df[["vm_pu","va_degree","P_pu","Q_pu","Im_inj","Ia_inj","Im_pu","Ia_pu","TopNo","Simulation"]]
+        data = []
+        inputs = []
+        labels = []
+        for topology in range(1, self.topologies + 1):
+            for simulation in range(1, self.simulations + 1):
+                # TODO Input
+                Vm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
+                #Vm_m = [v * (1 + np.random.uniform(-error, error)) for v in Vm_m]  # Adding ±1% noise
+                P_pu = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["P_pu"].values.tolist()[:-2]
+                #P_pu = [p * (1 + np.random.uniform(-error, error)) for p in P_pu]  # Adding ±1% noise
+                Q_pu = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Q_pu"].values.tolist()[:-2]
+                #Q_pu = [q * (1 + np.random.uniform(-error, error)) for q in Q_pu]  # Adding ±1% noise
+
+                print("Inserted 1% noise to conventional meters")
+
+                # TODO Output
+                Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
+                Va_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
+
+                print(topology, simulation)
+
+                # Input, SE Output, TI Output
+                data.append([Vm_m + P_pu + Q_pu, Vm_t + Va_t, topology])
+                # data.append([If_real, topology])
+
+        for [x, y, z] in data:
+            inputs.append(np.array(x))
+            if len(x) != 3*NUM_NODES: print("Issue on sample: ", x, y)
+            y = np.array(y)
+            z = np.array([z])
+            label = np.concatenate([y, z])
+            labels.append(label)
+
+        print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
+        print("Dataset Size", len(labels))
+
+        print(f"Saving input into IEEE33_pandapower_conventional_input")
+        np.save('datasets/IEEE33_pandapower_conventional_input.npy', inputs)
+        print(f"Saving input into IEEE33_pandapower_conventional_output")
+        np.save('datasets/IEEE33_pandapower_conventional_output.npy', labels)
+
+    def custom_one_hot_encode(self, labels):
+
+        one_hot_encoded_labels = []
+        for label in labels:
+            tmp = [0 for i in range(self.topologies)]
+            tmp[int(label)-1] = 1
+
+            one_hot_encoded_labels.append(tmp)
+
+        one_hot_encoded_labels = np.array(one_hot_encoded_labels)
+
+        return one_hot_encoded_labels
+
+    def read_data(self):
+
+        print("----------PREPROCESSIING DATASET------------")
+
+        inputs = np.load(input_filename)
+        outputs = np.load(output_filename)
+
+        #print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
+        #print("Label size: ", len(labels))
+
+        # Reshape the labels to a 2D array
+        outputs, labels = outputs[:, :-1], outputs[:, -1]
+
+        labels_reshaped = list(labels)
+
+
+        ohe_labels = self.custom_one_hot_encode(labels_reshaped)
+
+        # Initialize an empty list to store concatenated elements
+        concatenated_list = []
+
+        # Loop through each element (i) of outputs and labels
+        for i in range(len(outputs)):
+            # Concatenate the ith elements of outputs and labels
+            concatenated = np.concatenate((outputs[i], ohe_labels[i]))
+            concatenated_list.append(concatenated)
+
+        concatenated = np.array(concatenated_list)
+
+        return [inputs, concatenated]
+
+    def read_data_PMU_caseA(self):
+
+        print("----------PREPROCESSIING DATASET------------")
+
+        inputs = np.load(input_filename)
+        outputs = np.load(output_filename)
+
+        #print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
+        #print("Label size: ", len(labels))
+
+        # Reshape the labels to a 2D array
+        outputs, labels = outputs[:, :-1], outputs[:, -1]
+
+        labels_reshaped = list(labels)
+
+
+        ohe_labels = self.custom_one_hot_encode(labels_reshaped)
+
+        # Initialize an empty list to store concatenated elements
+        concatenated_list = []
+
+        # Loop through each element (i) of outputs and labels
+        for i in range(len(outputs)):
+            # Concatenate the ith elements of outputs and labels
+            concatenated = np.concatenate((outputs[i], ohe_labels[i]))
+            concatenated_list.append(concatenated)
+
+        concatenated = np.array(concatenated_list)
+
+        return [inputs, concatenated]
+
+    def read_data_PMU_caseB(self):
+
+        print("----------PREPROCESSIING DATASET------------")
+
+        inputs = np.load(input_filename)
+        outputs = np.load(output_filename)
+
+        #print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
+        #print("Label size: ", len(labels))
+
+        # Reshape the labels to a 2D array
+        outputs, labels = outputs[:, :-1], outputs[:, -1]
+
+        labels_reshaped = list(labels)
+
+
+        ohe_labels = self.custom_one_hot_encode(labels_reshaped)
+
+        # Initialize an empty list to store concatenated elements
+        concatenated_list = []
+
+        # Loop through each element (i) of outputs and labels
+        for i in range(len(outputs)):
+            # Concatenate the ith elements of outputs and labels
+            concatenated = np.concatenate((outputs[i], ohe_labels[i]))
+            concatenated_list.append(concatenated)
+
+        concatenated = np.array(concatenated_list)
+
+        return [inputs, concatenated]
+
+    def read_data_conventional(self):
+
+        print("----------PREPROCESSIING DATASET------------")
+
+        inputs = np.load(input_filename)
+        outputs = np.load(output_filename)
+
+        #print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
+        #print("Label size: ", len(labels))
+
+        # Reshape the labels to a 2D array
+        outputs, labels = outputs[:, :-1], outputs[:, -1]
+
+        labels_reshaped = list(labels)
+
+
+        ohe_labels = self.custom_one_hot_encode(labels_reshaped)
+
+        # Initialize an empty list to store concatenated elements
+        concatenated_list = []
+
+        # Loop through each element (i) of outputs and labels
+        for i in range(len(outputs)):
+            # Concatenate the ith elements of outputs and labels
+            concatenated = np.concatenate((outputs[i], ohe_labels[i]))
+            concatenated_list.append(concatenated)
+
+        concatenated = np.array(concatenated_list)
+
+        return [inputs, concatenated]
+
+    def preprocess_data(self, type):
+
+        # TODO Change for dataset here
+        if type == "PMU_caseA":
+            inputs, outputs = self.read_data_PMU_caseA()
+        elif type == "PMU_caseB":
+            inputs, outputs = self.read_data_PMU_caseB()
+        elif type == "conventional":
+            inputs, outputs = self.read_data_conventional()
+
+        # First split: train+validation and test
+        X_train, X_test, y_train, y_test = train_test_split(inputs, outputs, test_size=0.1, random_state=42)
+
+        # TODO Divide TI-SE
+        y_test_outputs = y_test[:, :2*NUM_NODES]
+        y_test_labels  = y_test[:, 2*NUM_NODES:]
+
+        # Second split: train and validation
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.125, random_state=42)  # 0.25 x 0.8 = 0.2
+
+        # TODO Divide TI-SE
+        y_train_outputs = y_train[:, :2*NUM_NODES]
+        y_train_labels  = y_train[:, 2*NUM_NODES:]
+
+        y_val_outputs = y_val[:, :2*NUM_NODES]
+        y_val_labels  = y_val[:, 2*NUM_NODES:]
+
+        scaler   = StandardScaler()
+        X_train  = scaler.fit_transform(X_train)
+        X_val    = scaler.transform(X_val)
+        X_test   = scaler.transform(X_test)
+
+        return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels
+
+    def preprocess_meter_type(self, type):
+
+        if type == "PMU_caseA":
+            # TODO Case A - Store then read for each measurement Vm, Va, Im, Ia
+            self.store_data_PMU_caseA()
+            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseA")
+        elif type == "PMU_caseB":
+            # TODO Case B - Store then read for each measurement Vm, Va, Iinjm, Iinja
+            #self.store_data_PMU_caseB()
+            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseB")
+        elif type == "conventional":
+            # TODO Case B - Store then read for each measurement Vm, Pinj, Qinj
+            self.store_data_conventional()
+            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("conventional")
+
+        return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels
+
+class BuildModel:
+
+    def __init__(self, NN_class):
+
+        self.model=NN_class
+
+    def build_simple_nn_old(self, input_dim):
+
+        # Define the model
+        model = Sequential()
+
+        # Input Layer (66 inputs)
+        #model.add(Dense(128, input_dim=input_dim, activation='relu'))
+
+        model.add(Dense(64, input_dim=input_dim, activation='relu'))
+
+        # Hidden Layer(s)
+        model.add(Dense(32, activation='relu'))
+        model.add(Dense(16, activation='relu'))
+
+        # Output Layer (16 outputs)
+        model.add(Dense(NUM_TOPOLOGIES, activation='softmax'))
+
+        # Compile the model
+        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+        # Summary of the model
+        model.summary()
+
+        return model
+
+    def build_simple_nn(self, input_dim):
+        # Input layer
+        inputs = layers.Input(shape=(input_dim,))
+
+        # First hidden layer with 64 neurons and ReLU activation
+       # x = layers.Dense(128, activation='relu')(inputs)
+
+        x = layers.Dense(128, activation='relu')(inputs)
+
+        x = layers.Dense(64, activation='relu')(x)
+
+        # First hidden layer with 64 neurons and ReLU activation
+        x = layers.Dense(32, activation='relu')(x)
+
+        # Second hidden layer with 32 neurons and ReLU activation
+        #x = layers.Dense(16, activation='relu')(x)
+
+        # Output layer (num_classes corresponds to the number of output classes)
+        outputs = layers.Dense(NUM_TOPOLOGIES, activation='softmax')(x)
+
+        # Create the model
+        model = models.Model(inputs=inputs, outputs=outputs)
+
+        # Compile the model with categorical cross-entropy loss and Adam optimizer
+        model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
+
+        return model
+
+    def build_model(self, input_dim):
+
+        if self.model=="NN":
+            return self.build_simple_nn(input_dim)
+
+class TrainModel:
+
+    def __init__(self, model, X_train, y_train, X_val, y_val, X_test, y_test):
+
+        self.model = model
+        self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test = X_train, y_train, X_val, y_val, X_test, y_test
+
+    def train_model(self):
+
+        # Compile the model
+        self.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+        # Train the model and save the history
+        history = self.model.fit(self.X_train, self.y_train, epochs=1, batch_size=32, validation_data=(self.X_val, self.y_val))
+
+        # Plot training & validation accuracy and loss values
+        plt.figure(figsize=(14, 5))
+
+        # Accuracy plot
+        plt.subplot(1, 2, 1)
+        plt.plot(history.history['accuracy'], label='Train Accuracy')
+        plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+        plt.title('Model Accuracy')
+        plt.xlabel('Epoch')
+        plt.ylabel('Accuracy')
+        plt.legend(loc='upper left')
+
+        # Loss plot
+        plt.subplot(1, 2, 2)
+        plt.plot(history.history['loss'], label='Train Loss')
+        plt.plot(history.history['val_loss'], label='Validation Loss')
+        plt.title('Model Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend(loc='upper left')
+
+        # Show plots
+        plt.savefig('TI_train_plot.png')
+
+        return self.model
+
+class PreProcFS:
+
+    def __init__(self, meterType, Preproc_model, submethod, X_train, y_train, X_val, y_val, X_test, y_test):
+
+        self.meterType          = meterType
+        self.Preproc_model      = Preproc_model
+        self.submethod  = submethod
+        self.X_train    = X_train
+        self.y_train    = y_train
+        self.X_val      = X_val
+        self.y_val      = y_val
+        self.X_test     = X_test
+        self.y_test     = y_test
+
+    def execute_rf_model_magnitudes_and_angles_sum(self):
+
+        # Train Random Forest Classifier
+        rf = RandomForestClassifier(n_estimators=100, random_state=42)
+        rf.fit(self.X_train, self.y_train)
+
+        importances = rf.feature_importances_
+        #print("Per feature importance: ", importances)
+
+        #TODO We need to take into consideration the importance per branch and its nodes
+        # 33 Vm, 33 Va, 35 Im, 35 Ia
+        used_branches     = []
+        all_indices = [i for i in range(NUM_BRANCHES)]
+        for iteration in range(NUM_BRANCHES):
+            importance_pairs = []
+            #print("All indices: ", all_indices)
+            used_sending_nodes = [branch_data[i]["sending_node"] for i in used_branches]
+            #print("Used sending nodes: ", used_sending_nodes)
+            remaining_indices = [branch_index for branch_index in all_indices if (branch_index not in used_branches)]
+            #print("Remaining indices: ", remaining_indices)
+            for branch_index in remaining_indices:
+                sending_node_index = branch_data[branch_index]["sending_node"]
+                if sending_node_index not in used_sending_nodes:
+                    importance_pairs.append(sum([importances[sending_node_index],
+                                                importances[NUM_NODES + sending_node_index],
+                                                importances[2*NUM_NODES + branch_index],
+                                                importances[2*NUM_NODES + NUM_BRANCHES + branch_index]]))
+                else:
+                    importance_pairs.append(sum([importances[2*NUM_NODES + branch_index],
+                                                importances[2*NUM_NODES + NUM_BRANCHES + branch_index]]))
+
+            #Return branch index of max current importance combinations
+            max_value = max(importance_pairs)
+            max_importances_index = importance_pairs.index(max_value)
+            best_index = remaining_indices[max_importances_index]
+            #print("Best index: ", best_index)
+            used_branches.append(remaining_indices[importance_pairs.index(max_value)])
+
+        #print(used_branches)
+
+        # return sorted_indices
+        return used_branches
+
+    def execute_rf_model_magnitude_angles_max(self):
+
+        # Train Random Forest Classifier
+        rf = RandomForestClassifier(n_estimators=100, random_state=42)
+        rf.fit(self.X_train, self.y_train)
+
+        importances = rf.feature_importances_
+        #print("Per feature importance: ", importances)
+
+        #TODO We need to take into consideration the importance per branch and its nodes
+        # 33 Vm, 33 Va, 35 Im, 35 Ia
+        used_branches     = []
+        all_indices = [i for i in range(NUM_BRANCHES)]
+        for _ in range(NUM_BRANCHES):
+            importance_pairs = []
+            used_sending_nodes = [branch_data[i]["sending_node"] for i in used_branches]
+            #print("All indices: ", all_indices)
+            #print("Used sending nodes: ", used_sending_nodes)
+            remaining_indices = [branch_index for branch_index in all_indices if (branch_index not in used_branches)]
+            #print("Remaining indices: ", remaining_indices)
+
+            for branch_index in remaining_indices:
+                sending_node_index = branch_data[branch_index]["sending_node"]
+                if sending_node_index not in used_sending_nodes:
+                    importance_pairs.append(max(importances[sending_node_index],
+                                                importances[NUM_NODES + sending_node_index],
+                                                importances[2*NUM_NODES + branch_index],
+                                                importances[NUM_NODES+NUM_BRANCHES + branch_index]))
+                else:
+                    importance_pairs.append(max(importances[2*NUM_NODES + branch_index],
+                                                importances[2*NUM_NODES + NUM_BRANCHES + branch_index]))
+
+            #Return branch index of max current importance combinations
+            max_value = max(importance_pairs)
+            max_importances_index = importance_pairs.index(max_value)
+            #print("Importance pairs: ", importance_pairs)
+            #print("Index of max element in new importance list: ", max_importances_index)
+            best_index = remaining_indices[max_importances_index]
+            #print("Best index: ", best_index)
+            used_branches.append(remaining_indices[importance_pairs.index(max_value)])
+
+        #print(used_branches)
+
+        # return sorted_indices
+        return used_branches
+
+    def execute_rfe_rf_PMU_caseA(self):
+
+        remaining_branches = [i for i in range(NUM_BRANCHES)]
+        #remaining_branches = BRANCH_PICK_LIST
+
+        EXISTING_METER_BRANCHES = [15]
+
+
+        #TODO Exclude existing branches
+        feature_group_dict = {b_i: [  0*NUM_NODES + branch_data[b_i]["sending_node"],
+                                      1*NUM_NODES + branch_data[b_i]["sending_node"],
+                                      2*NUM_NODES + b_i,
+                                      2*NUM_NODES+NUM_BRANCHES + b_i] for b_i in remaining_branches}
+
+        remaining_branches = [i for i in remaining_branches if i not in EXISTING_METER_BRANCHES]
+
+        num_features = 4
+        used_branches = [] #EXISTING_METER_BRANCHES
+
+        #TODO Train RF initially with EXISTING NODES to find the residual
+        #print(self.X_train[0], self.y_train[0])
+        y_labels = np.argmax(self.y_train, axis=1).reshape(-1)
+        existing_meter_indices = []
+        for branch in EXISTING_METER_BRANCHES:
+            existing_meter_indices.extend((feature_group_dict[branch]))
+        X_train = self.X_train[:, existing_meter_indices]
+        #print(X_train[0], X_train.shape)
+        rf = RandomForestClassifier(n_estimators=10, max_depth=5, random_state=42)
+        rf.fit(X_train, y_labels)
+        y_pred = rf.predict(X_train)
+        misclassified = (y_pred != y_labels)
+        #print(y_pred.shape)
+        #print(misclassified)
+
+        while len(remaining_branches) > 0:
+
+            used_indices = []
+
+            # Select Features per group to be used on RF training from remaining branches
+            for b_i in remaining_branches:
+                used_indices.extend(feature_group_dict[b_i])
+
+            X_train = self.X_train[:, used_indices]
+            #print("Used indices: ", used_indices)
+
+            # Train Random Forest Classifier
+            rf = RandomForestClassifier(n_estimators=10, max_depth=5, random_state=42)
+            rf.fit(X_train[misclassified], self.y_train[misclassified])
+            importances = rf.feature_importances_
+
+            #TODO How to return from list of new indices back to the original ones
+            # Remove from the original list the element of the worst index
+            # Get back as remaining_features[j]
+            group_importance_list = [sum(importances[num_features*i:(i+1)*num_features]) for i in range(len(remaining_branches))]
+            #print("Added importances per group: ", group_importance_list)
+            min_importance_branch = group_importance_list.index(min(group_importance_list))
+            #print("Minimum importance for worst group: ", min(group_importance_list))
+            #print("Chose: ", min_importance_branch)
+            #print(remaining_branches, min_importance_branch)
+            real_branch_index = remaining_branches.pop(min_importance_branch)
+            #print("Min importance branch index in remaining list: ", min_importance_branch, "Min real index: ", real_branch_index)
+            used_branches.append(real_branch_index)
+
+        used_branches.reverse()
+
+        #TODO Place first existing branches
+        used_branches = EXISTING_METER_BRANCHES + used_branches
+
+        print("TI Feature Order: ", used_branches)
+
+        # return sorted_indices
+        return used_branches
+
+    def execute_rfe_rf_PMU_caseB(self):
+
+        remaining_nodes = [i for i in range(NUM_NODES)]
+        #remaining_nodes = NODE_PICK_LIST
+
+        #TODO Exclude existing nodes
+        #remaining_nodes = [i for i in remaining_nodes if i not in EXISTING_METER_NODES]
+
+        feature_group_dict = {n_i: [  0*NUM_NODES + n_i,
+                                      1*NUM_NODES + n_i,
+                                      2*NUM_NODES + n_i,
+                                      3*NUM_NODES + n_i] for n_i in remaining_nodes}
+        num_features = 4
+        used_nodes = [] #EXISTING_METER_NODES
+
+
+        while len(remaining_nodes) > 0:
+
+            used_indices = []
+
+            # Select Features per group to be used on RF training from remaining branches
+            for n_i in remaining_nodes:
+                used_indices.extend(feature_group_dict[n_i])
+
+            X_train = self.X_train[:, used_indices]
+            #print("Used indices: ", used_indices)
+
+            # Train Random Forest Classifier
+            rf = RandomForestClassifier(n_estimators=10, max_depth=5, random_state=42)
+            rf.fit(X_train, self.y_train)
+            importances = rf.feature_importances_
+            #print("Importances: ", importances)
+            #TODO How to return from list of new indices back to the original ones
+            # Remove from the original list the element of the worst index
+            # Get back as remaining_features[j]
+            group_importance_list = [sum(importances[num_features*i:(i+1)*num_features]) for i in range(len(remaining_nodes))]
+            #print("Added importances per group: ", group_importance_list)
+            min_importance_node = group_importance_list.index(min(group_importance_list))
+            #print("Minimum importance for worst group: ", min(group_importance_list))
+            #print("Chose: ", min_importance_node)
+            #print("Remaining nodes: ", remaining_nodes)
+            #print("Minimum importance index: ", min_importance_node)
+            real_node_index = remaining_nodes.pop(min_importance_node)
+            #print("Min importance branch index in remaining list: ", min_importance_node, "Min real index: ", real_node_index)
+            used_nodes.append(real_node_index)
+            #print(used_nodes)
+
+        used_nodes.reverse()
+
+        #TODO Place first existing branches
+        #used_nodes = EXISTING_METER_BRANCHES + used_nodes
+
+        print("TI Feature Order: ", used_nodes)
+
+        # return sorted_indices
+        return used_nodes
+
+    def execute_rfe_rf_conventional(self):
+
+        remaining_nodes = [i for i in range(NUM_NODES)]
+
+        #TODO Exclude existing nodes
+        #remaining_nodes = [i for i in remaining_nodes if i not in EXISTING_METER_NODES]
+
+        feature_group_dict = {n_i: [  0*NUM_NODES + n_i,
+                                      1*NUM_NODES + n_i,
+                                      2*NUM_NODES + n_i] for n_i in remaining_nodes}
+        num_features = 3
+        used_nodes = EXISTING_METER_NODES
+
+        while len(remaining_nodes) > 0:
+
+            used_indices = []
+
+            # Select Features per group to be used on RF training from remaining branches
+            for n_i in remaining_nodes:
+                used_indices.extend(feature_group_dict[n_i])
+
+            X_train = self.X_train[:, used_indices]
+            #print("Used indices: ", used_indices)
+
+            # Train Random Forest Classifier
+            rf = RandomForestClassifier(n_estimators=10, max_depth=5, random_state=42)
+            rf.fit(X_train, self.y_train)
+            importances = rf.feature_importances_
+
+            #TODO How to return from list of new indices back to the original ones
+            # Remove from the original list the element of the worst index
+            # Get back as remaining_features[j]
+            group_importance_list = [sum(importances[num_features*i:(i+1)*num_features]) for i in range(len(remaining_nodes))]
+            print("Added importances per group: ", group_importance_list)
+            min_importance_node = group_importance_list.index(min(group_importance_list))
+            print("Minimum importance for worst group: ", min(group_importance_list))
+            print("Chose: ", min_importance_node)
+            print(remaining_nodes, min_importance_node)
+            real_node_index = remaining_nodes.pop(min_importance_node)
+            print("Min importance branch index in remaining list: ", min_importance_node, "Min real index: ", remaining_nodes)
+            used_nodes.append(real_node_index)
+            print(used_nodes)
+
+        used_nodes.reverse()
+
+        #TODO Place first existing branches
+        #used_nodes = EXISTING_METER_BRANCHES + used_nodes
+
+        print("TI Feature Order: ", used_nodes)
+
+        # return sorted_indices
+        return used_nodes
+
+    def execute_pca_magnitudes_and_angles(self):
+
+        # Initialize PCA
+        pca = PCA(n_components=136)  # Keep all components for now
+        X_pca = pca.fit_transform(self.X_train)
+
+        # Explained variance ratio for each component
+        explained_variances = pca.explained_variance_ratio_
+
+        loadings = pca.components_
+
+        used_branches = []
+        all_indices = [i for i in range(35)]
+        for _ in range(35):
+            importance_pairs = []
+            used_sending_nodes = [branch_data[i]["sending_node"] for i in used_branches]
+            #print("All indices: ", all_indices)
+            #print("Used sending nodes: ", used_sending_nodes)
+            remaining_indices = [branch_index for branch_index in all_indices if (branch_index not in used_branches)]
+            #print("Remaining indices: ", remaining_indices)
+
+            for branch_index in remaining_indices:
+                tmp_list = []
+                sending_node_index = branch_data[branch_index]["sending_node"]
+                if sending_node_index not in used_sending_nodes:
+                    for i in [sending_node_index, NUM_NODES + sending_node_index, 2*NUM_NODES + branch_index, NUM_NODES+NUM_BRANCHES + branch_index]:
+                        tmp_list.append(i)
+                else:
+                    for i in [2*NUM_NODES + branch_index, 2*NUM_NODES + NUM_BRANCHES + branch_index]:
+                        tmp_list.append(i)
+
+                # Calculate the weighted sum for branch importance
+                joint_importance = np.sum(np.abs(loadings[:, tmp_list]), axis=1)
+                importance_pairs.append(np.sum(joint_importance))
+
+            # Return branch index of max current importance combinations
+            max_value = max(importance_pairs)
+            max_importances_index = importance_pairs.index(max_value)
+            #print("Importance pairs: ", importance_pairs)
+            #print("Index of max element in new importance list: ", max_importances_index)
+            best_index = remaining_indices[max_importances_index]
+            #print("Best index: ", best_index)
+            used_branches.append(remaining_indices[importance_pairs.index(max_value)])
+
+        return used_branches
+
+
+    def execute(self):
+
+        print("------------EXECUTING FEATURE SELECTION-------------")
+        print(f"-----------------{self.Preproc_model}----------------------")
+        print(f"""------------------{self.submethod}-----------------""")
+        if self.Preproc_model=="RF":
+            if self.submethod == "rfe":
+                if self.meterType == "PMU_caseA":
+                    return self.execute_rfe_rf_PMU_caseA()
+                elif self.meterType == "PMU_caseB":
+                    return self.execute_rfe_rf_PMU_caseB()
+                if self.meterType == "conventional":
+                    return self.execute_rfe_rf_conventional()
+
+            #elif self.submethod == "sum":
+            #    return self.execute_rf_model_magnitudes_and_angles_sum()
+            #elif self.submethod == "max":
+            #    return self.execute_rf_model_magnitude_angles_max()
+
+            else:
+                print("Invalid model - submethod combination")
+
+
+        #elif self.Preproc_model=="GNN":
+        #    if self.submethod == "simple":
+        #        return self.execute_gnn_magnitudes_angles_fs()
+
+
+        elif self.Preproc_model=="PCA":
+            if self.submethod == "simple":
+                return self.execute_pca_magnitudes_and_angles()
+
+class TIPredictorTrainProcess:
+
+    def __init__(self, meterType, threshold, model, X_train, y_train, X_val, y_val, X_test, y_test, FS="RF", method="sum", iterative_fs=False):
+
+        self.meterType = meterType
+        self.threshold = threshold
+        self.model = model
+        self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test = X_train, y_train, X_val, y_val, X_test, y_test
+        if self.meterType == "PMU_caseA":
+            self.num_features = 2
+        elif self.meterType == "PMU_caseB":
+            self.num_features = 4
+        elif self.meterType == "conventional":
+            self.num_features = 3
+        else:
+            self.num_features = None
+        self.FS = FS
+        self.method = method
+        self.iterative_fs = iterative_fs
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    def evaluate_simple_NN(self, model, X_test, y_test):
+
+        correct_predictions = 0
+        total_samples = 0
+
+        # Forward pass
+        out_test = self.model(X_test)
+
+        print(out_test.shape, self.y_test.shape)
+
+        # Get predicted class by selecting the index of the maximum logit for each sample
+        preds = [np.array(i).argmax() for i in out_test]
+        true_labels = [np.array(i).argmax() for i in y_test]
+
+
+
+        # Calculate the number of correct predictions
+        correct_predictions = sum([1 if (preds[i] == true_labels[i]) else 0 for i in range(out_test.shape[0])])
+        total_samples = len(preds)
+
+        return correct_predictions / total_samples
+
+    def execute_NN(self):
+
+        if not self.iterative_fs:
+            print(self.X_train.shape)
+            FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
+            features = FS.execute()
+            #features = [17, 26, 21, 28, 8, 12, 7, 5, 6, 9, 11, 24, 19, 16, 27, 25, 14, 13, 23, 4, 29, 10, 20, 15, 31, 32, 30, 18, 3, 2, 22, 1, 0]
+            print(features)
+            if self.meterType == "PMU_caseA":
+                print("TI Feature Selection Order - Branches: ", features)
+            elif self.meterType == "PMU_caseB":
+                print("TI Feature Selection Order - Nodes: ", features)
+            elif self.meterType == "conventional":
+                print("TI Feature Selection Order - Nodes: ", features)
+
+            #TODO For every Currenct branch input feature add the magnitude and its angle
+            # If the magnitude is at index X, then angle is at index X+35
+            used_feature_indices = []
+            for i in features:
+                if self.meterType == "PMU_caseA":
+                    used_feature_indices.append(i)
+                    print("Chose feature - branch: ", i, "Total feature indices: ", used_feature_indices)
+                    node_indices = [branch_data[i]["sending_node"] for i in used_feature_indices] + [NUM_NODES + branch_data[i]["sending_node"] for i in used_feature_indices]
+                    current_indices = [i+2*NUM_NODES for i in used_feature_indices]+[2*NUM_NODES+i+NUM_BRANCHES for i in used_feature_indices]
+                    all_indices = node_indices + current_indices
+                elif self.meterType == "PMU_caseB":
+                    used_feature_indices.append(i)
+                    #TODO Insert manually
+                    #used_feature_indices = [127, 128, 112, 117] Case B
+                    print("Chose feature - node: ", i, "Total feature indices: ", used_feature_indices)
+                    node_indices = [i for i in used_feature_indices] + \
+                                   [NUM_NODES + i for i in used_feature_indices] + \
+                                   [2*NUM_NODES + i for i in used_feature_indices] + \
+                                   [3*NUM_NODES + i for i in used_feature_indices]
+                    all_indices = node_indices
+                elif self.meterType == "conventional":
+                    used_feature_indices.append(i)
+                    print("Chose feature - node: ", i, "Total feature indices: ", used_feature_indices)
+                    node_indices = [i for i in used_feature_indices] + \
+                                   [NUM_NODES + i for i in used_feature_indices] + \
+                                   [2*NUM_NODES + i for i in used_feature_indices]
+
+                    all_indices = node_indices
+                X_train = self.X_train[:, all_indices]
+                X_val   = self.X_val[:, all_indices]
+                X_test  = self.X_test[:, all_indices]
+
+                #TODO Simple NN with keras
+                if False:
+                    ML_model = "NN"
+                    buildModel = BuildModel(ML_model)
+                    input_dim = len(all_indices)
+                    self.model = buildModel.build_model(input_dim)
+                    print(X_train.shape, self.y_train.shape)
+                    trainModel = TrainModel(self.model, X_train, self.y_train, X_val, self.y_val, X_test, self.y_test)
+                    trainModel.train_model()
+                    # Evaluate the model on the test data
+                    test_loss, test_accuracy = self.model.evaluate(X_test, self.y_test, verbose=0)
+                    test_accuracy = self.evaluate_simple_NN(self.model, X_test, self.y_test)
+
+                NNdimension = len(used_feature_indices)
+
+
+                ML_model   = "NN"
+                if self.meterType == "PMU_caseA":
+                    num_node_features = 2
+                    ANN = SimpleNN(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
+                else:
+                    ANN = SimpleNN(NNdimension, self.num_features, NUM_TOPOLOGIES).to(self.device)
+                trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
+                print("X_train shape: ", X_train.shape)
+                test_accuracy = trainModel.evaluate()
+
+                print(used_feature_indices, test_accuracy)
+                with open("results.txt", "a") as wf:
+                    wf.write("USed indices (i+1 for proper index): "+str([i+1 for i in used_feature_indices])+", Accuracy: "+str(test_accuracy)+"\n")
+                    wf.close()
+
+                filename = "results/" + "TI___MODEL___" + str(ML_model) + "___" + "PREPROCESSING_" + str(FS.Preproc_model) + "___SUBMETHOD___" + str(FS.submethod) + "_results.txt"
+
+                with open(filename, "a") as wf:
+                    wf.write("Used indices (i+1 for proper index): "+str([i+1 for i in used_feature_indices])+", Accuracy: "+str(test_accuracy)+"\n")
+                    wf.close()
+
+                if test_accuracy >= self.threshold: break
+
+
+            return used_feature_indices
+
+    def execute_GNN(self):
+
+        if not self.iterative_fs:
+            FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
+            Ib_features = FS.execute()
+            #Ib_features = GLOBAL_BRANCH_LIST
+            print("TI Feature Selection Order: ", Ib_features)
+
+            #TODO For every Currenct branch input feature add the magnitude and its angle
+            # If the magnitude is at index X, then angle is at index X+35
+            used_feature_indices = []
+            for i in Ib_features:
+                #print("Chose Ibranch: ", i)
+                used_feature_indices.append(i)
+
+                X_train_TI = self.X_train
+                y_train_labels = self.y_train
+
+                X_val_TI = self.X_val
+                y_val_labels = self.y_val
+
+                X_test_TI = self.X_test
+                y_test_labels = self.y_test
+
+                print("EDGE Indices: ", used_feature_indices)
+                GTIP = GraphTIPreprocess_IV(self.meterType, used_feature_indices, X_train_TI, y_train_labels, X_val_TI, y_val_labels, X_test_TI, y_test_labels)
+
+                if self.meterType == "PMU_caseA":
+                    edges, train_loader, validation_loader, test_loader = GTIP.generate_dataset_TI_GNN_PMU_caseA()
+                    Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader, validation_loader, test_loader)
+                    acc = Train_GNN_TI.evaluate()
+                elif self.meterType == "PMU_caseB":
+                    edges, train_loader, validation_loader, test_loader = GTIP.generate_dataset_TI_GNN_PMU_caseB()
+                    Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader, validation_loader, test_loader)
+                    acc = Train_GNN_TI.evaluate()
+                elif self.meterType == "conventional":
+                    edges, train_loader, validation_loader, test_loader = GTIP.generate_dataset_TI_GNN_conventional()
+                    Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader,
+                                               validation_loader, test_loader)
+                    acc = Train_GNN_TI.evaluate()
+
+                filename = "results/" + "TI___MODEL___GNN_simple___" + "PREPROCESSING_" + str(FS.Preproc_model) + "___SUBMETHOD___" + str(FS.submethod) + "_results.txt"
+                print(filename)
+
+                with open(filename, "a") as wf:
+                    wf.write("Used indices (i+1 for proper index): " + str(
+                        [i + 1 for i in used_feature_indices]) + ", Accuracy: " + str(acc) + "\n")
+                    wf.close()
+
+                if acc >= self.threshold: break
+
+            return used_feature_indices
+
+    def execute(self):
+
+        if self.model == "NN":
+            # Return branch index list (i)
+            return self.execute_NN()
+        elif self.model == "GNN":
+            # Return branch index list (i)
+            return self.execute_GNN()
+
+class GATWithEdgeAttrs(torch.nn.Module):
+    def __init__(self, num_features, num_classes, edge_attr_dim, heads=4):
+        super(GATWithEdgeAttrs, self).__init__()
+        self.device             = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # Graph Attention layers (GATConv)
+        # Here, `edge_attr_dim` is the size of the edge features
+        self.conv1 = GATConv(num_features, 64, heads=heads, concat=True, edge_dim=edge_attr_dim)  # First GAT layer with edge features
+        self.conv2 = GATConv(64 * heads, 32, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Second GAT layer
+        self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Third GAT layer
+        #self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Fourth GAT layer
+
+        # Dropout layer
+        self.dropout = torch.nn.Dropout(0.3)
+
+        # Fully connected layer for classification
+        self.fc = torch.nn.Linear(8 * heads, num_classes)
+
+    def forward(self, data):
+        # If there are no node features, initialize with zeros (dummy features)
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)  # Default node features (1 feature per node)
+
+        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
+
+        x = x.to(self.device)
+        edge_index = edge_index.to(self.device)
+        if edge_attr is not None:
+            edge_attr = edge_attr.to(self.device)
+        batch = batch.to(self.device)
+
+        # First GAT layer with edge attributes
+        x = self.conv1(x, edge_index, edge_attr)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Second GAT layer with edge attributes
+        x = self.conv2(x, edge_index, edge_attr)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Third GAT layer with edge attributes
+        x = self.conv3(x, edge_index, edge_attr)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Fourth GAT layer with edge attributes
+        #x = self.conv4(x, edge_index, edge_attr)
+
+        # Global mean pooling: Aggregate node features into graph-level features
+        x = global_mean_pool(x, batch)
+
+        # Fully connected layer: Output the final classes
+        x = self.fc(x)
+
+        return F.log_softmax(x, dim=1)
+
+class GATNoEdgeAttrs(torch.nn.Module):
+    def __init__(self, num_features, num_classes, heads=4):
+        super(GATNoEdgeAttrs, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Graph Attention layers (without edge features)
+        self.conv1 = GATConv(num_features, 64, heads=heads, concat=True)  # No edge_dim
+        self.conv2 = GATConv(64 * heads, 32, heads=heads, concat=True)  # No edge_dim
+        self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True)
+        self.conv4 = GATConv(8  * heads, 4, heads=heads, concat=True)
+        #self.conv4 = GATConv(16  * heads, 4, heads=heads, concat=True)
+
+        # Dropout layer
+        self.dropout = torch.nn.Dropout(0.3)
+
+        # Fully connected layer for classification
+        self.fc1 = torch.nn.Linear(4 * heads, num_classes)
+
+    def forward(self, data):
+        # If no node features exist, initialize dummy features
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
+
+        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
+
+        # First GAT layer
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Second GAT layer
+        x = self.conv2(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Third GAT layer
+        x = self.conv3(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Fourth GAT layer
+        x = self.conv4(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # feourth GAT layer
+        #x = self.conv4(x, edge_index)
+        #x = F.relu(x)
+        #x = self.dropout(x)
+
+        # Global mean pooling
+        x = global_mean_pool(x, batch)
+
+        # Fully connected layer for classification
+        x = self.fc1(x)
+
+        return F.log_softmax(x, dim=1)
+
+class GATLinearNN(torch.nn.Module):
+    def __init__(self, num_features, num_classes, heads=4):
+        super(GATLinearNN, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # First layer: GAT for attention-based feature extraction
+        self.gat = GATConv(num_features, 64, heads=heads, concat=True)  # No edge_dim
+
+        # Linear layers (instead of GAT for deeper processing)
+        self.fc1 = torch.nn.Linear(64 * heads, 32)
+        self.fc2 = torch.nn.Linear(32, 16)
+        self.fc3 = torch.nn.Linear(16, 4)
+
+        # Dropout layer
+        self.dropout = torch.nn.Dropout(0.3)
+
+        # Fully connected layer for classification
+        self.fc_out = torch.nn.Linear(4, num_classes)
+
+    def forward(self, data):
+        # If no node features exist, initialize dummy features
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
+
+        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
+
+        # First GAT layer (Attention-based feature selection)
+        x = self.gat(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Fully connected layers (Non-attention based)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        x = self.fc2(x)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        x = self.fc3(x)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Global mean pooling
+        x = global_mean_pool(x, batch)
+
+        # Fully connected output layer
+        x = self.fc_out(x)
+
+        return F.log_softmax(x, dim=1)
+
+class GCNNoEdge(torch.nn.Module):
+    def __init__(self, num_features, num_classes):
+        super(GCNNoEdge, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Graph Convolution layers
+        self.conv1 = GCNConv(num_features, 128)
+        self.conv2 = GCNConv(128, 64)
+        self.conv3 = GCNConv(64, 32)
+        self.conv4 = GCNConv(32, 16)
+
+        # Dropout for regularization
+        self.dropout = torch.nn.Dropout(0.3)
+
+        # Fully connected layer for classification
+        self.fc = Linear(16, num_classes)
+
+    def forward(self, data):
+        # If no node features exist, initialize dummy features
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
+
+        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
+
+        # First GCN layer
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Second GCN layer
+        x = self.conv2(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Third GCN layer
+        x = self.conv3(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Fourth GCN layer
+        x = self.conv4(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Global mean pooling
+        x = global_mean_pool(x, batch)
+
+        # Fully connected layer for classification
+        x = self.fc(x)
+
+        return F.log_softmax(x, dim=1)
+
+class GATSAGE(torch.nn.Module):
+    def __init__(self, num_features, num_classes, heads=4):
+        super(GATSAGE, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Add SAGEConv for initial feature aggregation (good for sparse data)
+        self.sage = SAGEConv(num_features, 64 * heads)
+
+        # Graph normalization layer (can help with noisy data and sparse inputs)
+        self.graph_norm1 = GraphNorm(64 * heads)
+        self.graph_norm2 = GraphNorm(32 * heads)
+        self.graph_norm3 = GraphNorm(16 * heads)
+        self.graph_norm4 = GraphNorm(8 * heads)
+
+        # Graph Attention layers (without edge features)
+        self.conv1 = GATConv(64 * heads , 32, heads=heads, concat=True)
+        self.conv2 = GATConv(32 * heads, 16, heads=heads, concat=True)
+        self.conv3 = GATConv(16 * heads, 8, heads=heads, concat=True)
+        self.conv4 = GATConv(8 * heads, 4, heads=heads, concat=True)
+
+        # Dropout layer
+        self.dropout = torch.nn.Dropout(0.1)
+
+        # Fully connected layer for classification
+        self.fc1 = torch.nn.Linear(4 * heads, num_classes)
+
+    def forward(self, data):
+        # If no node features exist, initialize dummy features
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
+
+        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
+
+        # Initial SAGEConv Layer (Feature Aggregation)
+        x = self.sage(x, edge_index)
+        x = F.relu(x)
+        x = self.graph_norm1(x)  # Apply GraphNorm
+        x = self.dropout(x)
+
+        # First GAT layer
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        x = self.graph_norm2(x)  # Apply GraphNorm
+        x = self.dropout(x)
+
+        # Second GAT layer
+        x = self.conv2(x, edge_index)
+        x = F.relu(x)
+        x = self.graph_norm3(x)  # Apply GraphNorm
+        x = self.dropout(x)
+
+        # Third GAT layer
+        x = self.conv3(x, edge_index)
+        x = F.relu(x)
+        x = self.graph_norm4(x)  # Apply GraphNorm
+        x = self.dropout(x)
+
+        # Fourth GAT layer
+        x = self.conv4(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Global mean pooling
+        x = global_mean_pool(x, batch)
+
+        # Fully connected layer for classification
+        x = self.fc1(x)
+
+        return F.log_softmax(x, dim=1)
+
+class SparseGNNNoEdgeAttrsAPPNP(torch.nn.Module):
+    def __init__(self, num_features, num_classes, K=10, alpha=0.1):
+        super(SparseGNNNoEdgeAttrsAPPNP, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Using APPNP for better propagation in sparse graphs
+        self.appnp = APPNP(K=K, alpha=alpha)
+
+        # Initial MLP layers before propagation
+        self.fc1 = torch.nn.Linear(num_features, 64)
+        self.fc2 = torch.nn.Linear(64, 32)
+        self.fc3 = torch.nn.Linear(32, 8)
+
+        # Dropout layer
+        self.dropout = torch.nn.Dropout(0.3)
+
+        # Fully connected layer for classification
+        self.fc_out = torch.nn.Linear(8, num_classes)
+
+    def forward(self, data):
+        # If no node features exist, initialize dummy features
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float, device=self.device)
+
+        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
+
+        # MLP before propagation
+        x = F.elu(self.fc1(x))
+        x = self.dropout(x)
+        x = F.elu(self.fc2(x))
+        x = self.dropout(x)
+        x = F.elu(self.fc3(x))
+        x = self.dropout(x)
+
+        # APPNP propagation
+        x = self.appnp(x, edge_index)
+
+        # Global mean pooling
+        x = global_mean_pool(x, batch)
+
+        # Fully connected layer for classification
+        x = self.fc_out(x)
+
+        return F.log_softmax(x, dim=1)
+
+class GINNoEdgeModel(torch.nn.Module):
+    def __init__(self, num_features, num_classes):
+        super(GINNoEdgeModel, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        from torch.nn import Linear, Sequential, ReLU
+        # Define MLPs for GINConv
+        self.mlp1 = Sequential(Linear(num_features, 16), ReLU(), Linear(16, 16))
+        self.mlp2 = Sequential(Linear(16, 8), ReLU(), Linear(8, 8))
+        self.mlp3 = Sequential(Linear(8, 4), ReLU(), Linear(4, 4))
+
+        # GIN Convolution layers
+        self.conv1 = GINConv(self.mlp1)
+        self.conv2 = GINConv(self.mlp2)
+        self.conv3 = GINConv(self.mlp3)
+
+        # Dropout for regularization
+        self.dropout = torch.nn.Dropout(0.3)
+
+        # Fully connected layer for classification
+        self.fc = Linear(4, num_classes)
+
+    def forward(self, data):
+        # Initialize dummy features if no node features exist
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
+
+        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
+
+        # First GIN layer
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Second GIN layer
+        x = self.conv2(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Third GIN layer
+        x = self.conv3(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Global mean pooling
+        x = global_mean_pool(x, batch)
+
+        # Fully connected layer for classification
+        x = self.fc(x)
+
+        return F.log_softmax(x, dim=1)
+
+class SimpleNN(nn.Module):
+    def __init__(self, num_nodes, num_features, num_classes, branch_num=NUM_BRANCHES, branch_feature_num=None):
+        super(SimpleNN, self).__init__()
+        self.branch_num = branch_num
+        self.branch_feature_num = branch_feature_num
+        if self.branch_feature_num is not None:
+            self.input_dim = num_nodes * num_features + branch_num * branch_feature_num  # Flatten the entire graph input
+        else:
+            self.input_dim = num_nodes * num_features # Flatten the entire graph input
+
+        print("Input dimension for SimpleNN: ", self.input_dim, num_nodes, num_features, branch_num, branch_feature_num)
+
+        # Fully connected layers
+        self.fc1 = nn.Linear(self.input_dim, 64)
+        self.fc2 = nn.Linear(64, 16)
+        self.fc3 = nn.Linear(16, 4)
+        self.fc4 = nn.Linear(4, num_classes)
+
+        # Dropout for regularization
+        self.dropout = nn.Dropout(0.3)
+
+    def forward(self, x):
+        # Flatten the input (batch_size, num_nodes, num_features) -> (batch_size, num_nodes * num_features)
+        #print("In net:", x)
+        x = x.view(x.size(0), -1)
+        #print("In net view: ", x)
+
+        # Forward pass through MLP
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+
+        # Output layer (logits)
+        x = self.fc4(x)
+
+        return x  # No softmax, using CrossEntropyLoss
+
+
+class GraphTIPreprocess_IV:
+
+    def __init__(self, meterType, selected_edges, X_train, y_train, X_val, y_val, X_test, y_test):
+
+        self.meterType             = meterType
+        self.branch_data           = branch_data
+        self.edge_index            = None
+        self.selected_edges        = selected_edges
+        self.X_train               = X_train
+        self.y_train               = y_train
+        self.X_val                 = X_val
+        self.y_val                 = y_val
+        self.X_test                = X_test
+        self.y_test                = y_test
+
+    def define_graph(self):
+        # Complete edge_index for all branches (35 edges in total)
+        edges = [(v['sending_node'], v['receiving_node']) for v in branch_data.values()]
+        #edges = [edges[i] for i in self.selected_edges]
+        #print("Selected edges: ", selected_edges)
+        self.edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()  # Ensure correct shape [2, num_edges]
+        return self.edge_index
+
+    # Preprocessing to select features for the specific edges used
+    def preprocess_data(self, NP_train, selected_edge_indices, num_edges=NUM_BRANCHES, num_features_per_edge=2, num_nodes=NUM_NODES, num_features_per_node=2):
+
+        # Edges start at index Vm: 0 - 32, Va: 33 - 65, Im: 66 - 100, Ia: 101 - 135
+
+        branch_index_offset = 2*NUM_NODES
+        node_index_offset   = 0
+
+        edge_features   = np.zeros((NP_train.shape[0], num_edges * num_features_per_edge))
+        edge_mask       = np.zeros((NP_train.shape[0], num_edges * num_features_per_edge))
+
+        node_features   = np.zeros((NP_train.shape[0], num_nodes * num_features_per_node))
+        node_mask       = np.zeros((NP_train.shape[0], num_nodes * num_features_per_node))
+
+        # Only the features for selected edges will be non-zero
+        for idx, edge_idx in enumerate(selected_edge_indices):
+            mag_feature = NP_train[:, branch_index_offset + edge_idx]
+            angle_feature = NP_train[:, branch_index_offset + edge_idx + 35]
+            edge_features[:, edge_idx * 2] = mag_feature
+            edge_features[:, edge_idx * 2 + 1] = angle_feature
+            edge_mask[:, edge_idx * 2] = 1
+            edge_mask[:, edge_idx * 2 + 1] = 1
+
+            node_idx = branch_data[edge_idx]["sending_node"]
+            mag_feature = NP_train[:, node_index_offset + node_idx]
+            angle_feature = NP_train[:, node_index_offset + node_idx + 33]
+            node_features[:, node_idx * 2] = mag_feature
+            node_features[:, node_idx * 2 + 1] = angle_feature
+            node_mask[:, node_idx * 2] = 1
+            node_mask[:, node_idx * 2 + 1] = 1
+
+        return edge_features, edge_mask, node_features, node_mask
+
+    def preprocess_data_PMU_caseA(self, NP_train, selected_edge_indices, num_edges, num_features_per_edge=2, num_nodes=NUM_NODES, num_features_per_node=2):
+
+        # Edges start at index Vm: 0 - 32, Va: 33 - 65, Im: 66 - 100, Ia: 101 - 135
+
+        branch_index_offset = 2*NUM_NODES
+        node_index_offset   = 0
+
+        edge_features   = np.zeros((NP_train.shape[0], num_edges * num_features_per_edge))
+        edge_mask       = np.zeros((NP_train.shape[0], num_edges * num_features_per_edge))
+
+        node_features   = np.zeros((NP_train.shape[0], num_nodes * num_features_per_node))
+        node_mask       = np.zeros((NP_train.shape[0], num_nodes * num_features_per_node))
+
+        # Only the features for selected edges will be non-zero
+        for idx, edge_idx in enumerate(selected_edge_indices):
+            mag_feature = NP_train[:, branch_index_offset + edge_idx]
+            angle_feature = NP_train[:, branch_index_offset + edge_idx + NUM_BRANCHES]
+            edge_features[:, edge_idx * num_features_per_edge] = mag_feature
+            edge_features[:, edge_idx * num_features_per_edge + 1] = angle_feature
+            edge_mask[:, edge_idx * num_features_per_edge] = 1
+            edge_mask[:, edge_idx * num_features_per_edge + 1] = 1
+
+            node_idx = branch_data[edge_idx]["sending_node"]
+            mag_feature = NP_train[:, node_index_offset + node_idx]
+            angle_feature = NP_train[:, node_index_offset + node_idx + NUM_NODES]
+            node_features[:, node_idx * num_features_per_node] = mag_feature
+            node_features[:, node_idx * num_features_per_node + 1] = angle_feature
+            node_mask[:, node_idx * num_features_per_node] = 1
+            node_mask[:, node_idx * num_features_per_node + 1] = 1
+
+        return edge_features, edge_mask, node_features, node_mask
+
+    def preprocess_data_PMU_caseB(self, NP_train, selected_node_indices, num_nodes=NUM_NODES, num_features_per_node=4):
+
+        # Edges start at index Vm: 0 - 32, Va: 33 - 65, Im: 66 - 100, Ia: 101 - 135
+
+        node_features           = np.zeros((NP_train.shape[0], num_nodes * num_features_per_node))
+        node_mask               = np.zeros((NP_train.shape[0], num_nodes * num_features_per_node))
+
+        # Only the features for selected edges will be non-zero
+        for idx, node_idx in enumerate(selected_node_indices):
+            Vmag_feature    = NP_train[:, 0*NUM_NODES + node_idx]
+            Vangle_feature  = NP_train[:, 1*NUM_NODES + node_idx]
+            Iinjm_feature   = NP_train[:, 2*NUM_NODES + node_idx]
+            Iinja_feature   = NP_train[:, 3*NUM_NODES + node_idx]
+
+            node_features[:, node_idx * num_features_per_node + 0] = Vmag_feature
+            node_features[:, node_idx * num_features_per_node + 1] = Vangle_feature
+            node_features[:, node_idx * num_features_per_node + 2] = Iinjm_feature
+            node_features[:, node_idx * num_features_per_node + 3] = Iinja_feature
+
+            node_mask[:, node_idx * num_features_per_node + 0] = 1
+            node_mask[:, node_idx * num_features_per_node + 1] = 1
+            node_mask[:, node_idx * num_features_per_node + 2] = 1
+            node_mask[:, node_idx * num_features_per_node + 3] = 1
+
+        return node_features, node_mask
+
+    def preprocess_data_conventional(self, NP_train, selected_node_indices, num_nodes=NUM_NODES, num_features_per_node=3):
+
+        # Edges start at index Vm: 0 - 32, Va: 33 - 65, Im: 66 - 100, Ia: 101 - 135
+
+        print("SELECTED NODE INDICES FOR PREPROCESS: ", selected_node_indices)
+
+        node_index_offset       = 0
+        node_features           = np.zeros((NP_train.shape[0], num_nodes * num_features_per_node))
+        node_mask               = np.zeros((NP_train.shape[0], num_nodes * num_features_per_node))
+
+        # Only the features for selected edges will be non-zero
+        for idx, node_idx in enumerate(selected_node_indices):
+            Vmag_feature    = NP_train[:, node_index_offset + node_idx + 0*NUM_NODES]
+            P_feature  = NP_train[:, node_index_offset + node_idx + 1*NUM_NODES]
+            Q_feature   = NP_train[:, node_index_offset + node_idx + 2*NUM_NODES]
+
+            node_features[:, node_idx * num_features_per_node + 0] = Vmag_feature
+            node_features[:, node_idx * num_features_per_node + 1] = P_feature
+            node_features[:, node_idx * num_features_per_node + 2] = Q_feature
+
+            node_mask[:, node_idx * num_features_per_node + 0] = 1
+            node_mask[:, node_idx * num_features_per_node + 1] = 1
+            node_mask[:, node_idx * num_features_per_node + 2] = 1
+
+        return node_features, node_mask
+
+    def generate_dataset_TI_GNN_PMU_caseA(self):
+
+        num_active_branches   = len(self.selected_edges)
+        num_edges             = NUM_BRANCHES
+        num_nodes             = NUM_NODES
+        num_features_node     = 2
+        num_features_edge     = 2
+
+        #self.selected_edges = [6, 32, 9]
+
+        train_edge_data, train_edge_mask, train_node_data, train_node_mask = self.preprocess_data_PMU_caseA(self.X_train, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
+        val_edge_data, val_edge_mask, val_node_data, val_node_mask   = self.preprocess_data_PMU_caseA(self.X_val, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
+        test_edge_data, test_edge_mask, test_node_data, test_node_mask  = self.preprocess_data_PMU_caseA(self.X_test, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
+
+        #print("X train shape: ", self.X_train.shape)
+        #print("X val shape: ", self.X_val.shape)
+        #print("X test shape: ", self.X_test.shape)
+
+        edge_index = self.define_graph()
+
+        # Prepare data for PyTorch Geometric with masking
+        train_data = []
+        for i in range(self.X_train.shape[0]):
+            tmp_edge_attr = torch.tensor(train_edge_data[i].reshape(-1, num_features_edge), dtype=torch.float)
+            tmp_edge_mask = torch.tensor(train_edge_mask[i].reshape(-1, num_features_edge), dtype=torch.float)
+
+            tmp_node_attr = torch.tensor(train_node_data[i].reshape(-1, num_features_node), dtype=torch.float)
+            tmp_node_mask = torch.tensor(train_node_mask[i].reshape(-1, num_features_node), dtype=torch.float)
+
+
+            label = torch.tensor(self.y_train[i, :], dtype=torch.float)
+            #print(edge_index, edge_attr, mask, label)
+            train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
+
+        self.train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+
+        val_data = []
+        for i in range(self.X_val.shape[0]):
+            tmp_edge_attr = torch.tensor(val_edge_data[i].reshape(-1, num_features_edge), dtype=torch.float)
+            tmp_edge_mask = torch.tensor(val_edge_mask[i].reshape(-1, num_features_edge), dtype=torch.float)
+
+            tmp_node_attr = torch.tensor(val_node_data[i].reshape(-1, num_features_node), dtype=torch.float)
+            tmp_node_mask = torch.tensor(val_node_mask[i].reshape(-1, num_features_node), dtype=torch.float)
+
+            label = torch.tensor(self.y_val[i, :], dtype=torch.float)
+            # print(edge_index, edge_attr, mask, label)
+            val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
+
+        self.val_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+
+        test_data = []
+        for i in range(self.X_test.shape[0]):
+            tmp_edge_attr = torch.tensor(test_edge_data[i].reshape(-1, num_features_edge), dtype=torch.float)
+            tmp_edge_mask = torch.tensor(test_edge_mask[i].reshape(-1, num_features_edge), dtype=torch.float)
+
+            tmp_node_attr = torch.tensor(test_node_data[i].reshape(-1, num_features_node), dtype=torch.float)
+            tmp_node_mask = torch.tensor(test_node_mask[i].reshape(-1, num_features_node), dtype=torch.float)
+
+            label = torch.tensor(self.y_test[i, :], dtype=torch.float)
+            # print(edge_index, edge_attr, mask, label)
+            test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
+
+        self.test_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+
+        return [edge_index, self.train_loader, self.val_loader, self.test_loader]
+
+    def generate_dataset_TI_GNN_PMU_caseB(self):
+
+        num_active_branches   = len(self.selected_edges)
+        num_edges             = NUM_BRANCHES
+        num_nodes             = NUM_NODES
+        num_features          = 4
+
+        #self.selected_edges = [6, 32, 9]
+
+        train_node_data, train_node_mask = self.preprocess_data_PMU_caseB(self.X_train, self.selected_edges, num_nodes, num_features)
+        val_node_data, val_node_mask   = self.preprocess_data_PMU_caseB(self.X_val, self.selected_edges, num_nodes, num_features)
+        test_node_data, test_node_mask  = self.preprocess_data_PMU_caseB(self.X_test, self.selected_edges, num_nodes, num_features)
+
+        print("X train shape: ", self.X_train.shape)
+        print("X val shape: ", self.X_val.shape)
+        print("X test shape: ", self.X_test.shape)
+
+        edge_index = self.define_graph()
+
+        # Prepare data for PyTorch Geometric with masking
+        train_data = []
+        for i in range(self.X_train.shape[0]):
+
+            tmp_node_attr = torch.tensor(train_node_data[i].reshape(-1, num_features), dtype=torch.float)
+            tmp_node_mask = torch.tensor(train_node_mask[i].reshape(-1, num_features), dtype=torch.float)
+
+            label = torch.tensor(self.y_train[i, :], dtype=torch.float)
+            train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+
+        self.train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+
+        val_data = []
+        for i in range(self.X_val.shape[0]):
+
+            tmp_node_attr = torch.tensor(val_node_data[i].reshape(-1, num_features), dtype=torch.float)
+            tmp_node_mask = torch.tensor(val_node_mask[i].reshape(-1, num_features), dtype=torch.float)
+
+            label = torch.tensor(self.y_val[i, :], dtype=torch.float)
+            # print(edge_index, edge_attr, mask, label)
+            val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+
+        self.val_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+
+        test_data = []
+        for i in range(self.X_test.shape[0]):
+
+            tmp_node_attr = torch.tensor(test_node_data[i].reshape(-1, num_features), dtype=torch.float)
+            tmp_node_mask = torch.tensor(test_node_mask[i].reshape(-1, num_features), dtype=torch.float)
+
+            label = torch.tensor(self.y_test[i, :], dtype=torch.float)
+            # print(edge_index, edge_attr, mask, label)
+            test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+
+        self.test_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+
+        return [edge_index, self.train_loader, self.val_loader, self.test_loader]
+
+    def generate_dataset_TI_GNN_conventional(self):
+
+        num_active_branches   = len(self.selected_edges)
+        num_edges             = NUM_BRANCHES
+        num_nodes             = NUM_NODES
+        num_features          = 3
+
+        #self.selected_edges = [6, 32, 9]
+
+        train_node_data, train_node_mask = self.preprocess_data_conventional(self.X_train, self.selected_edges, num_nodes, num_features)
+        val_node_data, val_node_mask   = self.preprocess_data_conventional(self.X_val, self.selected_edges, num_nodes, num_features)
+        test_node_data, test_node_mask  = self.preprocess_data_conventional(self.X_test, self.selected_edges, num_nodes, num_features)
+
+        print("X train shape: ", self.X_train.shape)
+        print("X val shape: ", self.X_val.shape)
+        print("X test shape: ", self.X_test.shape)
+
+        edge_index = self.define_graph()
+
+        # Prepare data for PyTorch Geometric with masking
+        train_data = []
+        for i in range(self.X_train.shape[0]):
+
+            tmp_node_attr = torch.tensor(train_node_data[i].reshape(-1, num_features), dtype=torch.float)
+            tmp_node_mask = torch.tensor(train_node_mask[i].reshape(-1, num_features), dtype=torch.float)
+
+            label = torch.tensor(self.y_train[i, :], dtype=torch.float)
+            train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+
+        self.train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+
+        val_data = []
+        for i in range(self.X_val.shape[0]):
+
+            tmp_node_attr = torch.tensor(val_node_data[i].reshape(-1, num_features), dtype=torch.float)
+            tmp_node_mask = torch.tensor(val_node_mask[i].reshape(-1, num_features), dtype=torch.float)
+
+            label = torch.tensor(self.y_val[i, :], dtype=torch.float)
+            # print(edge_index, edge_attr, mask, label)
+            val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+
+        self.val_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+
+        test_data = []
+        for i in range(self.X_test.shape[0]):
+
+            tmp_node_attr = torch.tensor(test_node_data[i].reshape(-1, num_features), dtype=torch.float)
+            tmp_node_mask = torch.tensor(test_node_mask[i].reshape(-1, num_features), dtype=torch.float)
+
+            label = torch.tensor(self.y_test[i, :], dtype=torch.float)
+            # print(edge_index, edge_attr, mask, label)
+            test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+
+        self.test_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+
+        return [edge_index, self.train_loader, self.val_loader, self.test_loader]
+
+class TrainGNN_TI:
+
+    def __init__(self, meterType, model, used_branches, train_loader, validation_loader, test_loader):
+        self.meterType          = meterType
+        self.model              = model
+        self.used_branches      = used_branches
+        self.device             = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.num_classes        = NUM_TOPOLOGIES
+        self.num_edges          = NUM_BRANCHES
+        if self.meterType == "PMU_caseA":
+            self.model          = GATWithEdgeAttrs(num_features=2, num_classes=NUM_TOPOLOGIES, edge_attr_dim=2, heads=8).to(self.device)
+        elif self.meterType =="PMU_caseB":
+            self.model          = GATNoEdgeAttrs(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
+            #self.model          = SparseGNNNoEdgeAttrsAPPNP(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
+            #self.model          = GINNoEdgeModel(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
+            #self.model          = GCNNoEdge(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
+            #self.model          = GATLinearNN(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
+            #self.model           = GATSAGE(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
+        elif self.meterType == "conventional":
+            self.model          = GATNoEdgeAttrs(num_features=3, num_classes=NUM_TOPOLOGIES, heads=8).to(self.device)
+
+
+        self.optimizer          = optim.Adam(self.model.parameters(), lr=0.001)
+        self.criterion          = nn.CrossEntropyLoss()
+        self.train_loader       = train_loader
+        self.validation_loader  = validation_loader
+        self.test_loader        = test_loader
+
+    def train(self):
+
+        # Early stopping parameters
+        patience = 50  # Number of epochs to wait for improvement
+        min_delta = 0.0005  # Minimum change in validation loss to qualify as an improvement
+        best_val_loss = float('inf')
+        early_stop_counter = 0
+        max_epochs = 500  # Maximum number of epochs to train
+        best_model_weights = None  # To store the best weights
+
+        # Training loop
+        for epoch in range(max_epochs):
+            self.model.train()
+            total_loss = 0
+
+            for batch in self.train_loader:
+                batch = batch.to(self.device)
+                self.optimizer.zero_grad()
+                out = self.model(batch)
+
+                out_flat = out.view(-1, self.num_classes)
+                y_flat   = batch.y.view(-1, self.num_classes)
+
+                loss = self.criterion(out_flat, y_flat)
+                loss.backward()
+                self.optimizer.step()
+                total_loss += loss.item()
+
+            val_loss = 0
+            for batch_val in self.validation_loader:
+                batch_val = batch_val.to(self.device)
+                out_val = self.model(batch_val)
+
+                out_flat = out_val.view(-1, self.num_classes)
+                y_flat   = batch_val.y.view(-1, self.num_classes)
+
+                loss = self.criterion(out_flat, y_flat)
+                val_loss += loss.item()
+
+            # Early stopping and best weights check
+            if val_loss < best_val_loss - min_delta:
+                best_val_loss = val_loss
+                early_stop_counter = 0  # Reset counter if validation loss improves
+                best_model_weights = self.model.state_dict()  # Save the best weights
+            else:
+                early_stop_counter += 1
+
+            if early_stop_counter >= patience:
+                print(f"Early stopping at epoch {epoch + 1}")
+                break  # Stop training if no improvement for `patience` epochs
+
+            print(f'Epoch {epoch + 1}, - Training Loss: {total_loss / len(self.train_loader)}', f""" - Validation Loss: {val_loss/len(self.validation_loader)}""")
+
+        return self.model.load_state_dict(best_model_weights)
+
+    def evaluate(self):
+
+        self.train()
+        total_loss = 0
+
+        for batch_test in self.test_loader:
+            batch_test = batch_test.to(self.device)
+            out_test = self.model(batch_test)
+
+            out_flat = out_test.view(-1, self.num_classes)
+            y_flat = batch_test.y.view(-1, self.num_classes)
+
+            loss = self.criterion(out_flat, y_flat)
+            total_loss += loss.item()
+
+        print(f""" - Evaluation (Test Set) Loss: {total_loss / len(self.test_loader)}""")
+
+        correct_predictions = 0
+        total_samples = 0
+
+        for batch_test in self.test_loader:
+            batch_test = batch_test.to(self.device)
+
+            # Forward pass
+            out_test = self.model(batch_test)
+
+            # Flatten outputs and true labels
+            out_flat = out_test.view(-1, self.num_classes)
+            y_flat = batch_test.y.view(-1, self.num_classes)
+
+            # Get predicted class by selecting the index of the maximum logit for each sample
+            preds = out_flat.argmax(dim=1)
+            true_labels = y_flat.argmax(dim=1)
+
+            # Calculate the number of correct predictions
+            correct_predictions += (preds == true_labels).sum().item()
+            total_samples += y_flat.size(0)
+
+        # Calculate accuracy as the proportion of correct predictions
+        accuracy = correct_predictions / total_samples
+        print(f"Test Accuracy: {accuracy:.4f}")
+
+        return accuracy
+
+#TODO Adjust training for TI to PyTorch library
+class TrainNN_TI:
+    def __init__(self, model, X_train, y_train, X_val, y_val, X_test, y_test, num_classes):
+        self.model         = model
+        self.device        = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.num_classes   = num_classes
+
+        self.X_train = torch.tensor(X_train, dtype=torch.float32).to(self.device)
+        self.y_train = torch.tensor(y_train, dtype=torch.float32).to(self.device)  # Ensure it's long for classification
+        self.X_val = torch.tensor(X_val, dtype=torch.float32).to(self.device)
+        self.y_val = torch.tensor(y_val, dtype=torch.float32).to(self.device)
+        self.X_test = torch.tensor(X_test, dtype=torch.float32).to(self.device)
+        self.y_test = torch.tensor(y_test, dtype=torch.float32).to(self.device)
+
+        self.optimizer     = optim.Adam(self.model.parameters(), lr=0.001)
+        self.criterion     = nn.CrossEntropyLoss()
+
+    def train(self):
+        max_epochs = 300
+        best_val_loss = float('inf')
+        early_stop_counter = 0
+        patience = 10
+        min_delta = 0.0005
+        best_model_weights = None
+
+        for epoch in range(max_epochs):
+            self.model.train()
+            total_loss = 0
+            for i in range(self.X_train.shape[0]):
+                # Ensure the data is in the correct shape and device
+                X_train_sample = self.X_train[i].unsqueeze(0)  # Shape (1, num_features)
+                y_train_sample = self.y_train[i].unsqueeze(0)  # Shape (1,)
+
+                self.optimizer.zero_grad()
+
+                # Forward pass
+                out = self.model(X_train_sample)
+
+                # Compute the loss (CrossEntropyLoss expects class indices)
+                loss = self.criterion(out, y_train_sample)
+                loss.backward()
+                self.optimizer.step()
+
+                total_loss += loss.item()
+
+            # Validation
+            self.model.eval()
+            val_loss = 0
+            with torch.no_grad():
+                for i in range(self.X_val.shape[0]):
+                    X_val_sample = self.X_val[i].unsqueeze(0)
+                    y_val_sample = self.y_val[i].unsqueeze(0)
+
+                    out_val = self.model(X_val_sample)
+                    loss = self.criterion(out_val, y_val_sample)
+                    val_loss += loss.item()
+
+            # Early stopping check
+            if val_loss < best_val_loss - min_delta:
+                best_val_loss = val_loss
+                early_stop_counter = 0
+                best_model_weights = self.model.state_dict()
+            else:
+                early_stop_counter += 1
+
+            if early_stop_counter >= patience:
+                print(f"Early stopping at epoch {epoch + 1}")
+                break
+
+            print(
+                f'Epoch {epoch + 1}, Training Loss: {total_loss / self.X_train.shape[0]}, Validation Loss: {val_loss / self.X_val.shape[0]}')
+
+        if best_model_weights:
+            self.model.load_state_dict(best_model_weights)
+
+    def evaluate(self):
+
+        self.train()
+
+        self.model.eval()
+        total_loss = 0
+        correct_predictions = 0
+        total_samples = 0
+
+        with torch.no_grad():
+            for i in range(self.X_test.shape[0]):
+                X_test_sample = self.X_test[i].unsqueeze(0).to(self.device)
+                y_test_sample = self.y_test[i].unsqueeze(0).to(self.device)
+
+                # Convert to class indices if needed
+                if y_test_sample.ndimension() > 1:
+                    y_test_sample = torch.argmax(y_test_sample, dim=1).long()
+
+                out_test = self.model(X_test_sample)
+                loss = self.criterion(out_test, y_test_sample)
+                total_loss += loss.item()
+
+                # Get the predicted class (class with max logit)
+                preds = out_test.argmax(dim=1)
+                correct_predictions += (preds == y_test_sample).sum().item()
+                total_samples += y_test_sample.size(0)
+
+        accuracy = correct_predictions / total_samples
+        print(f"Test Loss: {total_loss / self.X_test.shape[0]}, Test Accuracy: {accuracy:.4f}")
+        return accuracy
+
+
+
+if __name__ == "__main__":
+
+    #meterType = "PMU_caseA"
+    #meterType = "PMU_caseB"
+    meterType = "conventional"
+
+    model = "NN"
+    PP    = "RF"
+    subPP = "rfe"
+    threshold = 0.95
+
+    PreProc = Preprocess()
+    X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = PreProc.preprocess_meter_type(meterType)
+    TI_PTP = TIPredictorTrainProcess(meterType, threshold, model, X_train, y_train_labels, X_val, y_val_labels, X_test, y_test_labels, PP, subPP)
+    TI_PTP.execute()
+
+
+
+    #TI_PTP.execute_NN()
+    #gtip = GraphTIPreprocess_IV(meterType=meterType,
+    #                            selected_edges=[32, 6, 9],
+    #                            X_train=X_train,
+    #                            y_train=y_train_labels,
+    #                            X_val=X_val,
+    #                            y_val=y_val_labels,
+    #                            X_test=X_test,
+    #                            y_test=y_test_labels)
+
+    #train_node_data, train_node_mask = gtip.preprocess_data_PMU_caseB(X_train,[32, 6, 9],NUM_NODES,num_features_per_node=4)
+    #print(train_node_data.shape, train_node_mask.shape)
+    #edge_index, train_loader, val_loader, test_loader = gtip.generate_dataset_TI_GNN_PMU_caseB()
+    #print(edge_index)
+    #print(train_loader)
+    #print(val_loader)
+    #print(test_loader)
