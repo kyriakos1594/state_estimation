@@ -1,0 +1,2354 @@
+1 In State Estimation in Smart Grids Using Temporal Graph Convolution Networks,
+    Graph NNs are utilized to train a time graph connecting nodes of different states
+    if the network nodes through time. The edges connect the time nodes
+
+2. Physics Informed Neural Nets incorporate physical equations in the NN model.
+    For example you can incorporate grid physical lays (like power flow equations)
+    in the loss function as does Physics-Informed Graphical Learning and Bayesian
+    Averaging for Robust Distribution State Estimation
+
+3. There are two challenges for the WLS-based DSSE method:
+    the iterative process requires accurate line parameters and
+    topology of the system that are difficult to obtain in practice.
+    In addition, the distribution network may be subject to topology
+    error. This causes huge challenges for tackling (2); 2) solving the
+    nonconvex optimization problem is computationally expensive
+    and requires many iterations. This is further aggravated by the
+    increasing integration of DERs and electric vehicles and the
+    growing distribution system size.
+
+4. This article (2) proposes a robust topology change-aware DSSE
+    method based on the physics-informed GNN and BPWA. His-
+    torical data are first utilized to learn the nonlinear relationship
+    between the measurements and state variables under different
+    topologies. During this stage, the structural knowledge of his-
+    torical topologies is embedded into the GNN. Then, the BPWA
+    method is applied to address the estimation problem utilizing
+    sparse training samples recorded under the new topology. Com-
+    parative tests with several benchmarking methods demonstrate
+    that: 1) the proposed method is robust to the anomalous measure-
+    ments and achieves much better performance than the traditional
+    learning-based method when some real-time measurements are
+    lost; 2) the proposed method can achieve fast adaption to topol-
+    ogy changes utilizing a limited amount of samples recorded
+    under the new topology; 3) when dealing with a new topology,
+    the BPWA method can preserve the robustness achieved by
+    the physics-informed graph attention network in presence of
+    outliers; 4) the BPWA allows the proposed method to achieve
+    effective quantification of the state estimation uncertainties. In
+    our future works, more intelligent methods that can detect and
+    better deal with PV connection scenarios will be developed.
+
+5. In State Estimation of Energy Internet Using SCADA and PMU Data Based on Graph Convolutional Networks
+    1) GCN is first introduced to state estimation of EI in this
+        paper. By considering EI topology, GCN achieves the
+        fusion of SCADA and PMU data with the adjacency
+        matrix and graph convolution operations.
+    2) Multiple output batches are constructed in GCN. Thus,
+        transient states of all EI buses can be obtained simulta-
+        neously.
+    3) The case study on an IEEE 9 bus system shows that the
+        proposed method achieves fast transient state estimation
+        and more accuracy transient voltages during faults than
+        the state-of-the-art methods.
+    To construct the GCN model for the specific EI system,
+    firstly, the graph of EI system is built by taking EI buses as
+    graph nodes and taking power lines in EI as edges of graph.
+    Then, an adjacency matrix with the size of 6 × 6 is built
+    to describe the EI topology. The GCN model is structured
+    with three graph convolutional layers, and two fully connected
+    layers are followed to extract the features of each node. The
+    detail parameters of the GCN model are list in Table I. The
+    features of the last graph convolutional layer are masked to
+    output of the five buses without PMU measurement. Voltage,
+    frequency and active power are the three channels to be
+    estimated.
+
+
+6. Topology Identification Using Graph Theory Informed State Estimation-Based Model
+    Selection for Power Distribution Systems
+     ELECTRIC power distribution systems can be subjected to
+        several reconfigurations a day, for multiple purposes, such
+        as loss minimization, load balancing, restoration after faults, and
+        to allow more penetration of distributed energy resources
+
+        A two-stage approach for topology identification of power distri-
+        bution systems is proposed in this article. A graph theory analysis
+        is implemented in the first stage to reduce the sample space
+        of the given combinatorial problem. The system connectivity
+        matrix and system measurements identify a set of candidate
+        topologies. The second stage solves a WLS SE of the candidate
+        topologies. The model with the least objective value overall is
+        selected as the identified topology for the given set of measure-
+        ments. Focusing on the topology instead of precise state esti-
+        mates allows simplifications to be introduced into the WLS SE
+        formulation.
+        Unlike mixed-integer-based formulations, we adopt a graph
+        theoretic approach to shrink the sample space of possible switch
+        combinations, thus avoiding an exhaustive search among all pos-
+        sible topologies. For solving the SE problem, we leverage scarce
+        measurements from the lines and buses where the distribution
+        network is typically instrumented. Furthermore, the proposed
+        approach is not restricted to the degree of topology change as
+        determined by the number of switch statuses that have changed
+        from the last known topology.
+
+
+7. In State Estimation in Electric Power Systems Leveraging Graph Neural Networks
+    The state estimation (SE), which estimates the set of power
+    system state variables based on the available set of mea-
+    surements, is an essential tool used for the power system’s
+    monitoring and operation [1]. A fast state estimator is required
+    to maximise the use of phasor measurement unit (PMU)
+    high sampling rates. In this paper, we propose training a
+    graph neural network (GNN) on a dataset of SE inputs and
+    outputs, to provide fast and accurate predictions during the
+    evaluation phase. One of the main benefits of using GNNs
+    in power systems is the fact that the prediction model is
+    not limited to the training and test examples of fixed power
+    system topologies, which is not the case with common deep
+    learning methods. GNNs exploit the graph structure of the
+    input data [2] [3], resulting in a lower number of learning
+    parameters, reduced memory requirements, and incorporate
+    the connectivity information into the learning process as well.
+    Furthermore, the inference phase of the trained GNN model
+    can be distributed, since the prediction of the state variable of
+    a node requires only K-hop neighbourhood measurements.    
+
+    In this paper, the proposed model operates on factor-graph-
+    like structures, which enables trivial inclusion and exclusion
+    of any type of measurements on the power system’s buses and
+    branches, by adding or removing the corresponding nodes in
+    the graph. The trained model is tested thoroughly in the various
+    missing data scenarios which include communication errors in
+    the delivery of isolated phasor data or failures of the complete
+    PMUs, in which the power system is unobservable, and the
+    reports on the prediction qualities are presented.
+
+    In this paper, we present a study on possibilities to use
+    GNNs as fast linear SE with PMUs solvers. We propose
+    a model with graph attention network based architecture,
+    which operates on heterogeneous graphs, containing variable
+    nodes that output the predictions based on the WLS SE
+    solutions, and factor nodes, which take PMU voltage and
+    current measurements and variances as inputs and propagate
+    them in the local neighbourhood. Evaluating the trained model
+    on the unseen data samples confirms that the proposed GNN
+    approach can be used as a very accurate approximator of the
+    WLS SE solutions. By testing the model on scenarios in which
+    individual phasor measurements, or the whole PMUs fail to
+    deliver measurement data to the proposed SE solver, we have
+    found that adding variable-to-variable node connections in the
+    training and test graphs significantly improves the predictions
+    in the cases when the system of equations defining the SE
+    problem becomes underdetermined.
+
+    Augmented graph with PMU measurement nodes and real measurements
+        
+8. Robust and Fast Data-Driven Power System State Estimator Using Graph Neural Networks
+    Motivation: The state estimation (SE), which estimates the
+    set of power system state variables based on the available set of
+    measurements, is an essential tool used for the power system’s
+    monitoring and operation [1]. With the increasing deployment
+    of phasor measurement units (PMUs) in power systems, a
+    fast state estimator is required to maximise the use of their
+    high sampling rates. Solving PMU-based SE, represented as a
+    linear weighted least-squares (WLS) problem, involves matrix
+    factorisations. Neglecting the PMU measurement covariances
+    represented in rectangular coordinates is a common practice
+    [2] that results in near O(n2 ) computational complexity for
+    sparse matrices, where n denotes the number of power sys-
+    tem’s buses. Recent advancements in graph neural networks
+    (GNNs) [3]–[5] open up novel possibilities for developing
+    power system algorithms with linear computational complexity
+    and potential distributed implementation. One of the primary
+    advantages of using GNNs in power systems instead of tradi-
+    tional deep learning methods is that the prediction model is not
+    O. Kundacina is with The Institute for Artificial Intelligence Research
+    and Development of Serbia (e-mail: ognjen.kundacina@ivi.ac.rs), M. Cosovic
+    is with Faculty of Electrical Engineering, University of Sarajevo, Bosnia
+    and Herzegovina (e-mail: mcosovic@etf.unsa.ba), D. Vukobratovic is with
+    Faculty of Technical Sciences, University of Novi Sad, Serbia, (email:
+    dejanv@uns.ac.rs).
+    restricted to training and test examples of fixed power system
+    topologies. GNNs take advantage of the graph structure of
+    the input data, resulting in fewer learning parameters, lower
+    memory requirements, and the incorporation of connectivity
+    information into the learning process. Furthermore, the infer-
+    ence phase of the trained GNN model can be distributed and
+    performed locally, since the prediction of the state variable
+    of a node requires only K-hop neighbourhood measurements.
+    Additional motivation for using GNNs as well as the other
+    deep learning methods for data-driven SE comes from the
+    power system parameters’ uncertainty [6]. However, note
+    that GNNs provide an option of incorporating power system
+    parameters via edge input features [7].
+
+    Contributions: This paper proposes training a GNN for
+    a regression problem using the inputs and the solutions of
+    linear SE with PMUs to provide fast and accurate predictions
+    during the evaluation phase. The following are the paper’s
+    main contributions:
+    Inspired by [17], we present the first attempt to utilise
+    GNNs over the factor graphs [18] instead of the bus-branch
+    power system model for the SE problem. This enables
+    trivial integration and exclusion of any type and number of
+    measurements on the power system’s buses and branches, by
+    adding or removing the corresponding nodes in the factor
+    graph. Moreover, the factor graph is augmented by adding
+    direct connections between variable nodes to improve in-
+    formation propagation during neighborhood aggregation,
+    particularly in unobservable scenarios when the loss of the
+    measurement data occurs.
+    • We present a graph attention network (GAT) [5] based
+    model to solve the SE problem, with the architecture spe-
+    cialised for the proposed heterogeneous augmented factor
+    graph. GNN layers that aggregate into factor and variable
+    nodes each have their own set of trainable parameters. Fur-
+    thermore, distinct sets of parameters are used for variable-
+    to-variable and factor-to-variable message functions in GNN
+    layers that aggregate into variable nodes.
+    • Due to the sparsity of the power system graph, and the fact
+    that the node degree does not increase with the total number
+    of nodes, the proposed approach has O(n) computational
+    complexity, making it suitable for application in large-scale
+    power systems.
+    • We investigate the proposed model’s local-processing nature
+    and demonstrate that significant result degradation caused
+    by PMU or communication failures affects only the local
+    neighborhood of the node where the failure occurred.
+    • We examine the proposed model’s robustness to outliers
+    and improve it solely by augmenting the training set with
+    examples that contain outliers.
+    • The inference of the trained GNN is easy to distribute
+    and parallelize. Even in the case of centralised SE im-
+    plementation, the processing can be done using distributed
+    computation resources, such as graphical-processing units.
+    An important decision to be made while creating the GNN
+    model is to select the GNN’s aggregation function. Aggrega-
+    tion functions that are commonly used include sum, mean, min
+    and max pooling, and graph convolution [22]. One common
+    drawback of these approaches is that incoming messages from
+    all of the node’s neighbours are weighted equally, or using
+    weights calculated using the structural properties of the graph
+    (e.g., node degrees) prior to training. Graph attention networks
+    (GATs) [5] propose using the attention-based aggregation, in
+    which the weights that correspond to the importance of each
+    neighbour’s message are learned from the data.
+    Inspired by the recent work [23] in which the power system
+    SE is modelled as a probabilistic graphical model, the initial
+    version of the graph over which GNN operates has a power
+    system’s factor graph topology, which is a bipartite graph that
+    consists of the factor and variable nodes and the edges between
+    them.
+    We evaluate the robustness of the proposed model to outliers
+    among input data using the same experiment setup described
+    in Sec. IV-A and test samples generated with measurement
+    variance 10−5 . In every test set sample, we randomly replace
+    an existing measurement with a value generated with a vari-
+    ance 1600 times higher than the original one and transformed
+    it into rectangular coordinates. For labels, we use WLS SE
+    solutions with no outliers among the inputs. Table IV displays
+    MSEs between the labels and the outputs of three different
+    approaches, along with the results of the WLS SE and the
+    approximative WLS SE algorithm for the same test set.
+    In this research, we investigate how GNNs can be used
+    as fast solvers of linear SE with PMUs. The proposed graph
+    attention network based model, specialised for newly intro-
+    duced heterogeneous augmented factor graphs, recursively
+    propagates the inputs from the factor nodes to generate the
+    predictions in the variable nodes based on the WLS SE
+    solutions. Evaluating the trained model on the unseen data
+    samples confirms that the proposed GNN approach can be
+    used as a very accurate approximator of the linear WLS
+    SE solutions, with the added benefit of linear computational
+    complexity at the inference time. The model is robust in un-
+    observable scenarios that are not solvable using standard WLSTABLE III
+    T EST SET RESULTS FOR VARIOUS POWER SYSTEMS AND TRAINING SET SIZES .
+    SE methods, such as when individual phasor measurements or
+    entire PMUs fail to deliver measurement data to the proposed
+    SE solver. Furthermore, when measurement variances are high
+    or outliers are present in the input data, the GNN model
+    outperforms the approximate WLS SE. The proposed approach
+    demonstrates scalability as well as sample efficiency when
+    tested on power systems of various sizes, as it predicts the
+    state variables well even when trained on a small number of
+    randomly generated samples.
+    While we focused on solving linear SE with PMUs, the
+    proposed learning framework, graph augmentation techniques,
+    and conclusions could be applied to a variety of SE formula-
+    tions. One of them could be a GNN-based SE for highly unob-
+    servable distribution systems, motivated by the GNN’s ability
+    to provide relevant solutions in underdetermined scenarios.
+
+
+
+9. Adaptive Graph Convolutional Network-Based Distribution System State Estimation
+    Abstract— The management and control of the power
+    systems rely on reliable and timely distribution system state
+    estimation, which is present to be challenging due to
+    significant voltage variations caused by high renewables.
+    To tackle this problem, a graph convolutional network
+    (AGCN) is proposed for the distribution system state
+    estimation (DSSE) by considering highly volatile renewable
+    generation. In particular, the AGCN can enable prompt
+    state estimation for viable system states. In the proposed
+    model, the graph convolutional layer can capture the
+    correlations of the nodal power injections so that enhanced
+    estimation accuracy can be achieved. Moreover, the
+    node-embedding technique is employed in the graph
+    convolutional layer to represent the nonlinear correlation
+    nature, through which the proposed model is allowed to
+    cover general scenarios in the application. The simulation
+    results have been provided to verify the accuracy and
+    effectiveness of the proposed model through IEEE 33-node
+    and the 118-node distribution systems.
+    To solve these problems, the AGCN model is proposed to
+    better handle DSSE with correlations of renewables. Different
+    from previous works, a novel graph convolutional operation is
+    proposed to aggregate the related nodal information so that
+    enhanced DSSE accuracy can be achieved.
+    Spectral-based methods update the node’s representation by
+multiplying its Fourier transform with its neighbor’s Fourier
+transform. Spatial-based methods update the node’s
+representation by convolutional itself directly with its
+neighbor’s representation, which obtains more attention due to
+their high effectiveness. The proposed model is spatially based.
+A novel AGCN model is proposed to deal with the DSSE
+problem with high-penetrated renewable power energy
+exhibiting complex correlations. Compared with the traditional
+methods, the results show the least improvement of 25% in the
+evaluation indexes of estimated states without and with wind
+and solar power correlations. This indicates that the AGCN can
+capture the correlations among measurements to achieve
+enhanced effectiveness. Besides, the proposed model also has a
+much shorter computation time than traditional DDSE
+methods. The results show the tremendous potential foreground
+
+10. Graph neural networks on factor graphs for robust, fast, and scalable
+linear state estimation with PMUs
+
+Motivation: The state estimation (SE), which estimates the
+set of power system state variables based on the available set of
+measurements, is an essential tool used for the power system’s
+monitoring and operation [1]. The increasing deployment of pha-
+sor measurement units (PMUs) in transmission power systems
+calls for a fast state estimator to take full advantage of their
+high sample rates. Solving PMU-only SE, which is represented as
+a linear weighted least-squares (WLS) problem, involves matrix
+factorisations, which can be difficult in cases where the matrix is
+ill-conditioned. It is common practice to neglect the phasor mea-
+surement covariances represented in rectangular coordinates [2].
+This can make the SE problem much easier to solve, but it also
+results in a computational complexity of nearly O(n2 ) for sparse
+matrices, where n is the number of power system buses. It is
+challenging to use this approach for real-time monitoring of
+large power systems. Recent advancements in graph neural net-
+works (GNNs) [3–5] open up novel possibilities for developing
+power system algorithms with linear computational complexity
+and potential distributed implementation. One of the key benefits
+of using GNNs in power systems instead of conventional deep
+learning methods is that the prediction model is not restricted
+to training and test examples of fixed power system topologies.
+GNNs take advantage of the graph structure of the input data, and
+hence are permutation invariant, have fewer trainable parame-
+ters, and require less storage space. Furthermore, the inference
+phase of many GNN models can be distributed and performed
+locally, since the prediction of the state variable of a node only
+requires measurements from the local neighbourhood, which ex-
+tends to a specific distance from the node being predicted. GNNs,
+as a model-free approach, can be useful when power system
+parameters are uncertain or unreliable [6]. However, if necessary,
+GNNs can incorporate power system parameters through the use
+of edge input features [7].
+Inspired by [27], we present the first use of GNNs on factor
+graphs [28] for the SE problem, instead of using the bus-
+branch power system model. This enables trivial integration
+and exclusion of any type and number of measurements
+on the power system buses and branches, by adding or
+removing the corresponding nodes in the factor graph. Fur-
+thermore, the factor graph is augmented by adding direct
+connections between variable nodes that are 2nd-order
+neighbours to improve information propagation during
+neighbourhood aggregation, particularly in unobservable
+scenarios when the loss of the measurement data occurs.
+• We present a graph attention network (GAT) [5] model,
+with the architecture customised for the proposed hetero-
+geneous augmented factor graph, to solve the SE problem.
+GNN layers that aggregate into factor and variable nodes
+have separate sets of trainable parameters. Furthermore,
+separate sets of parameters are used for variable-to-variable
+and factor-to-variable message functions in GNN layers that
+aggregate into variable nodes.
+• Given the sparsity of the power system’s graph, and the fact
+that node degree does not increase with the total number
+of nodes, the proposed approach has O(n) computational
+complexity, making it suitable for large-scale power sys-
+tems. The inference of the trained GNN is easy to distribute
+and parallelise. Even in the case of centralised SE imple-
+mentation, the processing can be done using distributed
+computation resources, such as graphical-processing units.
+We demonstrate that the number of trainable parameters in the proposed GNN-based SE model is constant, while it
+grows quadratically with the number of measurements in
+conventional deep learning approaches.
+• We study the local-processing nature of the proposed model
+and show that significant degradation of results caused by
+PMU or communication failures affects only the local neigh-
+bourhood of the node where the failure occurred.
+Inspired by recent work on using probabilistic graphical mod-
+els for power system SE [33], we first create a GNN over a graph
+with a factor graph topology. This bipartite graph consists of fac-
+tor and variable nodes, and edges between them. Variable nodes
+are used to create a s-dimensional node embedding for all real
+and imaginary parts of the bus voltages, R(Vi ) and I(Vi ), which
+are used to generate state variable predictions. Factor nodes, two
+per measurement phasor, serve as inputs for the measurement
+values, variances, and covariances, also given in rectangular coor-
+dinates. These values are then transformed and sent to variable
+nodes via GNN message passing. Unlike the approximative WLS
+SE, the GNN includes measurement covariances in the inputs
+without increasing the computational complexity. To achieve bet-
+ter representation of node’s neighbourhood structure, we perform
+variable node feature augmentation using binary index encod-
+ing. Since variable nodes have no additional input features, this
+encoding allows the GNN to better capture the relationships be-
+tween nodes. Compared to one-hot encoding used in [29], binary
+index encoding significantly reduces the number of input neurons.
+Unlike approaches that apply GNNs over the bus-branch
+power system model, such as in [24,26], the using GNNs over
+factor-graph-like topology allows for the incorporation of various
+types and quantities of measurements on both power system
+buses and branches. The ability to simulate the addition or re-
+moval of various measurements can be easily achieved by adding
+or removing factor nodes from any location in the graph. In
+contrast, using a GNN over the bus-branch power system model
+would require allocating a single input vector to each bus that
+includes all potential measurement data for that bus and its
+neighbouring branches. This can cause problems, such as having
+to fill elements in the input vector with zeros when not all
+possible measurements are available, and making the output
+sensitive to the order of measurements in the input vector. This
+can make it difficult to accurately model the system and generate
+reliable results.
+
+
+10. Distribution Network Topology Identification with
+Graph Transformer Neural Network
+
+Abstract— The safety and stable operation of distribution
+networks is of great significance to ensure reliable power supply.
+Obtaining the dynamic topology of the distribution network
+quickly and accurately is important to carry out system state
+assessment and ensure system operation quality. However, it is
+difficult to directly collect the real-time status of all switches and
+lines in a distribution system, due to the limitation of the
+deployment capability and data noise or mistake of the
+measurement device. In this paper, a topology identification
+model based on graph transformer neural network is proposed
+to calculate and infer the current topological distribution based
+on incomplete measurement information, aiming to overcome
+the insufficiency and inaccuracy of traditional methods. First,
+the data of distribution network is converted into a graph model
+and effective features of system operation are selected. Then, the
+graph-transformer-network-based topology identification
+model of power distribution system is jointly trained by node
+features, node labels and node connections, which can improve
+computational efficiency while increasing the amount of input
+information. Finally, the effectiveness and generalization of the
+proposed method are verified on IEEE 33 case and PG&E 69
+case.
+
+This resulting in a changing structure of the network and a
+more diverse and complex mode of operation, and network
+security stability control and economic operation analysis are
+challenged[4]. Compared with the transmission network, the
+distribution network has limited measurement equipment and
+lacks real-time telemetry and remote signaling[1]; at the same
+time, if the topology changes during data collection, the
+availability of data cannot be guaranteed, and the monitoring
+information of real-time topology and line parameters is often
+lost or unreliable. Therefore, in order to ensure the power
+quality, it is necessary to carry out real-time topology
+identification and intelligent dispatching of the distribution
+network to realize the safe operation of the distribution
+network.
+This resulting in a changing structure of the network and a
+more diverse and complex mode of operation, and network
+security stability control and economic operation analysis are
+challenged[4]. Compared with the transmission network, the
+distribution network has limited measurement equipment and
+lacks real-time telemetry and remote signaling[1]; at the same
+time, if the topology changes during data collection, the
+availability of data cannot be guaranteed, and the monitoring
+information of real-time topology and line parameters is often
+lost or unreliable. Therefore, in order to ensure the power
+quality, it is necessary to carry out real-time topology
+identification and intelligent dispatching of the distribution
+network to realize the safe operation of the distribution
+network.This resulting in a changing structure of the network and a
+more diverse and complex mode of operation, and network
+security stability control and economic operation analysis are
+challenged[4]. Compared with the transmission network, the
+distribution network has limited measurement equipment and
+lacks real-time telemetry and remote signaling[1]; at the same
+time, if the topology changes during data collection, the
+availability of data cannot be guaranteed, and the monitoring
+information of real-time topology and line parameters is often
+lost or unreliable. Therefore, in order to ensure the power
+quality, it is necessary to carry out real-time topology
+identification and intelligent dispatching of the distribution
+network to realize the safe operation of the distribution
+network.
+
+
+Afterwards, select node features which are more
+significant to the topology identification task, the feature
+importance of lightGBM calculation finds out that the
+contribution of voltage amplitude is much higher than that of
+power[22], indicating that node voltage amplitude is more
+effective for topology identification task. Therefore, this paper
+selects processed voltage feature as the input node feature.
+Finally, the selected feature data and node connection
+relationships are linked to the node status labels under the
+corresponding topology structure to construct a graph data set.
+
+In order to improve the accuracy and generalization ability
+of distribution network topology identification, this paper
+proposes a topology identification method with a graph deep
+learning approach based on self-attention mechanism. This
+method makes use of the natural graph structure properties of
+the electric connection structure of system as prior knowledge,
+and incorporates the features of the line and connection
+relationship with surrounding lines and bus into the
+calculation process. The effectiveness of the method is
+verified by the IEEE 33 node and PG&E 69 node distribution
+networks. The result shows that the accuarcy and
+generalization ability of the proposed methed for unseen
+topologies have been noticeably improved compared to
+traditional meachine learning models.
+This paper conducts a preliminary study on the application
+of graph deep learning in distribution network topology
+identification. The follow-up research work is to build and
+optimize the model when missing some node information and
+to further improve the application feasibility of the topology
+recognition mode.
+
+
+11. Spatiotemporal Graph Convolutional Neural Network Based Forecasting-Aided State Estimation Using Synchrophasors
+
+Abstract—Power system state estimation is a primary and major
+method for monitoring power grids in real time. Massive
+synchrophasor data contains temporal correlations and spatial
+characteristics based on the physical constraints of the power
+system. The spectral-domain convolution method based on the
+graph Fourier transform is used to construct a multilayer graph
+convolution neural network model to predict the short-term states
+of a power system, including the latest state when the power system
+is in the quasi-steady state. Combining the advantages of linear
+state estimation, a forecasting-aided state estimation method that
+can take advantage of predicted values and phase measurement
+units is designed to obtain the real-time state. Furthermore,
+predicted innovations analysis method are proposed to identify
+system mutations and bad data. Enough simulation tests validate
+that the proposed method can accurately estimate the real-time
+state of a power system.
+S
+TATE estimation is one of the core functions of the
+energy management systems (EMSs) of power grid
+dispatching and control centers. It is also the data source
+for other network analysis applications and online security and
+stability analysis applications. With the extensive integration of
+clean energies and the widespread application of high-power
+electronic equipment, the randomness and volatility of modern
+power systems are greatly enhanced, and the operation modes
+and dynamic characteristics of power grids are becoming
+increasingly complex and changeable. The traditional state
+estimation system based on a supervisory control and data
+acquisition (SCADA) scheme has difficulty meeting the
+requirements of fast and accurate state acquisition in modern
+power grids in terms of estimation accuracy, real-time
+performance and computational stability.
+The development of phase measurement units (PMU) and
+wide-area measurement systems (WAMS) provide a new way
+to obtain the real-time state of a power system [1]-[3]. PMU
+data have the following advantages: (1) the measurement
+process is triggered by synchronous time, so the measurement
+section has high synchronization; (2) the frequency of data
+updating can reach twice that of the power system, enabling the
+tracking of the dynamic changes of the system; and (3) the
+voltage phasor and current phasor can be measured directly.
+Most DSE methods are designed and executed based on the
+idea of the Kalman filter. Such a filter typically consists of two
+steps, namely, a prediction step and a filtering/update step.
+Notably, the accuracy of state prediction directly affects the
+accuracy of DSE. DSE methods, which consider only the quasi-
+steady state of a power system, are also called forecasting-aided
+state estimation (FASE) approaches [4]. In the early stages of
+DSE methods, the techniques for describing the time evolution
+model of system states are usually oversimplified [5], so the
+predictive powers of these models are typically low and
+insufficient for supporting high-precision DSE. The Kalman
+filter method is time-consuming to calculate, so the distributed
+dynamic estimation methods are also proposed [6]. Three
+numerically stable square-root sigma-point Kalman filter (SR-
+SPKF) algorithms are proposed to estimate the dynamic state
+[7]. Exponential smoothing methods and other Kalman filtering
+techniques have been used to estimate the parameters of
+dynamic models online, making these models self-adaptive and
+greatly improving their prediction abilities[8], [9]. Robust
+Unknown input observer is also used for DSE, allowing it to
+independently estimate the true state without taking into
+account unknown inputs or disturbances that affect frequency
+stability in real time [10].
+GCN is trained using measurements in the power system
+and output the fast and accurate predictions to obtain a linear
+SE with PMUs solver [38]. [39] proposed novel physics-aware
+GCN and GRN frameworks to capture both temporal and
+spatial features of the voltage phasors data. A novel Unrolled
+Spatiotemporal Graph Convolutional Network (USGCN)
+model is proposed to timely estimate and forecast distribution
+system states with high-penetrated renewable energy [40].
+The primary innovations and
+contributions of this paper are summarized as follows:
+(1) This paper presents a power system state prediction
+method based on GCN, which effectively leverages both the
+temporal correlations inherent in dynamic systems and spatial
+correlations based on the physical constraints of extensive state
+data. This approach accurately predicts the current state of the
+power system, particularly when it is in a quasi-stable state.
+(2) By harnessing the strengths of linear state estimation, we
+have designed a FASE method that intelligently integrates
+predictive values and PMU measurements to estimate real-time
+power grid states.
+(3) We propose a novel technique for identifying system
+mutations and bad measurement data through innovation
+analysis. This method effectively eliminates bad measurements
+and mitigates the risk of erroneous state estimation results
+caused by the persistence of past predictions during power
+system state transitions.
+(4) Comprehensive simulation tests were conducted using
+both IEEE test cases and real-world power grid scenarios,
+utilizing genuine power grid data. These tests included
+comparisons with state-of-the-art research in the field. The test
+results unequivocally demonstrate the accuracy, robustness,
+and applicability of the proposed FASE method.
+In a power system, many components, such as generators,
+exhibit dynamic behavior. These components respond to inputs
+and past states, establishing a strong temporal relationship
+between the current and previous states of the power system.
+Consequently, power system states exhibit pronounced
+temporal correlations. In the absence of external disturbances,
+it becomes possible to make preliminary predictions about the
+power system's state. Thus, the typical FASE method can be
+developed based on the framework of Kalman filtering,
+involving two steps: prediction and filtering, as illustrated in
+Fig. 1. Initially, given the estimated state at time step k-1 x̂k−1
+or earlier states, the predicted state x̅ k is calculated using
+appropriate state prediction methods. In the subsequent filtering
+step, these predictions, along with measurements at time step k,
+are employed to estimate the state x̂k .
+
+
+
+
+12. State Estimation in Smart Grids Using Temporal
+Graph Convolution Networks
+
+Abstract—State estimation (SE) is one of the key functions of
+smart grids. The availability of large volumes of measurement
+data introduces new opportunities for improving and comple-
+menting the conventional model-based SE in power systems. In
+this work, a data-driven approach based on Graph Convolution
+Neural Networks (G-CNNs) is presented for SE in smart grids.
+The G-CNN can learn the features in the non-Euclidean domain
+of graphs, which can capture the structures and interactions
+among the components of power grids. By integrating the
+temporal dependencies in the time-series data, a temporal G-
+CNN (T-GCN) is adopted for the SE problem. Specifically,
+a message-passing G-CNN is used to capture the topological
+structure of the smart grid and the gated recurrent units are
+used to capture the dynamic variation of state information
+for temporal dependencies. The performance evaluation of the
+presented method for two cases of full measurement availability
+and availability of a subset of measurements in comparison with
+some of the existing SE techniques shows promising performance.
+The state estimation (SE) is one of the main functions of the
+WASA. The conventional state estimators have been widely
+deployed in utility control centers to help with monitoring
+the state of the system. However, traditional SE methods do
+not adequately meet the real-time monitoring and accuracy
+requirements for smart grids. Many of the model-based SE
+techniques are based on steady-state analysis, which cannot
+be accurate for modern power systems due to highly dy-
+namic and stochastic variations introduced by, for instance,
+distributed energy generations and fast-changing loads. Be-
+sides, the deployment of phasor measurement units (PMUs)
+and the availability of a large volume of measurement data,
+introduce new opportunities for improving and complement-
+ing the conventional model-based SE in power systems
+such, in addition to conventional model-based SE, various
+data-driven SE methods have been developed in the past
+decade [2], [3]. Among such methods, variations of Kalman
+Filters (KF), deep learning algorithms, such as Recurrent
+Neural Network (RNN), Gated Recurrent Units (GRU), and
+Long-Short Term Memory (LSTM), have shown promising
+performance by learning the underlying nonlinear dynamics
+of these systems.
+To fill this gap, in this paper, temporal as well as graph-
+based features of power system measurements are considered
+in analyzing PMU time-series for SE. Specifically, a Graph
+Convolutional Neural Network (G-CNN) is combined with
+GRU units to create a spatio-temporal model that uses the
+topology of the system in learning the patterns embedded
+in the PMU time-series for SE. The performance of the
+presented approach is compared with the SE techniques based
+on Minimum Mean Square Error (MMSE), Bayesian Mul-
+tivariate Linear Regression with Auto Regression, Support
+Vector Regression, and Multivariate LSTM, which do not
+explicitly consider the graph structures in data. The presented
+SE approach is also evaluated for the cases when the mea-
+surements are available from all the buses and also when the
+measurements are only available from a subset of buses. The
+presented SE method shows improved performance under both
+cases compared to the SE techniques that do not explicitly
+consider the graph structures.
+Some of the most popular data-driven SE methods are the
+ones based on KF and variations of KF [2], such as Extended
+Kalman Filter (EKF) [7], Unscented Kalman Filter (UKF) [8],
+Cubature Kalman Filter (CKF) [9], Particle Filter [10], and
+Gaussian Mixture Filter [11]. The SE methods based on
+regression-based optimization using past measurements [12]
+and instantaneous correlations [13] of the measurements have
+also been proposed in the literature. However, with the avail-
+ability of a vast amount of data from smart grids sensors,
+neural network-based techniques are becoming increasingly
+popular in solving critical operations of smart grids [14]. For
+instance, variants of artificial neural networks (ANN) [15],
+such as RNN [16], LSTM [17], Residual Neural Network
+(ResNet) [18], and Convolutional Neural Network (CNN) [19]
+have been adopted for solving data-driven forecasting-aided
+SE in smart grids. In the later techniques, measurement data
+are fed as the input to the models either as multivariate
+time-series or images in Euclidean space. The aforementioned
+techniques do not explicitly consider the information about the
+underlying graph structures in the system data. Particularly,
+CNN generally handles data in Euclidean space and fails to
+address non-Euclidean spaces created by graphs; especially
+when there is no spatial locality due to the arbitrary structure
+of the graph [20].
+This step along with integrating the temporal dependencies
+in the data for one-step ahead prediction of the system’s state
+can be modeled as
+Zt = f1 (.)Xt ,
+Xt+1 = f2 (.)Xt ,
+(2)
+(3)
+where f1 (.) and f2 (.) are nonlinear functions of state
+variables Xt that will be learnt from the measurement data.
+Particularly, the function f1 (.) maps the measurements to the
+system state, and f2 (.) does the one-step ahead forecasting.
+Instead of learning two separate nonlinear relationships, both
+functions can be combined into one mapping function F (.) as
+Xt+1 = F (Zt , Xt ). In this work, a two layer spatio-temporal
+G-CNN is used to learn the mapping function F . Since power
+system measurements are highly correlated multivariate time-
+series, to capture the spatial dependencies, a graph convolution
+layer with message passing is used as the first layer of
+the network. The second layer is a GRU layer, which is
+responsible for capturing the temporal dependencies of the
+measurements.
+In this case, the assumption is that measurements are
+available only at a subset of buses (i.e., at n ∈ N o ), which can
+be identified, for instance, using a PMU placement strategy to
+ensure full observability of the system. In this work, three
+PMU placement strategies for the IEEE 118 bus system have
+been adopted and considered from [36] as shown in Table I
+to evaluate the performance of the presented SE technique
+for different availability of the measurements. Note that the
+measurement at the rest of the buses are modeled as white
+Gaussian noise, which can, for instance, represent the channel
+noise. The SE process in this case will estimate the state of
+all the nodes from the available measurements of N o buses
+along with one-step ahead state prediction.
+In this work, a data-driven approach based on G-CNN is
+presented for the SE problem in smart grids. Since G-CNNs
+are deep learning-based methods that operate on the graph
+Authorized licensed use limited to: National Technical University of Athens (NTUA).
+Downloaded on January 04,2022 at 08:17:10 UTC from IEEE Xplore. Restrictions
+apply.domain, they lend themselves well to the problem of SE in
+smart grids with underlying graph-based structures and inter-
+actions. In this work, a modified variant of G-CNN, namely
+temporal G-CNN (T-GCN), suitable for analyses of graph
+time-series, is presented for one-step ahead state prediction in
+smart grids. The T-GCN model can deal with complex spatial
+dependencies over graphs as well as temporal dynamics in
+the measurements. Specifically, a message passing G-CNN is
+used to capture the topological structure of the smart grid
+network in the spatial dependency analyses and the gated
+recurrent units are used to capture the dynamic variation of
+state information for obtaining the temporal dependencies. The
+performance evaluation of the presented method for two cases
+of full measurement availability and availability of a subset
+of measurements in comparison with some of the existing SE
+techniques shows better accuracy, low latency and faster data
+processing, which can result in improved wide-area monitoring
+for smart grids.
+In this work, a data-driven approach based on G-CNN is
+presented for the SE problem in smart grids. Since G-CNNs
+are deep learning-based methods that operate on the graph
+domain, they lend themselves well to the problem of SE in
+smart grids with underlying graph-based structures and inter-
+actions. In this work, a modified variant of G-CNN, namely
+temporal G-CNN (T-GCN), suitable for analyses of graph
+time-series, is presented for one-step ahead state prediction in
+smart grids. The T-GCN model can deal with complex spatial
+dependencies over graphs as well as temporal dynamics in
+the measurements. Specifically, a message passing G-CNN is
+used to capture the topological structure of the smart grid
+network in the spatial dependency analyses and the gated
+recurrent units are used to capture the dynamic variation of
+state information for obtaining the temporal dependencies. The
+performance evaluation of the presented method for two cases
+of full measurement availability and availability of a subset
+of measurements in comparison with some of the existing SE
+techniques shows better accuracy, low latency and faster data
+processing, which can result in improved wide-area monitoring
+for smart grids.
+
+
+
+13. Time-Synchronized State Estimation Using Graph
+Neural Networks in Presence of Topology Changes
+
+Abstract—Recently, there has been a major emphasis on devel-
+oping data-driven approaches involving machine learning (ML)
+for high-speed static state estimation (SE) in power systems. The
+emphasis stems from the ability of ML to overcome difficulties
+associated with model-based approaches, such as handling of non-
+Gaussian measurement noise. However, topology changes pose a
+stiff challenge for performing ML-based SE because the training
+and test environments become different when such changes occur.
+This paper overcomes this challenge by formulating a graph
+neural network-based time-synchronized state estimator that
+considers the physical connections of the power system during
+the training itself. The superiority of the proposed approach over
+the model-based linear state estimator in the presence of non-
+Gaussian measurement noise, and a regular deep neural network-
+based state estimator in the presence of topology changes is
+demonstrated for the IEEE 118-bus system.
+Static state estimation (SE) is performed in modern en-
+ergy management systems to enhance situational awareness
+of power system operators. In static SE, the state refers to
+the voltage magnitudes and angles of all the vertices of the
+power system graph. For the transmission system, which is
+the focus of this paper, the vertices are the buses inside
+substations. In the past decade, intelligent electronic devices
+(IEDs) called phasor measurement units (PMUs) have been
+placed in bulk inside the substations to the effect that many
+transmission systems are completely, and often redundantly,
+observed by these devices (e.g., see Fig. 1 of [1]). PMUs
+rely on the global positioning system to provide time-stamped
+measurements, also known as synchrophasor measurements.
+Therefore, estimation performed using measurements that are
+synchronized in time is termed time-synchronized estimation.
+Linear state estimation (LSE) is a time-synchronized estima-
+tion in power systems in which the static states are estimated
+using only using data from PMUs. Outputs of linear state
+estimators are preferred over those of supervisory control and
+data acquisition (SCADA)-based state estimators because of
+the former’s high speed (typically 30 samples/second) and
+time-synchronized nature. When a system is fully observed by
+PMUs, LSE is performed by solving the following equation:
+In this paper, we investigate if an alternate DNN architec-
+ture, namely, graph neural networks (GNNs), can continue to
+perform accurate and consistent SE after a topology change
+and without any subsequent re-training. GNN is an ML model
+that works on non-Euclidean data defined as a graph [9]. The
+inputs of a GNN are the node feature and adjacency matrices
+which contain the node and connectivity information of the
+graph, respectively. By employing graph-structured data, one
+can incorporate physical information of the system into the
+learning process of the GNN [10]. Hence, the GNN’s learning
+process includes knowledge of the data (features) and the
+topology of the system. This makes GNNs distinct from other
+ML models and more suited for handling topology changes.
+In this paper, similar to [14], we first place PMUs optimally
+to obtain a fully-observed node feature matrix; however, we
+do not create a separate factor-graph (the reason is given
+in Section II). Then, we build a GNN in which the phys-
+ical connections of the power system are embedded using
+multiple convolution layers and important node features are
+extracted via an attention layer, to perform high-speed time-
+synchronized SE. Finally, we demonstrate the robustness of
+the proposed GNN-based state estimator compared with the
+state-of-the-art for high-speed SE, namely, model-based LSE
+and regular DNN-based SE, in terms of handling non-Gaussian
+measurement noise and topology changes, respectively.
+If PMUs are only placed on some of the nodes of the system,
+there will be missing features in X. We overcome this problem
+by placing PMUs such that all the nodes either have PMUs on
+them or are adjacent to at least one node that has a PMU on it.
+Such optimal locations can be determined from prior literature
+on optimal PMU placement for LSE (e.g., [15]). Note that
+loss of PMU data can result in the feature matrix becoming
+unobservable. Contrary to creating a separate factor-graph to
+overcome this issue as done in [14], we suggest detecting and
+replacing bad/missing PMU data before it enters the GNN as
+already done for regular DNNs in [16].
+Graph Convolution Network (GCN): GCN is used to exploit
+topology information in the system graph by aggregating
+weighted features in the neighborhood of every node. It is
+mathematically defined as:
+
+
+(k−1)
+X
+xu
+
+
+(4)
+x(k)
+W (k) p
+v =σ
+|N
+(v)||N (u)|
+u∈N (v)∪{v}
+where, xv and xu are rows of X corresponding to nodes v and
+u, respectively, σ is the rectified linear-unit (ReLU) activation
+function, W is the learnable weight matrix, |N (v)| and |N (u)|
+are the number of nodes in the neighborhood of v and u,
+respectively, and k = 1, 2, . . . , K refers to the different hidden
+layers of the GNN. In each iteration of (4), features of every
+node are updated by propagating the weighted features of its
+neighboring nodes to capture the physical connections of the
+power system graph.
+Graph Attention Network (GAT): GAT is used to add
+importance to specific messages from neighbors of each node
+in the graph, as opposed to GCN, where all the messages are
+treated as equally important. A GAT is formulated as:
+
+
+X
+
+
+x(k)
+αvu W (k) x(k−1)
+(5)
+u
+v =σ
+u∈N (v)∪{v}
+where, αvu is the level of importance of neighboring node u’s
+message to node v, and is calculated as:
+exp(evu )
+u∈N (v)∪{v} exp(evu )
+αvu = P
+(6)
+where the attention coefficient, evu , is given by,
+evu = σleaky (aT [W (k) x(k−1)
+k W (k) x(k−1)
+])
+v
+u
+(7)
+In (7), k refers to the concatenation operation, and σleaky is
+the leaky-ReLU activation function. GAT adds the learnable
+parameter “a” to learn the attention (importance) across pairs
+of nodes during the training process.
+GAT is its ability to assign different levels of importance to
+different neighbors and obtain a better feature representation
+for each node, thereby improving estimation performance.
+The matrices X and A are the inputs to the GNN model, and
+the state variables (noise-free voltage magnitudes and angles)
+are the outputs. The GNN structure comprises five GCN and
+one GAT layer (i.e., a total of six hidden layers), where the
+GCN layers extract the topology-based information (physical
+connections), while the GAT layer learns the importance of
+neighborhood information within the graph. The number of
+epochs, learning rate, and optimizer are 1,000, 0.001, and
+Adam, respectively. The test data comprises 4,000 distinct
+graph samples for every topology (see Section III-D regarding
+how the different topologies were created).
+In this paper, a time-synchronized GNN-based SE frame-
+work is presented to estimate the static states of the power
+system. The framework combines GCN and GAT layers ac-
+count for the physical connections of the system. The proposed
+approach is compared with LSE and a regular DNN-based SE
+in presence of non-Gaussian measurement noise and topology
+changes. The results indicate that by using convolution and
+attention layers, the GNN trained for the base topology is
+able to perform robust estimation under different system and
+sensing conditions without any ex post facto learning.
+The application of GNNs to power systems is still in its
+infancy. As such, more research is expected to be conducted
+in this area in the near future. We are currently exploring the
+ability of the proposed GNN-based state estimator to handle
+bad/missing PMU data. We also plan to extend the proposed
+research by using feature augmentation techniques in order to
+reduce the number of PMUs needed for satisfying the fully-
+observed node feature matrix requirement.
+
+
+14. A multi-rate sampling PMU-based event classification in active distribution
+grids with spectral graph neural network
+
+Phasor measurement units (PMUs) are time-synchronized measurement devices that have been proliferated in
+transmission networks during the last two decades. Recently, there have been efforts to bring this technology
+to distribution grids for different applications such as three-phase state estimation, fault and event analyses,
+and phase identification. Streamed time-synchronized voltage and current phasor data can be used for events
+classification and region identification along distribution feeders to determine the type and location of events,
+which are important features of any fault and event detection, location, and isolation software. In this paper,
+the spectral theory-based graph convolution is used for event classification and region identification. The
+proposed model uses modified graph convolution filters to aggregate the regional multi-rate samples of PMU
+data, i.e., voltage magnitude and angles from several nodes. Besides these temporal data of the measured nodes,
+the physical configuration of the network containing edge features are given to the graph convolution network
+(GCN) to not only classify the event type, but also identify the affected region and location. The proposed
+graph-based method is tested on a standard test system with capacitor and distributed energy resources-related
+events, malfunction of voltage regulator, sudden load changes, and different types of faults. The results are
+compared with baseline methods, Chebyshev graph neural network (GNN), decision tree, logistic regression
+and K-nearest neighbor using the accuracy, recall, precision and F-1 score metrics. Furthermore, performance
+sensitivity analysis is carried out with respect to the number of installed PMUs, measurement noise level, size
+of available historical data, availability of network edge features, and different designs of GNN.
+Phasor measurement units (PMUs) are time-synchronized sensor
+technologies that have been successfully deployed in transmission net-
+works for variety of applications [1], from state estimation to faults and
+events detection, classification, and localization [2]. On the other hand,
+these measurement devices have not been implemented on distribution
+grids at large-scale yet. Historically, it has not been cost-effective to
+equip passive distribution feeders with such advanced sensors such as
+PMUs [3]. However, due to the increasing penetration of distributed en-
+ergy resources (DERs) and flexible loads, distribution grids are becom-
+ing more active compared to the past [4]. The increasing penetration
+level of DERs brings new challenges for developing more effective and
+efficient monitoring, protection, and control methods for the evolving
+grids. Therefore, there is an increasing need for equipping distribution
+networks with more advanced sensors, such as PMUs, to better provide
+network and asset situational awareness, such as events analysis [5].
+Active distribution grids are susceptible to experience different
+events which might cause damage to the assets. Hence, it is crucial
+to analyze the events, including identifying their type and location. A
+prompt event analysis framework can mitigate the adverse consequence
+of an event, leading to improvement in grid reliability and resilience.
+There have been many studies about fault and events analysis in
+power distribution networks using different methods. Recently, ma-
+chine learning-based (ML) methods have been widely used for events
+and fault analysis in distribution networks. In [10], measured voltages
+are used as inputs to a support vector machine (SVM) classifier to
+specify the fault types. Authors of [11] propose the use of SVM for
+fault classification and deep neural network for fault location. Ref. [12]
+classifies faults and cyber attacks, and specifies the location of the oc-
+curred incident in distribution grids using deep neural network (DNN).
+In [13], a fault classification method is proposed via a latent structure
+learning under a multi-task learning algorithm to perform an accurate
+classification with limited labeled data. Authors of [14] propose a
+pattern recognition technique for fault detection in transmission grids
+by selecting the primitive patterns in recorded waveform signals. In this
+study, the attribute grammar is deployed for feature extraction as it can
+handle semantic and syntactic information [15]
+Graph neural network (GNN) is proposed to capture spatial–
+temporal features of PMU data for event classification and region
+identification at sub-circuit level in distribution feeders. Potential
+events such as capacitor banks (CBs) switching, DER outages,
+sudden load changes, malfunctioning of tap changes in VRs, and
+all nodal short-circuit faults are considered and studied in a stan-
+dard distribution test system. The proposed GNN-based method
+assists system operators to effectively determine events type and
+region leading to enhancement in network and assets situational
+awareness.
+• The proposed method is developed to process multi-rate PMU
+data captured at different locations. Measurement devices with
+different sampling rates bring new challenges in simultaneous
+processing of data toward each specific application such as event
+classification. A multi-rate data fusion is appropriately adopted,
+making the proposed method applicable to real-world conditions
+where sensors with different sampling rates might be available.
+Moreover, the physical distance between PMUs and the configu-
+ration of the network is defined as a weighted adjacency matrix
+of a graph representing the distribution grid, and used as a prior
+knowledge in the classification problem.
+• We use an efficient layer-wise linear filter of GCN, which is
+obtained by the first order approximation of spectral graph con-
+volution [29]. Moreover, this model is not limited to the explicit
+parameterization given by Chebyshev polynomial, and is more
+efficient in terms of computation time and convergence rate. Also,
+the proposed linear GNN (L-GNN) gives a desired classification ac-
+curacy compared to Chebyshev-GNN (C-GNN), constructed with
+Chebyshev filter, and other conventional machine learning (ML)
+methods.
+
+
+15. Optimal Phasor Measurement Unit Placement
+Using Machine Learning Technique
+
+Abstract— The Phasor Measurement Unit (PMU) plays a
+massive role in dynamic monitoring and wide-area protection of
+the power system. Although installing PMU on each bus makes
+sense, it is unrealistic due to the high cost and unnecessary.
+Given these circumstances, academia and industry have been
+researching to find the best algorithm for Optimal Phasor
+Measurement Unit Placement (OPP). The OPP is primarily
+driven by economic and observability issues, among others.
+Traditionally, all OPP strategies frame OPP as an optimization
+problem and use various optimization algorithms to find the
+best solution. In this paper, a Machine Learning (ML) technique
+based on a data-driven approach is investigated. The proposed
+novel algorithm makes use of the Real-time Simulator (OPAL-
+RT) to extract data and the Random Forest Method to detect the
+physical anomaly in the power system. The results are further
+processed to find the best solution for PMU placement. The
+proposed approach is applied in the IEEE 9-bus system to
+validate its effectiveness. The regression technique is used to
+verify the ability of the approach to maximize the observability
+of the entire system.
+In this paper, a data-driven approach is proposed for OPP.
+To the author’s knowledge, there have been no studies on the
+possible application of RF based algorithm for OPP. Various
+faults are simulated in HYPERSIM to extract the data for the
+Machine Learning (ML) model. The data is preprocessed and
+fed to the Random Forest (RF) classifier. The results are
+further processed to find the OPP. The proposed method is
+applied to standard test systems to show its realistic and
+practical effectiveness by validating the presented results with
+other methods. The research paper is organized as follows.
+The various OPP techniques are discussed in Section II.
+Section III expands the cost function presented in [11] to
+include more realistic costs that come with the PMU
+installation. Section IV describes the physical anomaly in the
+electric grid briefly. Section V explains Random Forest
+Method, followed by the methodology to implement the
+proposed algorithm in Section VI. Section VII contains the
+application of the proposed algorithm in the IEEE 9-bus
+system and a comparison of various contemporary ML
+techniques for physical anomaly detection. Section VIII
+includes limitations and future work to improve the proposed
+algorithm. Finally, Section IX concludes the paper.
+In addition, the OPP was treated as an optimization
+problem, but the proposed algorithm uses the data-driven
+approach using a real-time simulator (OPAL-RT) and
+Machine Learning technique, specifically Random Forest
+(RF) method, with due consideration to physical anomaly
+detection and critical variable identification.
+In this paper, a Random forest-based algorithm is
+presented for the optimal positioning of the PMU units. The
+proposed algorithm is a data-driven approach to the OPP
+problem. The implementation requires modeling and data
+extraction from the Real-time Simulator. A complete
+framework to solve the OPP problem and its viability is
+demonstrated in the IEEE 9-bus system. The Random Forest
+classifier provided an average fault recognition accuracy of
+99.988% and a state prediction accuracy of 99.397%. The
+proposed approach for physical anomaly detection was also
+compared against other popular ML methods like SoftMax,
+SVM, and Multiple logistic regression, and the results
+revealed that the RF is relatively more efficient for fault
+classification. The OPP for IEEE 9-bus for the proposed
+approach gives comparable results to the several optimization
+techniques.
+The phasor value obtained from the PMU on the
+HYPERSIM model is purely sinusoidal, so the accuracy of
+the ML model is very high. Although the Gaussian noise is
+added along with the standardization of the dataset, it is not
+an actual representation of a real-life scenario where signals
+consist of many noise signals and are distorted. Moreover,
+communication is affected by various factors such as harsh
+terrain, distance, signal propagation, and latency. Therefore,
+the actual implementation of the proposed algorithm will
+have greater confidence if we can accurately model all the
+electric layers and perform a co-simulation with the network-
+emulating software. The proposed algorithm is implemented
+in the IEEE 9-bus system. Although RF is widely considered
+scalable due to bootstrap bagging, the proposed algorithm
+must be tested on a higher bus benchmark system. While the
+number of simulations and data preprocessing time will be
+larger for higher bus systems, the algorithm should run on
+state-of-the-art machines to reduce the algorithm's overall
+execution time.
+In this paper, a Random forest-based algorithm is
+presented for the optimal positioning of the PMU units. The
+proposed algorithm is a data-driven approach to the OPP
+problem. The implementation requires modeling and data
+extraction from the Real-time Simulator. A complete
+framework to solve the OPP problem and its viability is
+demonstrated in the IEEE 9-bus system. The Random Forest
+classifier provided an average fault recognition accuracy of
+99.988% and a state prediction accuracy of 99.397%. The
+proposed approach for physical anomaly detection was also
+compared against other popular ML methods like SoftMax,
+SVM, and Multiple logistic regression, and the results
+revealed that the RF is relatively more efficient for fault
+classification. The OPP for IEEE 9-bus for the proposed
+approach gives comparable results to the several optimization
+techniques.
+
+16. State Estimation for Power Distribution System
+using Graph Neural Networks
+
+Abstract-State estimation is critical to maintaining system
+stability and reliability as it enables real-time monitoring of
+the power system operation and facilitates fault detection,
+minimizing the risk of power outages and improving overall
+system performance. This paper presents a state estimation
+method based on graph neural networks, aiming to improve time
+efficiency and extended observability. Graph neural networks can
+aggregate information and dependencies from voltage and power
+measurement at the critical buses, making them more effective
+for state estimation on non-grid structured data. The IEEE 123-
+bus system is used as a case study to evaluate comprehensively
+the state estimation performance. The proposed model provides
+a better performance for mapping measurement data with states
+compared to other neural networks.
+As a highly complex cyber-physical system, a smart grid is
+composed of power electronic devices, a power infrastructure
+and a communication network. Phasor Measurement Units
+(PMU s) initially collect physical data before sending it to
+Supervisory Control and Data Acquisition Systems (SCADA).
+The measurement data is then sent by the communication
+network to the application level, where the power applications
+are processed and assessed [1]. The main objective is to deter-
+mine the state of the system based on the measurement data,
+ensuring the trustworthiness of the cyber-physical pipeline.
+Data from micro phasor measuring units (PMU) is analyzed
+by using many state estimate schemes proposed in literature
+[3]-[11]. In general, these schemes can be categorized into
+two groups: model-based methods and data-driven methods.
+Model-based techniques are developed from physical equa-
+tions which are relationships between power system mea-
+surements and states. Conventionally, the state-space model
+equations of power networks can be studied to provide better
+awareness for the static state estimation (SSE) or dynamic state
+estimation (DSE) algorithms [12]. DSE can track state values
+well, even in the load-change cases and identify bad data using
+a weighted least square or chi-square method. However, DSE
+is only reliant on precise dynamic system models, which may
+not always be observable in some situations [13]. Therefore,
+with the rapid advancement of state estimation techniques,
+large research groups are shifting to data-driven approaches.
+Data-driven methods have recently emerged as an appealing
+research direction because they do not rely on physical equa-
+tions to perform state estimation [2]. The primary trend in
+these methods involves leveraging artificial neural networks
+to describe either part of or the entire power system. This
+is achieved through training vast amounts of data collected
+from different sources. These ANN-based techniques capture
+functional patterns from power systems and encode them as
+node parameters. This method enhances the robustness of state
+estimation against inaccurate measurements by leveraging
+either a neural network or a parallel distributed processing
+model. In addition to ANNs, kernel-weighted neighbors and
+kernel function methods have also been utilized for grid
+current-state estimation [2].
+The contributions of this paper are twofold: the proposed
+scheme can track well changes of state values including
+voltage magnitude and phase angle in load-change cases; com-
+prehensive studies and comparisons among different neural
+networks such as Multi-layer Perception, Convolutional Neural
+Network, and Graph Convolutional Network are also provided.
+n this paper, we proposed an innovative solution to state
+estimation in power distribution systems. The datasets for
+studying load-change cases in the IEEE 123-bus feeder system
+were generated using the Opal-RT simulation and can be
+leveraged for future research purposes. The numerical results
+show that the GCN model outperforms other state-of-the-art
+methods on the same dataset, demonstrating its great potential
+for exploiting spatio-temporal patterns from the graph datasets.
+Additionally, it enables faster training, improved convergence,
+reduced parameter count, as well as flexibility and scalability
+by hyper-parameter tuning techniques. In the future, we will
+modify the deep learning framework to specifically integrate
+the system's physical information. Moreover, the effect of
+reduced measurements and noises should also be examined.
+
+17. A Machine Learning Approach to Meter Placement
+for Power Quality Estimation in Smart Grid
+
+bstract—Due to the high-measuring cost, the monitoring of
+power quality (PQ) is nontrivial. This paper is aimed at reducing
+the cost of PQ monitoring in power network. Using a real-world
+PQ dataset, this paper adopts a learn-from-data approach to
+obtain a device latent feature model, which captures the device
+behavior as a PQ transition function. With the latent feature
+model, the power network could be modeled, in analogy, as a
+data-driven network, which presents the opportunity to use the
+well-investigated network monitoring and data estimation algo-
+rithms to solve the network quality monitoring problem in power
+grid. Based on this network model, algorithms are proposed to
+intelligently place measurement devices on suitable power links to
+reduce the uncertainty of PQ estimation on unmonitored power
+links. The meter placement algorithms use entropy-based mea-
+surements and Bayesian network models to identify the most
+suitable power links for PQ meter placement. Evaluation results
+on various simulated networks including IEEE distribution test
+feeder system show that the meter placement solution is efficient,
+and has the potential to significantly reduce the uncertainty of
+PQ values on unmonitored power links.
+With devices’ latent features captured, we in the second
+step introduce a network model which represents the smart
+microgrid as a data-driven network. In analogy, we represent
+the electrical components as network nodes, power links as
+data links, and flow of power as data flow on the links. This
+problem transformation significantly simplifies the complex-
+ity of the power network; it also presents the opportunity to
+use the well-investigated network monitoring and data esti-
+mation algorithms to solve the network quality monitoring
+problem.
+Finally, we solve the intelligent meter placement problem
+by proposing an iterative approach for identifying network
+segments suitable for power meter placement. During each
+iteration of the algorithm, we identify in a greedy manner the
+network segment whose PQ is most unpredictable given the
+meters placed so far. We then place the next power meter
+at that location. In summary, this paper makes the following
+contributions.
+1) A network model for PQ estimation, based on the device
+latent features that are learned from a real-world dataset.
+2) An intelligent entropy-based algorithm and a Bayesian
+network (BN)-based approach to solve the meter place-
+ment problem.
+On the fourth aspect, there is a great body of work on the
+problem of optimal sensor placement [12]. In the context of
+power networks, optimal placement of phasor measurement
+units (PMU) has been studied [13]. Reference [14] shows
+that adding few extra PMUs could improve the bad data
+detection in the network state estimation. A relevant work
+addressing the problem of distribution system state estimation
+was proposed [15] to minimize the state estimation errors. The
+optimal PMU placement and its communication infrastructure
+was designed [16] to address the problem of state estimation.
+A procedure finding the optimal trade-offs between PMUs and
+metering devices for distribution state estimation was investi-
+gated in [17]. Nevertheless, we have not seen any work on
+studying optimal meter placement problem in the context of
+network-wide PQ estimation. Further, there are three major
+differences between the existing PMU placement algorithms
+and our algorithm.
+1) We focus on distribution networks at the enterprise level
+(e.g., a university campus).
+2) Our method is data driven and is based on statistical
+machine learning method.
+3) The existing PMU placement algorithms address the
+problem of estimating network states and do not con-
+sider PQ estimation explicitly.
+The objective of this paper is to reduce the cost of PQ mon-
+itoring by intelligently placing PQ meters on selected links in
+the power network. After deploying limited number of meters,
+we should be able to estimate the PQ values on unmonitored
+links as accurately as possible. A candidate link for meter
+placement is the one whose PQ is the most uncertain. The
+challenge here is how to identify the most uncertain links.
+Clearly, the PQ values on any power link is dependent on
+the physical characteristics of the electric devices. For exam-
+ple, the PQ at the output link of a UPS is more predictable
+than that of a switch. Hence, we need to know the behav-
+ior of each device in the network. We call the behavior of a
+device its latent feature or simply a transition function, which
+is usually estimated through physical modeling or through the
+assessment of historical power monitoring data.
+This section describes a BN-based algorithm for select-
+ing locations for placing power meters in a power grid. The
+approach uses Monte Carlo (MC) sampling and probabilistic
+inference approaches to identify locations in the power grid
+which exhibit unpredictable PQ events
+The problem is inherently challenging as the information
+received from a power meter flows not only the forward direc-
+tion from the root nodes toward the leaf nodes, but also in
+reverse or upstream direction toward the root node (utility
+main) and back to all other nodes in the network.
+To tackle the above challenge, we cast the problem as a
+BN and model the power grid using a factor graph. Several
+message passing algorithms could be used to help us determine
+the optimal meter placement. We chose the belief propagation
+or sum-product algorithm [18], since it is well understood and
+has been shown to work for general topologies [19] including
+tree networks.
+Q meters are expensive devices and it is financially infea-
+sible to install them on every link in the power network. We
+proposed algorithms which intelligently place power meters on
+selected power links to reduce the cost of PQ monitoring. We
+formulated the problem of selecting suitable meter placements
+in power networks such that PQ can be best predicted. Two
+approaches were presented, one based on CE and one con-
+sidering prediction error. Experiments in various simulation
+networks including the IEEE 13-node distribution test feeder
+suggested that the CE-based MinEntropy approach is much
+faster. Finally, the proposed solutions significantly reduce the
+uncertainty of PQ values on unmonitored power links.
+
+
+18. Optimal Placement of PMUs & Analytics on PMU Data using ANN Technique
+
+Abstract—Power system play a vital role in human life. The
+reliability of these power systems depends on the operating
+constraints & conditions. PMU (Phasor measurement units)
+utilizes synchronization signals provided by the GPS (global
+positioning system) satellites and deliver the voltage and currents
+phasors measured at a given node. To avoid the redundant use of
+PMUs, the optimal locations for the PMUs must be determined.
+The main objective of this research paper is to place a minimal
+number of PMUs, so that the system can be effectively observable
+& the implementation for on-line estimation of the power system
+and for security monitoring.
+The ANN technique utilizes synchrophasor is to carry out the
+contingency analysis by calculating the sensitivity factors. The
+same thing is verified with the help of Fast Decoupled Load Flow
+(FDLF), in MATLAB environment and contingency ranking is
+made. This method is very much effective in ranking the
+contingencies of a electrical power system. This was tried on
+IEEE-14 Bus system & the results were found to be effective.
+Topological observability uses the graph theoretical
+concepts to find the positions for calculations, placements and
+hence, for making the system topologically observable. Clear
+information of PMU based topological observability is
+explained in this section.
+PMU based Topological Observability:
+The following simple rules stated below are put together to
+make the system topologically observable using PMUs,
+1. If phasor information of voltage and current are known
+at one end of a branch, then voltage phasor at another end of
+the branch can be evaluated by Ohm’s law.
+2. When voltage phasors at two different ends of a branch
+are known, branch current can be evaluated.
+3. When zero injection bus is present with no PMU, and
+only one unknown outgoing current, then that current can be
+computed using Kirchhoff’s Current Law (KCL).
+This paper has suggested a simple Programming based
+method for the optimal placement of PMUs to ensure
+complete topological observability of the system. The
+contingency selection and ranking which are important for
+contingency analysis have been done by calculating
+performance index PI by two different methods & compared.
+The PI is calculated for IEEE 14 bus systems using the Fast
+Decoupled Load Flow (FDLF) algorithm and also by using
+Feed forward- Backward Propogation Neural Network in
+MATLAB environment.
+The proposed observability and controllability analysis has
+been tested on the IEEE 14-bus system. The proposed method
+is quite effective and simple to adopt. The contingency
+selection by ANN proves to be efficient in terms of accuracy
+and time.
+
+
+19. Real-Time Faulted Line Localization and PMU Placement in Power Systems Through Convolutional Neural Networks
+
+Abstract—Diverse fault types, fast reclosures, and complicated
+transient states after a fault event make real-time fault location
+in power grids challenging. Existing localization techniques in this
+area rely on simplistic assumptions, such as static loads, or require
+much higher sampling rates or total measurement availability. This
+paper proposes a faulted line localization method based on a convo-
+lutional neural network (CNN) classifier using bus voltages. Unlike
+prior data-driven methods, the proposed classifier is based on fea-
+tures with physical interpretations that improve the robustness of
+the location performance. The accuracy of our CNN-based local-
+ization tool is demonstrably superior to other machine learning
+classifiers in the literature. To further improve the location perfor-
+mance, a joint phasor measurement units placement strategy are
+proposed and validated against other methods. A significant as-
+pect of our methodology is that under very low observability (7%
+of buses), the algorithm is still able to localize the faulted line to
+a small neighborhood with high probability. The performance of
+our scheme is validated through simulations of faults of various
+types in the IEEE 39-bus and 68-bus power systems under vary-
+ing uncertain conditions, system observability, and measurement
+quality.
+The main contributions are summarized from four aspects:
+1) The feature vector with clear physical interpretations is de-
+fined (Section II-B). With this feature as input, the complexity of
+the CNN classifier is largely reduced, compared with the classic
+ones with millions of parameters [15], [16]. Moreover, faults can
+be located within the small neighborhood of the faulted point
+when a limited number of buses are measured (Section V-D
+and V-E). 2) The four-layer CNN classifier is motivated due to
+the property of sparse connectivity and capturing local features
+(Section III). The advantages of CNN are illustrated by the com-
+parison with other types of classifiers (Section V-C). 3) A PMU
+placement algorithm is proposed based on the loss function of
+the CNN classifier, and its localization performance is shown
+to be improved compared with other random or topology-based
+methods (Section IV and V-F). 4) The significance of the local-
+ization scheme lies in its robustness to practical scenarios with
+differing load variations (Section V-G), noise (Section V-H), and
+voltage quality (Section V-I).
+CNN is preferred mainly considering three reasons: (1) The
+convolution operation in CNN generates sparse connectivity be-
+tween the entries of different layers [23], which is more suitable
+than the fully connected operation for the sparse vector ψ̄ (ex-
+plained in Section II-B). (2) CNN reveals the local features [23].
+The small size of the kernels strengthens CNN to learn the lo-
+cal features instead of the global features. As the neighborhood
+property of ψ̄ (presented in Section II-B) illustrates the local
+characteristics, CNN has the advantages of learning the neigh-
+borhood property from the input. (3) In addition, the experimen-
+tal comparison results (discussed in Section V-C) of different
+classifiers further confirm our analysis, and the CNN shows the
+advantages especially when the system is partially measured.
+In the next Section, we describe how correct PMU placement
+helps to reduce fault localization error with partial observability
+and improves the performance of the CNN.
+We propose a data-driven placement algorithm that is aware of
+both the fault localization and the learning mechanism (opti-
+mization of the loss function of CNN). To optimize the PMU
+placement for fault location, the optimal set S can be obtained
+by minimizing loss function (18) satisfying (19) during the train-
+ing stage. The regularization item Θ2F reduces the model com-
+plexity by creating a parameter set Θ of a small norm.
+To find the optimal set S of size K is an NP-complete prob-
+lem, thus we propose an algorithm to greedily increase the num-
+ber of measured buses until the total number K is reached in
+Algorithm 1.
+Given the total number of measured buses K, this algorithm
+greedily increases the size of the set S from the initial set S0
+one by one until K, where S0 includes a few buses having the
+largest degree di or being significantly crucial. For each step,
+the set S is updated by adding the i∗ th bus that minimizes the
+loss function li plus the item of β/di . Note that the item β/di
+is added to the loss function to account for the effect of grid
+topology in determining the selected bus. The weight coefficient
+β ∈ (0, 1) adjusts the significance of the bus degree and of the
+loss function to prioritize the buses with a large degree. This
+item takes effect obviously when the set S is large, and the
+difference of the loss function li becomes small. Meanwhile,
+a number of experimental results show that adding a bus with
+more considerable degree tends to have better performances.
+Based on all of the above, our algorithm tries to enforce the
+n this Subsection, we discuss the performance of the algo-
+rithm 1 for PMU placement. The proposed algorithm is com-
+pared with the “2-hop Vertex Cover (VC)” and the Random
+placement algorithms. The “2-hop VC” is a topology-based al-
+gorithm for PMU placement [33]. It places PMUs on a set of
+buses such that each edge in the graph is at most two hops away
+from a PMU. The baseline of the Random algorithm selects ar-
+bitrarily s buses. The LARs for faults of the four tested types
+are compared in Fig. 7 where the measured buses are suggested
+by the three placement algorithms.
+As there are at least 12 buses that can satisfy the ob-
+jective of “2-hop vertex cover” for this 68-bus power sys-
+tem, these three algorithms are compared when s = 12. The
+12 buses selected by the Random algorithm include SR =
+[31, 3, 65, 46, 43, 28, 15, 44, 23, 58, 9, 57], one solution of the 2-
+hop VC algorithm is obtained by solving a linear programming
+approximating the 2-hop VC formulation, and the selected buses
+are SV C = [3, 6, 13, 19, 23, 26, 30, 31, 36, 40, 44, 52], and the
+12 buses selected by the method proposed in the manuscript are
+SP = [1, 9, 16, 30, 36, 23, 42, 61, 51, 57, 6, 37]. Compared with
+the Random algorithm, the improvements of the proposed algo-
+rithm for the different types of faults varies, but it shows about
+10% improvement in average over the other methods. The 2-
+hop VC method also has higher LARs than that of the Random
+algorithm, but it is still lagging behind the proposed algorithm
+showing the average improvement of 8%.
+The running time of the proposed PMU placement algorithm
+is 5.4 hours based on the personal computer of Intel i7, 3.6 GHz
+CPU and 32 GB RAM, and this process can be accomplished
+offline. The running time of testing one dataset is 4 ms, thus the
+proposed CNN classifier can efficiently determine the location
+of the faults in real-time.
+This manuscript proposes to locate the faulted line by a CNN
+classifier through the use of physically interpretable feature vec-
+tors. The clear physical interpretations of these feature vectors
+are explained based on the substitution theory. The benefits of
+employing these features have three aspects: 1) a high location
+accuracy rate is reached even when the system has low observ-
+ability; 2) the true faulted line, even if not the highest, has a high
+output probability (among top-k, if not the highest) from the clas-
+sifier in low observability; 3) the misclassified lines output by
+the classifier mostly are geographically near the faulted line. The
+location performance is further increased by using the design of
+the CNN classifier into a joint PMU placement algorithm, that
+is demonstrably superior to other random and topology-based
+methods. The significance of the proposed faulted line localiza-
+tion method over other methods is revealed in the robustness to
+different conditions, including variant random load fluctuations,
+noise, inaccurate voltage measurements in the IEEE 39-bus and
+68-bus power systems.
+In the future, we will extend this work to the distribution
+system and identify the exact location of the fault along the line.
+Furthermore, testing the methodology on real-data (as opposed
+to synthetically generated data) is another direction for our
+future work.
+
+
+20) Prediction of voltage distribution using deep learning and identified key
+smart meter locations
+
+The energy landscape for the Low-Voltage (LV) networks is undergoing rapid changes. These changes are
+driven by the increased penetration of distributed Low Carbon Technologies, both on the generation side
+(i.e. adoption of micro-renewables) and demand side (i.e. electric vehicle charging). The previously passive
+‘fit-and-forget’ approach to LV network management is becoming increasing inefficient to ensure its effective
+operation. A more agile approach to operation and planning is needed, that includes pro-active prediction and
+mitigation of risks to local sub-networks (such as risk of voltage deviations out of legal limits).
+The mass rollout of smart meters (SMs) and advances in metering infrastructure holds the promise
+for smarter network management. However, many of the proposed methods require full observability, yet
+the expectation of being able to collect complete, error free data from every smart meter is unrealistic in
+operational reality. Furthermore, the smart meter (SM) roll-out has encountered significant issues, with the
+current voluntary nature of installation in the UK and in many other countries resulting in low-likelihood of
+full SM coverage for all LV networks. Even with a comprehensive SM roll-out privacy restrictions, constrain
+data availability from meters. To address these issues, this paper proposes the use of a Deep Learning Neural
+Network architecture to predict the voltage distribution with partial SM coverage on actual network operator
+LV circuits. The results show that SM measurements from key locations are sufficient for effective prediction
+of the voltage distribution, even without the use of the high granularity personal power demand data from
+individual customers.
+To address the challenges identified, this paper proposes a Deep
+Learning Neural Network (DLNN) architecture to predict how voltage
+is distributed on an LV circuit for one time step ahead using minimal
+or key located smart meter data. We define an LV circuit as a group
+of customers that share the same source (closed fuse at the secondary
+substation). An LV network are a group of LV circuits within a specific
+area. From the LV network operational perspective, the smart meter
+data can indicate how voltage is distributed across the LV circuit. This
+is beneficial to predict its likelihood of risks.
+Due to the real-life limitations in the SM roll-out discussed in earlier
+sections, for the DLNN to be a practical useful tool, our predictive
+model must meet with the following features and aims:
+1. Ability to predict the voltage distribution across a circuit one
+time step ahead (t + τ) despite the partial SMs coverage in the
+LV circuit
+2. Ability to predict the voltage for all customers, including for
+locations without any SMs
+3. Ability to use, but not require high granularity power demand
+data from all customers on the circuit, e.g. the potential use of
+aggregated power demand data or no power data
+4. No firm requirements of having customers’ phase connection
+data for making predictions
+Many PSSE methodologies will fall short as they are unable to meet
+with the above features.
+Low Voltage (LV) networks are a central element in the energy
+transition, and will need to accommodate significant increases in Dis-
+tributed Generation, Storage Technologies and increasingly, new de-
+mand profiles, such as from decarbonised transport systems (i.e. EV
+charging infrastructure). UK policy is setting aggressive timescales in
+decarbonisation of energy and transport services, creating an urgency
+in the need for advanced operational and planning capabilities for LV
+networks. The previously passive ‘fit-and-forget’ approach to network
+management will be inefficient to ensure their effective operation. An
+adaptive approach is required that includes the prediction of risk to
+the circuits. This has motivated the mass smart meter (SM) roll-out and
+advance measurement infrastructure (AMI) installation in order to pro-
+vide observability of how energy is distributed across the LV network,
+specifically for the LV circuits beyond the secondary substation. Yet, the
+majority of the Power System State Estimation (PSSE) tools developed
+require full observability of the networks. Moreover, the majority of
+the PSSE analysis methods described in literature also assumed that
+100% of the customers on the network are with SM. This premise is
+unrealistic in real-life operations. The current voluntary nature of the
+SM installation has resulted in the low-likelihood of full SM coverage
+for all the LV networks. This, together with privacy requirements,
+which restrict the access of high granularity power demand data, have
+resulted in the low uptake of many of the PSSE tools for LV network
+analysis. In this landscape, big data is a key concern for the DNOs,
+however big data comes with a high data management cost.
+To address these concerns, in our research, we designed and eval-
+uated the use of a novel Deep Learning Neural Network (DLNN) to
+predict how voltage is distributed across an low voltage (LV) circuit,
+despite the partial SM coverage on the LV circuit. The results show the
+applicability of the DLNN to predict the voltage distribution, even at
+locations without smart meter, and that with SM data at key locations
+within the circuit is sufficient for effective prediction without requiring
+high granularity power demand data.
+Taking a longer-term view, such approaches will be increasingly
+important for automating the data gathering and analysis activities of
+distribution network operators going forward, and this research work
+(and the broader NCEWS project it is part of) has been highlighted as
+a key innovation project supporting the SP Energy Networks digitali-
+sation agenda (c.f. [3], pg. 57). Overall, we conclude that state-of-the
+art machine learning techniques, such as deep learning, can provide
+significant benefits for power system operators in providing voltage
+distribution predictions, while at the same time using only partial data
+and respecting the privacy constraints of their customers.
+In future work, we plan to explore several directions. First, we con-
+sider applying our techniques to address other challenging problems for
+power networks, such as phase identification for individual customers.
+Second, we plan to explore a variety of other, more complex network
+topologies, such as dense, ‘‘meshed’’ network topologies, present in
+many industrial and urban environments. Finally, looking forward,
+we plan to investigate the use of AI techniques combining ML and
+data-analytic methods for network visibility/monitoring (such as those
+presented in this paper), with those supporting planning decisions, for
+example, how to design the sizing and placement of charging stations
+to enable faster EV rollout.
+
+21) Measurement Selection for Data-Driven Monitoring
+of Distribution Systems
+
+Abstract—This article investigates the problem of measure-
+ment selection for data-driven monitoring approaches. Several
+approaches to input variable selection (IVS) are analyzed, and a
+general procedure for finding the optimal order for the selection
+of candidate measurements is presented. The method is based
+on the extensions of partial correlation and minimal redundancy
+maximum relevance criteria to support IVS problems involving
+multiple outputs. This method can be used to find the minimal set
+of measurements for achieving a target estimation accuracy. The
+results demonstrate the advantages and limits of the introduced
+method in comparison to the other approaches discussed in this
+article.
+In model-based approaches, the monitoring involves the
+measurements as inputs to a mathematical model of the system.
+On one hand, the procedure used in these approaches usually
+results in strict requirements, on which measurement must
+be available given the model of the system so as to ensure
+In model-based approaches, the monitoring involves the
+measurements as inputs to a mathematical model of the system.
+On one hand, the procedure used in these approaches usually
+results in strict requirements, on which measurement must
+be available given the model of the system so as to ensure
+convergence. On the other hand, in most medium-voltage (MV)
+low-voltage (LV) distribution systems, there are currently no
+or only very few measurements available from the distribution
+systems, especially at the LV level. This makes it difficult or even
+impossible to effectively monitor the system, e.g., in terms of
+model-based state estimation. In such cases, addition of further
+measurements is necessary to enable monitoring. Although
+so-called pseudomeasurements may enable state estimation
+even with very few real measurements, they have a limited
+potential to improve the estimation accuracy, which depends on
+the assumptions used to generate the pseudomeasurements [4].
+This means that the addition of real measurements is required in
+many grids to enable grid monitoring. Nevertheless, additional
+measurements are costly and must be selected in a careful way.
+This article introduces four IVS procedures based on the con-
+cepts of partial correlation (PC) and minimal redundancy max-
+imum relevance (mRMR) for data-driven monitoring of power
+distribution systems. These procedures can serve as guidelines
+during the measurement infrastructure planning. They determine
+the optimal subset of measurements to be used as input of
+the data-driven voltage magnitude estimator in a step-by-step
+manner, i.e., finding the next best input candidate at each step.
+Input candidates can be any measurable quantity, including not
+only electrical quantities such as voltage, current, and power
+values, but also weather-related quantities. The heterogeneous
+nature of the input candidates does not introduce any additional
+complexity in the presented procedures. Furthermore, two of the
+proposed IVS procedures completely work without any use of
+the monitoring application and are thus completely model-free.
+he goal is to define a procedure that finds that the optimal
+selection order of the input candidates to the data-driven moni-
+toring application achieves the highest estimation accuracy. The
+estimated quantities in this article are the voltage magnitudes of
+the nodes in a distribution system; for the sake of simplicity, in
+the rest of this article, we will refer to this voltage magnitude
+estimator simply as estimator.
+The IVS methods can be categorized into model-based and
+model-free (filter) approaches [18]. The model-based algo-
+rithms, which are broadly divided into embedded and wrapper
+approaches, consider an underlying preselected model for the
+estimation process, i.e., an estimator, and directly optimize
+some given performance indices of this estimator during the
+IVS process. Therefore, their results rely on the performance of
+their underlying estimator, and this makes them more vulnerable
+to overfitting [19]. Furthermore, these methods, especially the
+wrapper approach, can become computationally inefficient [19].
+In contrast, model-free approaches do not assume a particular
+estimator. So, the IVS problem is decoupled from the choice of
+the estimator. However, if a reliable estimator model is available
+and the computational burden is not a major concern in a given
+application, inclusion of the knowledge about the estimator
+might contribute to improved accuracy. Thus, this article focuses
+on filter approaches. However, in addition to a model-free ex-
+tension of a filter approach, a model-based (wrapper) extension
+is also presented, and their performances are compared.
+1) Partial Correlation: PC is a measure of the linear relation-
+ship or association between two variables with the effect of one
+or a set of variables removed from both of the variables. 
+2)Concept of MI: MI is a measure of the amount of informa-
+tion that two variables share. In other words, MI measures the
+dependence or similarity between two variables.
+3) mRMR Concept: The underlying idea of the mRMR
+approach is to find a subset S of the input candidates yi ∈ Y with
+m elements, which jointly have the highest dependence with
+the target output among all subsets of input candidates with m
+elements.
+4) mRMR-Based IVS Procedure: It can be shown that
+mRMR and maximum dependence criteria are equivalent if
+a first-order forward selection (i.e., an incremental search) is
+used for selection of input candidates [25].
+Four procedures for deciding the selection order of the input
+candidates in a data-driven estimation process involving mul-
+tiple outputs are presented and compared. The AMO-PC and
+AMO-mRMR methods are completely model-free and require
+relatively low computational effort, but the selection orders
+which they find does not lead to the fastest error reduction. In
+contrast, the MMO-PC and MMO-mRMR rely on an estimator
+model in the input selection process, which makes them compu-
+tationally more demanding and vulnerable to estimator model
+uncertainties. However, they outperform the other two methods
+in finding the selection orders, which reduce the estimation
+error in the quickest way if a suitable estimator model is used.
+The AMO-PC and MMO-PC methods can be applied only to
+linear problems, while the AMO-mRMR and MMO-mRMR
+methods are applicable in a general case. As the studied prob-
+lem of voltage magnitude estimation involves a predominantly
+linear relationship between the majority of the defined input
+candidates and the target outputs, the AMO-PC and MMO-PC
+approaches perform satisfactorily. Nevertheless, in a general
+case, the AMO-mRMR and MMO-mRMR approaches should
+be used to obtain reliable results. The methods can support
+distribution system operators’ decisions about the optimal or-
+der for installing measurements to ensure the highest possible
+estimation accuracy with any given number of measurements.
+They can also be seamlessly applied to select the next best
+input candidate when some measurements are available prior
+to the selection process. Furthermore, the proposed methods are
+applicable to other applications with multiple target outputs.
+
+
+22) State and Topology Estimation for Unobservable Distribution Systems Using Deep Neural Networks
+
+Abstract— Time-synchronized state estimation for reconfig-
+urable distribution networks is challenging because of limited
+real-time observability. This article addresses this challenge by
+formulating a deep learning (DL)-based approach for topology
+identification (TI) and unbalanced three-phase distribution sys-
+tem state estimation (DSSE). Two deep neural networks (DNNs)
+are trained for time-synchronized DNN-based TI and DSSE,
+respectively, for systems that are incompletely observed by
+synchrophasor measurement devices (SMDs) in real time. A data-
+driven approach for judicious SMD placement to facilitate
+reliable TI and DSSE is also provided. Robustness of the proposed
+methodology is demonstrated by considering non-Gaussian noise
+in the SMD measurements. A comparison of the DNN-based
+DSSE with more conventional approaches indicates that the
+DL-based approach gives better accuracy with smaller number
+of SMDs.
+To overcome the need for large numbers of real-time
+sensors, prior approaches for performing DSSE have used load
+forecasts as pseudo-measurements [11], [12]. However, it has
+been shown in [13] that using forecast/pseudo-measurements
+in real time can deteriorate estimation performance. Instead,
+the work of [13] proposed a Bayesian approach that trained
+a deep neural network (DNN) to circumvent the real-time
+unobservability problem. However, the approach was not vali-
+dated for three-phase unbalanced distribution systems. In [14],
+an artificial neural network was created for three-phase unbal-
+anced DSSE. However, smart meter measurements were not
+considered in the analysis (only micro-PMU measurements
+were used) and loads were varied by a Gaussian distribution
+which might not correctly represent system behavior. A sparse-
+tracking state estimator for unbalanced distribution systems
+that are incompletely observed by D-PMUs was developed
+in [15]. However, it required additional information from event
+data that may not be always available and was restricted to
+radial networks. A three-phase DSSE based on a Bayesian
+fusion procedure was proposed in [16] to account for the
+different temporal aspects of the states and measurements.
+However, due to the heavy computational burden of the
+procedure, it could not handle non-Gaussian loads and mea-
+surement noise. Moreover, in [11]–[16], the system topology
+was assumed to be fixed.
+This article addresses the knowledge gaps identified above
+by making the following salient contributions.
+1) A DNN-based TI is proposed to estimate switch statuses
+in real time from sparsely placed SMDs.
+2) A DNN-based DSSE for unbalanced three-phase distrib-
+ution networks is developed that estimates states (voltage
+phasors) in a fast, time-synchronized manner for both
+radial and meshed networks.
+3) Transfer learning is employed to account for the effects
+of topology changes on DNN-based DSSE.
+4) A judicious approach for SMD placement to facilitate
+reliable TI and DSSE is presented.
+5) Robustness of the proposed method is demonstrated by
+considering non-Gaussian noise in SMD measurements.
+B. Transfer Learning
+Now, a DNN can successfully approximate E(x | z) for
+a given topology. However, once the topology changes, the
+distribution of the inputs (i.e., SMD measurements), for which
+the DNN had been trained, changes. This is the best realized
+from the fact that the direction of the currents in a feeder
+can reverse when topology change occurs. Thus, there is a
+need to update the trained DNN once the topology changes.
+One way to do this is to train the DNN for DSSE afresh for
+every new topology. However, doing so may take a long time.
+An alternate (better) solution is to use Transfer learning to
+transfer the knowledge gained from the old topology to the
+new topology.
+Four approaches have been proposed for implementing
+inductive Transfer learning: feature-representation transfer,
+instance transfer, relational-knowledge transfer, and parameter
+transfer [27]. Here, we use parameter transfer to update the
+DNN for DSSE as the DNN’s parameters can be used for
+multiple domains. Two well-known parameter-based trans-
+fer learning methods are parameter-sharing and fine-tuning,
+respectively. Parameter-sharing assumes that the parameters
+are highly transferable due to which the parameters in the
+source domain can be directly copied to the target domain,
+where they are kept “frozen.” Fine-tuning assumes that the
+parameters in the source domain are useful, but they must
+be trained with limited target domain data to better adapt to
+the target domain [28]. Since there is no guarantee that the
+parameters of the DNN-based DSSE will be highly trans-
+ferable for different topologies, fine-tuning is used in this
+article to update the weights of the DNN for DSSE when
+topology changes. Essentially, fine-tuning provides a more
+effective initialization (than random initialization) by using the
+weights from the previously well-trained DNN. By doing this,
+it bypasses the need for large amounts of data (and time) for
+DNN retraining (see Section V.D for the implementation of
+the proposed methodology).
+As mentioned in Section I, smart meter measurements
+become available after a delay of at least a few hours,
+implying that they cannot be directly used for real-time DSSE.
+Therefore, the proposed methodology uses the historical slow
+timescale smart meter readings in the offline training process
+of the DNNs. The smart meter energy readings are first
+converted into average power by dividing the energy with
+the corresponding time interval. Then, the aggregated net
+injection at the distribution transformer level is calculated by
+summing up the readings of the smart meters connected to the
+transformer. The net load at each transformer is treated as a
+random variable.
+Next, a kernel density estimator (KDE) is used to learn
+the (non-Gaussian) distribution of aggregated smart meter
+readings. Although KDE is suitable for learning the PDF of
+data samples that do not follow a parametric PDF, it is prone
+to overfitting which causes loss of generality of the fitted
+PDF [34]. To overcome this problem, we modify the KDE
+by adjusting its bandwidth to achieve 95% confidence interval
+ensuring that the fitted PDF effectively represents net load
+behavior. After the PDF of active power injection is obtained,
+the reactive power is computed by selecting a power factor
+from a uniform distribution lying between 0.95 and 1. Monte
+Carlo (MC) sampling is performed next to pick active and
+reactive power injections from the learned distribution to run a
+large number of power flows. The voltage and current phasors
+obtained from the solved power flows are used to create the
+training database.
+During the online operation, the trained DNN is fed
+with streaming data from SMDs to perform DSSE at SMD
+timescales (subsecond time interval). However, as SMD data
+were not used in the training process, a question arises
+regarding the effectiveness of using calculated average power
+to represent instantaneous power injections at subsecond time
+resolution. In fact, it is statistically not possible to obtain
+the instantaneous power injections from the average power
+for one particular time interval. However, we hypothesize that
+if sufficient historical data for average powers are available,
+it is possible to approximate the PDF of instantaneous power
+injections using the historical average power measurements.
+A. Simulation Settings
+1) Distribution System Setup: Simulations are performed
+on a radial IEEE 34-node system (System S1) [38] and
+a meshed 240-node distribution network of Midwest U.S.
+(System S2) [39]–[40]. In System S1, three distributed gener-
+ation (DG) units having the ratings of 135, 60, and 60 kW
+are also placed on nodes 822, 848, and 860, respectively,
+to model the effect of renewable generation. The loads and
+DG units are varied based on the Pecan Street historical
+data [41] to create different scenarios for this system. System
+S2 has smart meters installed at customer premises and all
+the characteristics of a modern distribution network, such
+as underground and overhead lines, capacitors and voltage
+regulators, and single, double, and three-phase laterals and
+loads. One-year of smart meter readings is also available
+for this system. PDFs (computed using KDE) were fit to
+the historical hourly smart meter data. Network models of
+Systems S1 and S2 are available in OpenDSS [42]. The budget
+constraint was set at two SMDs for System S1 and ten SMDs
+for System S2. 
+Lastly, to demonstrate the ability of the proposed approach
+to provide real-time state estimates, a stream of high-speed
+data obtained from the Pecan Street dataset were set as
+inputs to the trained DNN for DSSE. The DNN was able
+to consistently track the variations in the states (see plot of
+Phase C voltage angle in Fig. 7). Moreover, the DNN took
+only 0.01 s to produce the estimates. This is because a trained
+DNN performs a matrix multiplication of the input values
+with the weights and biases of its neurons—a process that can
+be done very fast. Thus, this study shows that the proposed
+approach can provide fast (subsecond) situational awareness to
+distribution systems that are incompletely observed by SMDs
+in real time.
+Lastly, to demonstrate the ability of the proposed approach
+to provide real-time state estimates, a stream of high-speed
+data obtained from the Pecan Street dataset were set as
+inputs to the trained DNN for DSSE. The DNN was able
+to consistently track the variations in the states (see plot of
+Phase C voltage angle in Fig. 7). Moreover, the DNN took
+only 0.01 s to produce the estimates. This is because a trained
+DNN performs a matrix multiplication of the input values
+with the weights and biases of its neurons—a process that can
+be done very fast. Thus, this study shows that the proposed
+approach can provide fast (subsecond) situational awareness to
+distribution systems that are incompletely observed by SMDs
+in real time.
+are used to find a mapping between the states (voltage phasors)
+and the SMD measurements, with the mapping being realized
+using
+a DNN. When a change in topology occurs, the proposed
+framework first detects the change using a DNN built for TI
+and, subsequently, employs Transfer learning via fine-tuning
+to update the DNN for DSSE in real time for the new topology.
+A detailed methodology for SMD placement is also pro-
+posed to enhance the performance of DNN-based DSSE
+for varying network configurations. Being a greedy search
+method, this measurement selection strategy for SMD place-
+ment is not guaranteed to be optimal. However, it is deemed
+acceptable for the following reasons: 1) the problem being
+solved here is un-solvable in the classical sense (i.e., it has
+larger number of unknowns than knowns), therefore, there may
+not be a sensor placement algorithm that consistently gives the
+best results under all operating conditions and 2) the focus is
+not on optimizing sensor placement but on getting reasonable
+TI and state estimation results, which the proposed placement
+strategy is able to provide.
+The performance of the proposed DNN-based DSSE is
+validated by comparing it with the classical LSE as well
+as another ML-based state estimator (SVR-based state esti-
+mation). The simulation results on a renewable-rich IEEE
+34-node distribution feeder and the meshed 240-node Midwest
+U.S. system show that the proposed method: 1) can achieve
+similar DSSE accuracy with a significantly smaller number of
+SMDs; 2) can efficiently detect varying network topologies for
+reconfigurable distribution systems; 3) ensures reliable DSSE
+for different topologies; and 4) is robust against non-Gaussian
+measurement noise, nonparametric load variations, and renew-
+able energy fluctuations. The ability of the proposed algorithm
+to provide reliable state estimates with very few SMDs in
+large distribution networks for different topologies makes it
+a suitable candidate for enhanced monitoring, protection, and
+control of actual distribution systems.
+
+23) State Estimation of Smart Power Grid: A Literature Survey
+
+Abstract - Developing new and improving existing energy
+technologies, as well as adding information systems to manage the
+monitoring and controlling of smart grids, are all part of the
+advancement and use of smart power grids. The fast growth of
+smart grids necessitates the development of effective state
+estimation algorithms. This study gives a review of the literature
+on smart power grid state estimation algorithms. Based on the
+literature, the study also offers an overview of static and dynamic
+state estimation along with traditional and evolutionary
+algorithms techniques. Furthermore, a brief discussion on the role
+of a generalized state estimator that combined key aspects of a
+smart power grid is done. In addition to all these, some significant
+difficulties based on smart grid state estimation methodologies,
+such as meter placement, the impact of renewable penetration, and
+the use of pseudo measurements, were reviewed. The use of both
+traditional and contemporary probabilistic and meta-heuristic
+approaches has been reviewed. This study can offer utility
+engineers and researchers insights into the technological
+accomplishments, challenges, and future directions of distribution
+system SE research.
+
+Smart grid technologies are a step forward in the
+development of the utility industry, as they have the potential to
+solve the shortcomings of the current power system [1].
+Renewable energy resources (e.g., photovoltaic (PV) and wind)
+can be used to feed the smart grid [2]in parallel with the utility
+grid to provide a low overall cost. These resources, on the other
+hand, have negative effects on the distribution system, such as
+high power loss due to reverse feeding of the power flow [3],
+voltage fluctuation and unbalanced voltage [4], and voltage rise
+[5.] Because of the huge number of nodes, few phase
+measurements, and the system's inability to supply a meter at
+each node and branch, state estimation is
+utilized to estimate the power flow solution of various real- time
+information. Weighted least square criteria is a regularly used
+state estimator (WLS). The authors of [6] presented novel
+approaches for wide-area smart grid monitoring and analysis
+[7] shows another method for wide-area network estimate
+termed multi-area state estimation (MASE). The previous
+approaches had the disadvantage of taking a long time to
+execute [8]. Iterative power flow algorithms, in general, take
+a lengthy time to estimate smart grid states. The use of phasor
+Measurement Units (PMUs) has increased in recent years [9].
+PMUs becomes the central part of power distribution systems.
+Consequently, unnoticed little variations in parameters (voltage,
+current, phase angle, balance of active and reactive power, etc.)
+can have an impact on the entire power distribution system.
+PMUs quickly identify the issue before it spreads throughout
+the system. Additionally, it establishes the phasor of branch
+currents or bus voltages that are sampled simultaneously with
+the GPS. GPS provides continuous positioning and timing
+information under different weatherconditions.
+Metaheuristic optimization techniques often make it
+possible to successfully handle arising challenges. Here are a
+few techniques for SE.
+•
+SE based on Artificial Neural Networks (ANN)
+A method based on artificial neural networks (ANN) was
+proposed by the authors in [38] to evaluate the viability and
+resilience of smart grid system states. [39] compared the
+performance of ANN with WLS and discovered that ANN is
+quicker and more accurate. High levels of distributed generators
+(DG) are employed in [40–44] to calculate line current and
+voltage magnitudes.
+•
+SE based on Fuzzy Logic
+The fuzzy logic-based state estimator in [45-47]incorporates
+information using fuzzy set theory. To obtain fuzzy
+assessments, this program uses historical data to derive active
+and reactive load curves
+•
+SE based on Particle Swarm Optimization (PSO)
+Authors in [48] introduced Particle Swarm Optimization (PSO),
+a very effective and straightforward approach compared to older
+meta-heuristic evolutionary algorithms; nonetheless, PSO has a
+static model of selection, which lengthens the time it takes to
+identify an appropriate area in the solution space. The authors
+provide a hybrid PSO in [49] to solve this problem, allowing for
+high solution quality while speeding up computation time.
+•
+SE based on Particle Swarm Optimization (PSO)
+Authors in [48] introduced Particle Swarm Optimization (PSO),
+a very effective and straightforward approach compared to older
+meta-heuristic evolutionary algorithms; nonetheless, PSO has a
+static model of selection, which lengthens the time it takes to
+identify an appropriate area in the solution space. The authors
+provide a hybrid PSO in [49] to solve this problem, allowing for
+high solution quality while speeding up computation time.
+If a large number of pseudo measurements with extra errors
+are used to make a distribution network visible, the anticipated
+state may deviate from the real system state [57–58]. In order to
+achieve real-time operation, the need of cautious selection of
+new measurement locations and the cost of additional devices
+may be substantial. To achieve the ideal number and position of
+meters for proper observability, several strategies are described
+in [55-56]. Introduces [57] new techniques to enhance accuracy.
+PMUs and smart meters can be installed strategically to enhance
+system supervision and the precision of smart grid solutions.
+Pseudo-measurement creation is utilized to find load
+estimation at the distribution level [62]. However, development
+in this area is still in progress. Standard load profiles are utilized
+instead of AMI data history in some circumstances [63-64] to
+do numerical analysis and verification, which saves money.
+Smart grids are rapidly evolving, necessitating advanced
+state estimate approaches. The topic of locating system states
+has been discussed. This paper provides a literature survey on
+state estimation techniques for this purpose, which includes
+traditional approaches, alternative state estimation techniques,
+forecasting-based state estimation techniques, multi-area state
+estimation techniques, and meta-heuristic evolutionary
+algorithms like ANN, Fuzzy Logic, and PSO algorithms.
+Furthermore, the incentives for state estimation in a smart power
+system have been discussed. Additionally, significant issues
+encountered in determining system states, such as meter
+placements, impacts of renewable penetration, applications of
+pseudo measurements, and cyber-security, have been explored.
+As a result, the main contribution of this work is to describe
+various state estimate methodologies, how using smart grids
+affects systems without knowing their present states, and what
+obstacles are being faced with regard to extensively
+implementing smart grids. It would be interesting to investigate
+the impact of catastrophic events on distribution system
+observability and provide a workable solution in order to allow
+effective system state estimate approaches that depend on the
+operator's real-time knowledge of system circumstances.
+
+
+24) Robust Data-Driven State Estimation for Smart Grid
+
+Abstract—A grand challenge for state estimation in newly built
+smart grid lies in how to deal with the increasing uncertainties.
+To solve the problem, we propose a data-driven state estimation
+approach based on recent targeted investment on sensors, data
+storage, and computing devices. An architecture is proposed to
+use power system physics and pattern to systematically clean
+historical data and conduct supervised learning, where histori-
+cal similar measurements and their states are used to learn the
+relationship between the current measurement and the state. In
+order to deal with nonlinearity, kernel trick is used to produce
+linear mapping in a carefully selected higher dimensional space.
+To speed up the data-driven approach for online services, we
+analyze power system data set and discover its clustering prop-
+erty due to the periodic pattern of power systems. This leads
+to significant dimension reduction and the idea of preorganizing
+data points in a tree structure for inquiry, leading to 1000 times
+speedup. Numerical results show that the proposed data-driven
+approach works well in a smart grid setting with increasing
+uncertainties and it produces an online state estimate excelling
+current industrial approach.
+The contribution of the paper lies in 1) proposing to utilize
+the pattern in power systems for using historical data, 2) show-
+ing how to combine a nonparametric method to retrieve useful
+information, and how to conduct a parametric regression to
+fuse the information for the current state estimation, 3) speed-
+ing up the process via analyzing the power system pattern,
+and 4) adding robustness to the proposed method.
+The goal of data-driven state estimation is to utilize histor-
+ical data to improve the currently used static state estimation.
+We assume the availability of data storage devices recording
+historical measurements, topologies, and state estimates. The
+problem setup is as below:
+• Problem: Obtain a data-driven state estimator
+• Given:
+– a sequence of historical measurement column vec-
+tors: z1, z2, · · · , zk, · · · zQ, where k is the time index,
+and Q is the total number of data points in the
+database;
+– a sequence of historical state estimate column vec-
+tors: x1, x2, · · · , xk, · · · , xQ;
+– a sequence of historical measurement function sets
+based on topology: h1, h2, · · · , hk, · · · , hQ;
+– the current measurement column vector: zcurrent;
+– the current measurement function set: hcurrent.
+• Find: ˆxcurrent = g(zcurrent).
+In this paper, we propose to utilize historical data to deal
+with increasing uncertainties in power system state estimation.
+In particular, we present an architecture to systematically clean
+historical data, conduct supervised learning, and speed up the
+learning process to enable online state estimation. We show
+how to achieve these three steps by employing power system
+operation process, applying physical relationship, and using
+power system pattern. The numerical results illustrate that the
+proposed method can achieve a highly accurate robust data-
+driven state estimate in a short time with a 1000 time speedup.
+
+
+25) Bayesian State Estimation for Unobservable
+Distribution Systems via Deep Learning
+
+Abstract—The problem of state estimation for unobservable
+distribution systems is considered. A deep learning approach to
+Bayesian state estimation is proposed for real-time applications.
+The proposed technique consists of distribution learning of
+stochastic power injection, a Monte Carlo technique for the
+training of a deep neural network for state estimation, and a
+Bayesian bad-data detection and filtering algorithm. Structural
+characteristics of the deep neural networks are investigated. Sim-
+ulations illustrate the accuracy of Bayesian state estimation for
+unobservable systems and demonstrate the benefit of employing
+a deep neural network. Numerical results show the robustness
+of Bayesian state estimation against modeling and estimation
+errors and the presence of bad and missing data. Comparing
+with pseudo-measurement techniques, direct Bayesian state es-
+timation via deep learning neural network outperforms existing
+benchmarks.
+A direct implication of unobservability is that the class
+of state estimators that assume deterministic system state
+cannot provide guarantees on the accuracy and consistency
+of their estimates. In particular, the popular weighted least-
+squares (WLS) estimator and its variants can no longer be used
+when the system is unobservable because small WLS error in
+model fitting does not imply small error in estimation; large
+estimation error may persist even in the absence of noise.
+The most important benefit of Bayesian inference is that
+observability is no longer required. A Bayesian estimator ex-
+ploits probabilistic dependencies of the measurement variables
+on the system states; it improves the prior distribution of the
+states using available measurements, even if there are only a
+few such measurements. Unlike the least squares techniques
+that minimize modeling error, a Bayesian estimator minimizes
+directly the estimation error.
+The main benefit of the proposed Bayesian state estima-
+tion is twofold. First, the online computation cost of the
+Bayesian estimate is several orders of magnitude lower than
+that of the WLS techniques, thanks to the neural network
+implementation of the MMSE estimator. Second, the Bayesian
+inference framework provides a level of flexibility to assemble
+information from a variety of data sources. For instance, smart
+meter data are not used directly in state estimation; they
+contribute to the learning of the probability distribution of
+network states. The issues of incompatible timescales, delayed
+measurements, and missing data are mitigated.
+The proposed machine learning approach consists of dis-
+tribution learning and deep regression learning; the former
+uses smart meter data to learn bus injection distributions from
+which training samples are drawn. A novel contribution is
+learning the distribution of fast timescale power injection from
+slow timescale smart meter data. In regression learning, a deep
+neural network is trained for the MMSE state estimation. A
+key innovation here is the way that the power system model
+(the power flow equations) is embedded in the regression
+learning.
+We adopt a generic static power flow model for an N -
+bus three-phase power system. We assume that node 1 is the
+slack bus that, for distribution systems, represents the point
+of common coupling (PCC), where the distribution network is
+connected to the main grid.
+The three-phase voltage phasors at bus i is a complex
+column vector xi = [x1i , x2i , x3i ]| , where the superscripts are
+phase indices, and xki = Vik ∠θik , where Vik is the voltage
+magnitude and θik is the phase angle for the state variable at
+phase k of bus i. The overall system state x = [x1 , · · · , xN ]|
+is the column vector consisting of voltage phasors at all buses.
+We adopt a static system model defined by a pair of
+equations that characterize the relationship among the vector
+of (complex) power injections s = [s1 , · · · , sN ]T at network
+buses, the system states x, the vector of measurements z =
+[z1 , · · · , zM ]T , and measurement noise e:
+x = g(s), z = h(x) + e,
+The proposed scheme includes (i) online state estimation in
+the upper right of Fig. 1 and (ii) offline learning in the rest of
+the figure. This online-offline partition is of course not strict;
+the offline learning becomes online if learning continuous as
+data arrive.
+The online state estimation is through a neural-network ap-
+proximation of the MMSE estimator as described in Sec III-B.
+The offline learning includes distribution and regression learn-
+ing modules. Taking (historical) samples of the smart meter
+measurement y, the distribution learning module produces
+F̂s that approximates the probability distribution of the net
+injection s. The three submodules at the bottom of the figure
+are part of the regression learning that produces parameter w of
+the neural network. Specifically, the Monte Carlo sampling and
+the power flow analysis submodules generate samples from the
+estimated net-injection probability distributions F̂s and convert
+them to a set of state-measurement training samples {(x, z)}.
+The deep neural network training module sets the neural
+network parameter w via an empirical risk minimization.
+
+        TIaccuracy was set at 95%, while the DSSEaccuracy was set
+at 0.15 for phase angle mean absolute error (MAE) and
+0.30% for voltage magnitude mean absolute percentage error
+(MAPE).
+
+Insert PMUs:
+
+    - PMU - Measure node Voltage and one branch current
+        Vm, Va, Ibm, Iba
+
+        GNN
+
+        NN
+
+
+    - Next - PMU
+        Vm, Va, Iinjm, Iinja
+
+        GNN
+
+        NN
+
+
+    - Συμβατικοί μετρητές
+        Vm, Pinj, Qinj
+
+        GNN
+
+        NN
+
+
+
+
+That sounds interesting! Using a Transformer with Graph Attention Network (GAT) layers for State Estimation suggests you're working with structured data, possibly from power grids, dynamic systems, or another domain where relationships between entities matter.
+How a Transformer with GAT Works for State Estimation
+
+    Graph Attention Networks (GAT)
+        Instead of treating the input as a simple sequence, GAT layers model node relationships explicitly.
+        Each node (state variable) attends to its neighbors using attention weights, allowing the network to learn dynamic dependencies.
+
+    Transformer for Feature Extraction
+        The transformer processes time-series or structured data without losing global context.
+        Self-attention allows it to capture long-range dependencies between state variables.
+
+    State Estimation with Graphs
+        Traditional transformers struggle with irregular structures like power grids or sensor networks, but GAT layers help by learning an optimal adjacency structure.
+        GAT enables the model to handle missing data, noisy measurements, or dynamic topology changes.
+
+Potential Use Cases of GAT+Transformers for State Estimation
+
+    Power System State Estimation (PSSE)
+        Estimating voltages and currents across an electrical grid.
+        GAT helps model the grid structure while transformers capture global dependencies.
+
+    Traffic Flow Estimation
+        Using GAT for spatial relationships between roads and transformers for temporal dynamics.
+
+    Sensor Networks (IoT, Smart Cities)
+        Estimating missing sensor readings while handling irregular connectivity.
+
+What Challenges Did You Face?
+
+    Did you use positional encodings for node embeddings?
+    How did you handle time dependencies? (Recurrent layers, additional self-attention?)
+    Did you compare it to LSTMs or traditional Kalman filters for benchmarking?
