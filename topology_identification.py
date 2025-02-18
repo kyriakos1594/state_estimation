@@ -32,241 +32,10 @@ from captum.attr import IntegratedGradients
 from torch_geometric.nn import MLP, EdgeConv # Multi-layer Perceptron
 from torch.nn import Linear, BatchNorm1d
 import shap
+from config_file import *
+
 # Set the device globally
-
-# Define branch data based on the given fixed structure
-# IEEE-33
-branch_data = {
-    0: {'sending_node': 0, 'receiving_node': 1},
-    1: {'sending_node': 1, 'receiving_node': 2},
-    2: {'sending_node': 2, 'receiving_node': 3},
-    3: {'sending_node': 3, 'receiving_node': 4},
-    4: {'sending_node': 4, 'receiving_node': 5},
-    5: {'sending_node': 5, 'receiving_node': 6},
-    6: {'sending_node': 6, 'receiving_node': 7},
-    7: {'sending_node': 7, 'receiving_node': 8},
-    8: {'sending_node': 8, 'receiving_node': 9},
-    9: {'sending_node': 9, 'receiving_node': 10},
-    10: {'sending_node': 10, 'receiving_node': 11},
-    11: {'sending_node': 11, 'receiving_node': 12},
-    12: {'sending_node': 12, 'receiving_node': 13},
-    13: {'sending_node': 13, 'receiving_node': 14},
-    14: {'sending_node': 14, 'receiving_node': 15},
-    15: {'sending_node': 15, 'receiving_node': 16},
-    16: {'sending_node': 16, 'receiving_node': 17},
-    17: {'sending_node': 17, 'receiving_node': 18},
-    18: {'sending_node': 18, 'receiving_node': 19},
-    19: {'sending_node': 19, 'receiving_node': 20},
-    20: {'sending_node': 20, 'receiving_node': 21},
-    21: {'sending_node': 2, 'receiving_node': 22},
-    22: {'sending_node': 22, 'receiving_node': 23},
-    23: {'sending_node': 23, 'receiving_node': 24},
-    24: {'sending_node': 5, 'receiving_node': 25},
-    25: {'sending_node': 25, 'receiving_node': 26},
-    26: {'sending_node': 26, 'receiving_node': 27},
-    27: {'sending_node': 27, 'receiving_node': 28},
-    28: {'sending_node': 28, 'receiving_node': 29},
-    29: {'sending_node': 29, 'receiving_node': 30},
-    30: {'sending_node': 30, 'receiving_node': 31},
-    31: {'sending_node': 31, 'receiving_node': 32},
-    32: {'sending_node': 20, 'receiving_node': 7},
-    33: {'sending_node': 11, 'receiving_node': 21},
-    34: {'sending_node': 24, 'receiving_node': 28}
-}
-
-# MESOGEIA
-branch_data = {
-    0: {"sending_node": 1, "receiving_node": 0},
-    1: {"sending_node": 1, "receiving_node": 2},
-    2: {"sending_node": 2, "receiving_node": 3},
-    3: {"sending_node": 2, "receiving_node": 4},
-    4: {"sending_node": 5, "receiving_node": 3},
-    5: {"sending_node": 3, "receiving_node": 6},
-    6: {"sending_node": 7, "receiving_node": 5},
-    7: {"sending_node": 6, "receiving_node": 8},
-    8: {"sending_node": 8, "receiving_node": 9},
-    9: {"sending_node": 8, "receiving_node": 10},
-    10: {"sending_node": 11, "receiving_node": 10},
-    11: {"sending_node": 10, "receiving_node": 12},
-    12: {"sending_node": 12, "receiving_node": 13},
-    13: {"sending_node": 14, "receiving_node": 11},
-    14: {"sending_node": 17, "receiving_node": 6},
-    15: {"sending_node": 15, "receiving_node": 12},
-    16: {"sending_node": 13, "receiving_node": 16},
-    17: {"sending_node": 13, "receiving_node": 18},
-    18: {"sending_node": 16, "receiving_node": 19},
-    19: {"sending_node": 16, "receiving_node": 21},
-    20: {"sending_node": 22, "receiving_node": 19},
-    21: {"sending_node": 20, "receiving_node": 17},
-    22: {"sending_node": 19, "receiving_node": 23},
-    23: {"sending_node": 23, "receiving_node": 24},
-    24: {"sending_node": 24, "receiving_node": 25},
-    25: {"sending_node": 26, "receiving_node": 23},
-    26: {"sending_node": 21, "receiving_node": 27},
-    27: {"sending_node": 24, "receiving_node": 28},
-    28: {"sending_node": 28, "receiving_node": 29},
-    29: {"sending_node": 29, "receiving_node": 30},
-    30: {"sending_node": 28, "receiving_node": 31},
-    31: {"sending_node": 30, "receiving_node": 32},
-    32: {"sending_node": 33, "receiving_node": 29},
-    33: {"sending_node": 32, "receiving_node": 34},
-    34: {"sending_node": 35, "receiving_node": 30},
-    35: {"sending_node": 34, "receiving_node": 37},
-    36: {"sending_node": 32, "receiving_node": 36},
-    37: {"sending_node": 35, "receiving_node": 40},
-    38: {"sending_node": 34, "receiving_node": 38},
-    39: {"sending_node": 36, "receiving_node": 39},
-    40: {"sending_node": 38, "receiving_node": 47},
-    41: {"sending_node": 39, "receiving_node": 41},
-    42: {"sending_node": 43, "receiving_node": 39},
-    43: {"sending_node": 45, "receiving_node": 35},
-    44: {"sending_node": 41, "receiving_node": 42},
-    45: {"sending_node": 44, "receiving_node": 45},
-    46: {"sending_node": 46, "receiving_node": 43},
-    47: {"sending_node": 48, "receiving_node": 46},
-    48: {"sending_node": 42, "receiving_node": 49},
-    49: {"sending_node": 52, "receiving_node": 48},
-    50: {"sending_node": 53, "receiving_node": 46},
-    51: {"sending_node": 49, "receiving_node": 50},
-    52: {"sending_node": 48, "receiving_node": 51},
-    53: {"sending_node": 54, "receiving_node": 44},
-    54: {"sending_node": 54, "receiving_node": 44},
-    55: {"sending_node": 47, "receiving_node": 55},
-    56: {"sending_node": 42, "receiving_node": 59},
-    57: {"sending_node": 51, "receiving_node": 56},
-    58: {"sending_node": 55, "receiving_node": 62},
-    59: {"sending_node": 57, "receiving_node": 49},
-    60: {"sending_node": 59, "receiving_node": 58},
-    61: {"sending_node": 60, "receiving_node": 52},
-    62: {"sending_node": 45, "receiving_node": 61},
-    63: {"sending_node": 47, "receiving_node": 65},
-    64: {"sending_node": 50, "receiving_node": 63},
-    65: {"sending_node": 58, "receiving_node": 64},
-    66: {"sending_node": 63, "receiving_node": 66},
-    67: {"sending_node": 67, "receiving_node": 50},
-    68: {"sending_node": 64, "receiving_node": 82},
-    69: {"sending_node": 51, "receiving_node": 70},
-    70: {"sending_node": 57, "receiving_node": 68},
-    71: {"sending_node": 69, "receiving_node": 57},
-    72: {"sending_node": 66, "receiving_node": 74},
-    73: {"sending_node": 75, "receiving_node": 66},
-    74: {"sending_node": 71, "receiving_node": 56},
-    75: {"sending_node": 70, "receiving_node": 72},
-    76: {"sending_node": 63, "receiving_node": 79},
-    77: {"sending_node": 74, "receiving_node": 73},
-    78: {"sending_node": 76, "receiving_node": 67},
-    79: {"sending_node": 71, "receiving_node": 83},
-    80: {"sending_node": 72, "receiving_node": 84},
-    81: {"sending_node": 77, "receiving_node": 54},
-    82: {"sending_node": 79, "receiving_node": 78},
-    83: {"sending_node": 73, "receiving_node": 85},
-    84: {"sending_node": 80, "receiving_node": 67},
-    85: {"sending_node": 69, "receiving_node": 81},
-    86: {"sending_node": 78, "receiving_node": 87},
-    87: {"sending_node": 89, "receiving_node": 69},
-    88: {"sending_node": 83, "receiving_node": 86},
-    89: {"sending_node": 84, "receiving_node": 91},
-    90: {"sending_node": 88, "receiving_node": 74},
-    91: {"sending_node": 86, "receiving_node": 90},
-    92: {"sending_node": 92, "receiving_node": 71},
-    93: {"sending_node": 87, "receiving_node": 98},
-    94: {"sending_node": 75, "receiving_node": 93},
-    95: {"sending_node": 81, "receiving_node": 94},
-    96: {"sending_node": 86, "receiving_node": 95},
-    97: {"sending_node": 90, "receiving_node": 96},
-    98: {"sending_node": 91, "receiving_node": 97},
-    99: {"sending_node": 85, "receiving_node": 99},
-    100: {"sending_node": 93, "receiving_node": 100},
-    101: {"sending_node": 93, "receiving_node": 104},
-    102: {"sending_node": 101, "receiving_node": 97},
-    103: {"sending_node": 102, "receiving_node": 87},
-    104: {"sending_node": 100, "receiving_node": 103},
-    105: {"sending_node": 105, "receiving_node": 91},
-    106: {"sending_node": 107, "receiving_node": 103},
-    107: {"sending_node": 108, "receiving_node": 101},
-    108: {"sending_node": 103, "receiving_node": 106},
-    109: {"sending_node": 97, "receiving_node": 111},
-    110: {"sending_node": 99, "receiving_node": 112},
-    111: {"sending_node": 109, "receiving_node": 99},
-    112: {"sending_node": 111, "receiving_node": 110},
-    113: {"sending_node": 81, "receiving_node": 113},
-    114: {"sending_node": 81, "receiving_node": 113},
-    115: {"sending_node": 110, "receiving_node": 114},
-    116: {"sending_node": 113, "receiving_node": 117},
-    117: {"sending_node": 106, "receiving_node": 115},
-    118: {"sending_node": 113, "receiving_node": 119},
-    119: {"sending_node": 117, "receiving_node": 116},
-    120: {"sending_node": 106, "receiving_node": 118},
-    121: {"sending_node": 121, "receiving_node": 107},
-    122: {"sending_node": 116, "receiving_node": 122},
-    123: {"sending_node": 112, "receiving_node": 120},
-    124: {"sending_node": 122, "receiving_node": 123},
-    125: {"sending_node": 122, "receiving_node": 124},
-    126: {"sending_node": 114, "receiving_node": 125},
-    127: {"sending_node": 123, "receiving_node": 128},
-    128: {"sending_node": 125, "receiving_node": 126},
-    129: {"sending_node": 126, "receiving_node": 129},
-    130: {"sending_node": 127, "receiving_node": 120},
-    131: {"sending_node": 127, "receiving_node": 128},
-    132: {"sending_node": 129, "receiving_node": 130},
-}
-
-branch_data = {
-    0: {'sending_node': 0, 'receiving_node': 1},
-    1: {'sending_node': 1, 'receiving_node': 2},
-    2: {'sending_node': 2, 'receiving_node': 3},
-    3: {'sending_node': 3, 'receiving_node': 4},
-    4: {'sending_node': 4, 'receiving_node': 5},
-    5: {'sending_node': 5, 'receiving_node': 6},
-    6: {'sending_node': 6, 'receiving_node': 7},
-    7: {'sending_node': 7, 'receiving_node': 8},
-    8: {'sending_node': 8, 'receiving_node': 9},
-    9: {'sending_node': 9, 'receiving_node': 10},
-    10: {'sending_node': 10, 'receiving_node': 11},
-    11: {'sending_node': 11, 'receiving_node': 12},
-    12: {'sending_node': 12, 'receiving_node': 13},
-    13: {'sending_node': 13, 'receiving_node': 14},
-    14: {'sending_node': 14, 'receiving_node': 15},
-    15: {'sending_node': 15, 'receiving_node': 16},
-    16: {'sending_node': 16, 'receiving_node': 17},
-    17: {'sending_node': 17, 'receiving_node': 18},
-    18: {'sending_node': 2, 'receiving_node': 19},
-    19: {'sending_node': 19, 'receiving_node': 20},
-    20: {'sending_node': 20, 'receiving_node': 21},
-    21: {'sending_node': 2, 'receiving_node': 22},
-    22: {'sending_node': 22, 'receiving_node': 23},
-    23: {'sending_node': 23, 'receiving_node': 24},
-    24: {'sending_node': 5, 'receiving_node': 25},
-    25: {'sending_node': 25, 'receiving_node': 26},
-    26: {'sending_node': 26, 'receiving_node': 27},
-    27: {'sending_node': 27, 'receiving_node': 28},
-    28: {'sending_node': 28, 'receiving_node': 29},
-    29: {'sending_node': 29, 'receiving_node': 30},
-    30: {'sending_node': 30, 'receiving_node': 31},
-    31: {'sending_node': 31, 'receiving_node': 32},
-    32: {'sending_node': 20, 'receiving_node': 7},
-    33: {'sending_node': 11, 'receiving_node': 21},
-    34: {'sending_node': 24, 'receiving_node': 28}
-}
-
-NUM_NODES    = 33 #131 #33
-NUM_BRANCHES = 35 #133 #35
 np.set_printoptions(threshold=np.inf)
-GLOBAL_BRANCH_LIST = [6]
-NUM_TOPOLOGIES = 15
-NUM_SIMULATIONS = 1000
-EXISTING_METER_BRANCHES = []
-EXISTING_METER_NODES    = []
-
-RAW_FILENAME    = "datasets/IEEE33_dataset.csv"
-
-input_filename  = "datasets/MESOGEIA_dataset_input.npy"
-output_filename = "datasets/MESOGEIA_dataset_output.npy"
-
-
-NODE_PICK_LIST   = [4, 7, 9, 14, 15, 17, 18, 20, 21, 22, 25, 26, 27, 31, 33, 37, 40, 45, 53, 59, 60, 62, 68, 70, 75, 76, 77, 79, 80, 82, 83, 85, 88, 89, 90, 92, 94, 95, 96, 98, 102, 104, 105, 107, 108, 109, 111, 112, 114, 115, 117, 118, 119, 121, 124, 127, 128, 129, 130]
-BRANCH_PICK_LIST = [key for key in branch_data.keys() if ((branch_data[key]["receiving_node"] in NODE_PICK_LIST) or (branch_data[key]["sending_node"] in NODE_PICK_LIST))]
-print(BRANCH_PICK_LIST)
 
 class Preprocess:
 
@@ -275,91 +44,7 @@ class Preprocess:
         self.filename                  = RAW_FILENAME
         self.topologies                = NUM_TOPOLOGIES
         self.simulations               = NUM_SIMULATIONS
-        self.radial_topologies_zipfile = 'datasets/Radial topologies/'
-        self.meshed_topologies_zipfile = 'datasets/Meshed topologies'
         self.dataset_filename          = RAW_FILENAME
-
-    def merge_datasets(self):
-
-        # List of topology frames
-        df_dict   = {}
-        file_list = []
-        dataset   = None
-
-        for folder in [self.radial_topologies_zipfile, self.meshed_topologies_zipfile]:
-            print("------------Folder-----------", folder)
-            for root, dirs, files in os.walk(folder):
-                for file in files:
-                    if file.split(".")[1] == "xlsx":
-                        print("Processed file: ---->", file)
-                        file_list.append(file)
-                        tmp_df = pd.read_excel(os.path.join(folder, file))
-                        df_dict[file] = tmp_df
-
-        print(file_list)
-        print("Choose files by hand")
-
-        file_list = ['completedatasetTopo1-3.xlsx', 'completedatasetTopo4.xlsx', 'completedatasetTopo5.xlsx',
-                     'completedatasetTopo6.xlsx', 'completedatasetTopo7.xlsx', 'completedatasetTopo8.xlsx',
-                     'completedatasetTopo9.xlsx', 'completedatasetTopo10.xlsx', 'completedatasetTopo11.xlsx',
-                     'completedatasetTopo12.xlsx', 'completedatasetTopo13.xlsx', 'completedatasetTopo14.xlsx',
-                     'completedatasetTopo15.xlsx']
-
-        print(file_list)
-
-        for file in file_list:
-            tmp_df = df_dict[file]
-            if dataset is None:
-                dataset = tmp_df
-            else:
-                dataset = pd.concat([dataset, tmp_df], axis=0)
-
-        dataset.to_csv(self.dataset_filename)
-
-
-    def store_data_themis(self):
-
-        df = pd.read_csv(self.dataset_filename)
-        # "Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"
-        df = df[["Vm_m", "Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopNo"]]
-        data = []
-        inputs = []
-        labels = []
-        for topology in range(1, self.topologies + 1):
-            for simulation in range(1, self.simulations + 1):
-                # TODO Input
-                Vm_m = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Vm_m"].values.tolist()[:-2]
-                Va_m = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Va_m"].values.tolist()[:-2]
-                Ifm_m = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Ifm_m"].values.tolist()
-                Ifa_m = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Ifa_m"].values.tolist()
-
-                # TODO Output
-                Vm_t = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Vm_t"].values.tolist()[:-2]
-                Va_t = df[(df["TopNo"] == topology) & (df["SimNo"] == simulation)]["Va_t"].values.tolist()[:-2]
-
-                print(topology, simulation)
-
-                # Input, SE Output, TI Output
-                data.append([Vm_m + Va_m + Ifm_m + Ifa_m, Vm_t + Va_t, topology])
-                #data.append([If_real, topology])
-
-        for [x, y, z] in data:
-            inputs.append(np.array(x))
-            #if len(x)!=136: print("Issue on sample: ", x, y)
-            #print(y)
-            #print(z)
-            y = np.array(y)
-            z = np.array([z])
-            label = np.concatenate([y, z])
-            labels.append(label)
-
-        print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
-        print("Dataset Size", len(labels))
-
-        print(f"Saving input into datasets/MESOGEIA_dataset_input.npy")
-        np.save("datasets/MESOGEIA_dataset_input.npy", inputs)
-        print(f"Saving input into datasets/MESOGEIA_dataset_output.npy")
-        np.save("datasets/MESOGEIA_dataset_output.npy", labels)
 
     def store_data_PMU_caseA(self):
 
@@ -393,13 +78,12 @@ class Preprocess:
             label = np.concatenate([y, z])
             labels.append(label)
 
-        print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
-        print("Dataset Size", len(labels))
+        print(f"Saving input into {PMU_caseA_input}")
+        np.save(f"{PMU_caseA_input}", inputs)
+        print(f"Saving input into {PMU_caseA_output}")
+        np.save(f"{PMU_caseA_output}", labels)
 
-        print(f"Saving input into datasets/MESOGEIA_dataset_input.npy")
-        np.save("datasets/MESOGEIA_dataset_input.npy", inputs)
-        print(f"Saving input into datasets/MESOGEIA_dataset_output.npy")
-        np.save("datasets/MESOGEIA_dataset_output.npy", labels)
+        self.train_test_split_dataset(meterType)
 
     def store_data_PMU_caseB(self):
 
@@ -438,11 +122,13 @@ class Preprocess:
         print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
         print("Dataset Size", len(labels))
 
-        print(f"Saving input into datasets " + input_filename)
-        print("Inputs:", len(inputs))
-        np.save(input_filename, inputs)
-        print(f"Saving input into " + output_filename)
-        np.save(output_filename, labels)
+        print(f"Saving input into datasets " + PMU_caseB_input)
+        np.save(PMU_caseB_input, inputs)
+        print(f"Saving input into " + PMU_caseB_output)
+        np.save(PMU_caseB_output, labels)
+
+        self.train_test_split_dataset(meterType)
+
 
     def store_data_conventional(self):
 
@@ -464,7 +150,7 @@ class Preprocess:
                 Q_pu = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Q_pu"].values.tolist()[:-2]
                 #Q_pu = [q * (1 + np.random.uniform(-error, error)) for q in Q_pu]  # Adding ±1% noise
 
-                print("Inserted 1% noise to conventional meters")
+                print(f"Inserted {100*error}% noise to conventional meters")
 
                 # TODO Output
                 Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
@@ -487,10 +173,13 @@ class Preprocess:
         print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
         print("Dataset Size", len(labels))
 
-        print(f"Saving input into IEEE33_pandapower_conventional_input")
-        np.save('datasets/IEEE33_pandapower_conventional_input.npy', inputs)
-        print(f"Saving input into IEEE33_pandapower_conventional_output")
-        np.save('datasets/IEEE33_pandapower_conventional_output.npy', labels)
+        print(f"Saving input into ", PMU_caseB_input)
+        np.save(f"{PMU_caseB_input}", inputs)
+        print(f"Saving input into {PMU_caseB_output}")
+        np.save(f"{PMU_caseB_output}", labels)
+
+        self.train_test_split_dataset(meterType)
+
 
     def custom_one_hot_encode(self, labels):
 
@@ -505,43 +194,13 @@ class Preprocess:
 
         return one_hot_encoded_labels
 
-    def read_data(self):
-
-        print("----------PREPROCESSIING DATASET------------")
-
-        inputs = np.load(input_filename)
-        outputs = np.load(output_filename)
-
-        #print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
-        #print("Label size: ", len(labels))
-
-        # Reshape the labels to a 2D array
-        outputs, labels = outputs[:, :-1], outputs[:, -1]
-
-        labels_reshaped = list(labels)
-
-
-        ohe_labels = self.custom_one_hot_encode(labels_reshaped)
-
-        # Initialize an empty list to store concatenated elements
-        concatenated_list = []
-
-        # Loop through each element (i) of outputs and labels
-        for i in range(len(outputs)):
-            # Concatenate the ith elements of outputs and labels
-            concatenated = np.concatenate((outputs[i], ohe_labels[i]))
-            concatenated_list.append(concatenated)
-
-        concatenated = np.array(concatenated_list)
-
-        return [inputs, concatenated]
 
     def read_data_PMU_caseA(self):
 
         print("----------PREPROCESSIING DATASET------------")
 
-        inputs = np.load(input_filename)
-        outputs = np.load(output_filename)
+        inputs = np.load(PMU_caseA_input)
+        outputs = np.load(PMU_caseA_output)
 
         #print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
         #print("Label size: ", len(labels))
@@ -571,8 +230,8 @@ class Preprocess:
 
         print("----------PREPROCESSIING DATASET------------")
 
-        inputs = np.load(input_filename)
-        outputs = np.load(output_filename)
+        inputs = np.load(PMU_caseB_input)
+        outputs = np.load(PMU_caseB_output)
 
         #print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
         #print("Label size: ", len(labels))
@@ -602,8 +261,8 @@ class Preprocess:
 
         print("----------PREPROCESSIING DATASET------------")
 
-        inputs = np.load(input_filename)
-        outputs = np.load(output_filename)
+        inputs = np.load(conventional_input)
+        outputs = np.load(conventional_output)
 
         #print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
         #print("Label size: ", len(labels))
@@ -629,45 +288,108 @@ class Preprocess:
 
         return [inputs, concatenated]
 
-    def preprocess_data(self, type):
+    def train_test_split_dataset(self, type):
 
         # TODO Change for dataset here
         if type == "PMU_caseA":
             inputs, outputs = self.read_data_PMU_caseA()
+            X_train_file = X_train_PMU_caseA
+            y_train_file = y_train_PMU_caseA
+            X_val_file   = X_val_PMU_caseA
+            y_val_file   = y_val_PMU_caseA
+            X_test_file  = X_test_PMU_caseA
+            y_test_file  = y_test_PMU_caseA
         elif type == "PMU_caseB":
             inputs, outputs = self.read_data_PMU_caseB()
+            X_train_file = X_train_PMU_caseB
+            y_train_file = y_train_PMU_caseB
+            X_val_file = X_val_PMU_caseB
+            y_val_file = y_val_PMU_caseB
+            X_test_file = X_test_PMU_caseB
+            y_test_file = y_test_PMU_caseB
         elif type == "conventional":
             inputs, outputs = self.read_data_conventional()
+            X_train_file = X_train_conventional
+            y_train_file = y_train_conventional
+            X_val_file = X_val_conventional
+            y_val_file = y_val_conventional
+            X_test_file = X_test_conventional
+            y_test_file = y_test_conventional
+        else:
+            print("Enter meter type")
+            sys.exit(0)
+
 
         # First split: train+validation and test
         X_train, X_test, y_train, y_test = train_test_split(inputs, outputs, test_size=0.1, random_state=42)
 
-        # TODO Divide TI-SE
-        y_test_outputs = y_test[:, :2*NUM_NODES]
-        y_test_labels  = y_test[:, 2*NUM_NODES:]
-
         # Second split: train and validation
         X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.125, random_state=42)  # 0.25 x 0.8 = 0.2
-
-        # TODO Divide TI-SE
-        y_train_outputs = y_train[:, :2*NUM_NODES]
-        y_train_labels  = y_train[:, 2*NUM_NODES:]
-
-        y_val_outputs = y_val[:, :2*NUM_NODES]
-        y_val_labels  = y_val[:, 2*NUM_NODES:]
 
         scaler   = StandardScaler()
         X_train  = scaler.fit_transform(X_train)
         X_val    = scaler.transform(X_val)
         X_test   = scaler.transform(X_test)
 
+        np.save(X_train_file, X_train)
+        np.save(y_train_file, y_train)
+        np.save(X_val_file, X_val)
+        np.save(y_val_file, y_val)
+        np.save(X_test_file, X_test)
+        np.save(y_test_file, y_test)
+
+    def preprocess_data(self, type):
+
+        if type == "PMU_caseA":
+
+            X_train = np.load(X_train_PMU_caseA)
+            y_train = np.load(y_train_PMU_caseA)
+
+            X_val = np.load(X_val_PMU_caseA)
+            y_val = np.load(y_val_PMU_caseA)
+
+            X_test = np.load(X_test_PMU_caseA)
+            y_test = np.load(y_test_PMU_caseA)
+
+        elif type == "PMU_caseB":
+            X_train = np.load(X_train_PMU_caseB)
+            y_train = np.load(y_train_PMU_caseB)
+            X_val = np.load(X_val_PMU_caseB)
+            y_val = np.load(y_val_PMU_caseB)
+            X_test = np.load(X_test_PMU_caseB)
+            y_test = np.load(y_test_PMU_caseB)
+
+        elif type == "conventional":
+            X_train = np.load(X_train_conventional)
+            y_train = np.load(y_train_conventional)
+            X_val = np.load(X_val_conventional)
+            y_val = np.load(y_val_conventional)
+            X_test = np.load(X_test_conventional)
+            y_test = np.load(y_test_conventional)
+
+        else:
+            print("Please enter known meter Type")
+            sys.exit(0)
+
+
+        #TODO Divide SE/TI output
+        y_train_outputs = y_train[:, :2 * NUM_NODES]
+        y_train_labels = y_train[:, 2 * NUM_NODES:]
+
+        y_val_outputs = y_val[:, :2 * NUM_NODES]
+        y_val_labels = y_val[:, 2 * NUM_NODES:]
+
+        y_test_outputs = y_test[:, :2 * NUM_NODES]
+        y_test_labels = y_test[:, 2 * NUM_NODES:]
+
         return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels
+
 
     def preprocess_meter_type(self, type):
 
         if type == "PMU_caseA":
             # TODO Case A - Store then read for each measurement Vm, Va, Im, Ia
-            self.store_data_PMU_caseA()
+            #self.store_data_PMU_caseA()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseA")
         elif type == "PMU_caseB":
             # TODO Case B - Store then read for each measurement Vm, Va, Iinjm, Iinja
@@ -675,8 +397,11 @@ class Preprocess:
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseB")
         elif type == "conventional":
             # TODO Case B - Store then read for each measurement Vm, Pinj, Qinj
-            self.store_data_conventional()
+            #self.store_data_conventional()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("conventional")
+        else:
+            print("Please enter known meter type")
+            sys.exit(0)
 
         return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels
 
@@ -1407,16 +1132,16 @@ class GATNoEdgeAttrs(torch.nn.Module):
 
         # Graph Attention layers (without edge features)
         self.conv1 = GATConv(num_features, 64, heads=heads, concat=True)  # No edge_dim
-        self.conv2 = GATConv(64 * heads, 32, heads=heads, concat=True)  # No edge_dim
-        self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True)
-        self.conv4 = GATConv(8  * heads, 4, heads=heads, concat=True)
+        self.conv2 = GATConv(64 * heads, 16, heads=heads, concat=True)  # No edge_dim
+        #self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True)
+        #self.conv4 = GATConv(8  * heads, 4, heads=heads, concat=True)
         #self.conv4 = GATConv(16  * heads, 4, heads=heads, concat=True)
 
         # Dropout layer
         self.dropout = torch.nn.Dropout(0.3)
 
         # Fully connected layer for classification
-        self.fc1 = torch.nn.Linear(4 * heads, num_classes)
+        self.fc1 = torch.nn.Linear(16 * heads, num_classes)
 
     def forward(self, data):
         # If no node features exist, initialize dummy features
@@ -1436,14 +1161,14 @@ class GATNoEdgeAttrs(torch.nn.Module):
         x = self.dropout(x)
 
         # Third GAT layer
-        x = self.conv3(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
+        #x = self.conv3(x, edge_index)
+        #x = F.relu(x)
+        #x = self.dropout(x)
 
         # Fourth GAT layer
-        x = self.conv4(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
+        #x = self.conv4(x, edge_index)
+        #x = F.relu(x)
+        #x = self.dropout(x)
 
         # feourth GAT layer
         #x = self.conv4(x, edge_index)
@@ -2324,8 +2049,8 @@ class TrainNN_TI:
 if __name__ == "__main__":
 
     #meterType = "PMU_caseA"
-    #meterType = "PMU_caseB"
-    meterType = "conventional"
+    meterType = meterType
+    #meterType = "conventional"
 
     model = "NN"
     PP    = "RF"
@@ -2334,8 +2059,8 @@ if __name__ == "__main__":
 
     PreProc = Preprocess()
     X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = PreProc.preprocess_meter_type(meterType)
-    TI_PTP = TIPredictorTrainProcess(meterType, threshold, model, X_train, y_train_labels, X_val, y_val_labels, X_test, y_test_labels, PP, subPP)
-    TI_PTP.execute()
+    #TI_PTP = TIPredictorTrainProcess(meterType, threshold, model, X_train, y_train_labels, X_val, y_val_labels, X_test, y_test_labels, PP, subPP)
+    #TI_PTP.execute()
 
 
 

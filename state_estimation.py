@@ -1932,12 +1932,12 @@ class Train_GNN_DSSE:
         if self.meterType == "PMU_caseA":
             self.model = GATWithEdgeAttrs(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, heads=8).to(self.device)
         elif self.meterType == "PMU_caseB":
-            #self.model = GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=16).to(self.device)
+            self.model = GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=16).to(self.device)
             #self.model = SparseGAT(num_features=4,output_dim=NUM_NODES, heads=8).to(self.device)
             #self.model = GATTransformer(num_features=4, output_dim=NUM_NODES, heads=16, num_transformer_layers=2, num_attention_heads=16).to(self.device)
             #self.model = GAT_ED_Transformer(num_features=4,output_dim=NUM_NODES,heads=8,num_encoder_layers=2,num_decoder_layers=2).to(self.device)
-            self.model = GAT_EED_Transformer(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=12,heads=16,num_encoder_layers=2, num_decoder_layers=2).to(self.device)
-            self.model.parameters()
+            #self.model = GAT_EED_Transformer(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=12,heads=16,num_encoder_layers=2, num_decoder_layers=2).to(self.device)
+            print(self.model.parameters())
         elif self.meterType == "conventional":
             self.model = GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
 
