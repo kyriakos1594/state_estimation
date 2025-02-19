@@ -2286,6 +2286,116 @@ estimated net-injection probability distributions F̂s and convert
 them to a set of state-measurement training samples {(x, z)}.
 The deep neural network training module sets the neural
 network parameter w via an empirical risk minimization.
+The universal approximation theorem (see, e.g., [40]) has
+established that a neural network with a single hidden layer
+is sufficient to approximate an arbitrary continuous function.
+This means that with a sufficiently large neural network and
+appropriately chosen w, a neural network can well approx-
+imate the MMSE state estimator. Under this approximation,
+the infinite dimensional learning problem of the conditional
+mean becomes a finite dimensional learning problem with
+dimensionality being the number of parameters in w.
+The empirical risk minimization problem above is well studied
+for deep learning problems, and an extensive literature exists.
+See, e.g., [41]. For the state estimation problem at hand, the
+class of stochastic gradient descent algorithms is considered.
+The Adam algorithm [42] designed for non-stationary objec-
+tives and noisy measurements is particularly suitable.
+A characteristic of deep learning is over-fitting, which
+means that the number of neural network parameters tends to
+be large relative to the training data set. A general approach
+to overcoming over-fitting is regularization that constraints
+in some way the search process in neural network training.
+Standard techniques include L1 regularization, dropout, and
+early stopping [41]. We present next a regularization technique
+based on structural constraints on the neural network.
+The performance of state estimation can be affected by the
+structure of the neural network. The “shape” of the network
+can vary from shallow-and-wide to deep-and-narrow, and it
+does not have to be rectangular. Indeed, the shape of the
+network plays a role or regularization.
+We propose a technique that transforms a rectangular
+network to a non-rectangular one based on the statistical
+clustering of the output variables at each layer. The intuition is
+that, for a feedforward network, if the outputs of two neurons
+at the same layer are strongly correlated statistically, they can
+be combined. Generalizing beyond two neurons, if the outputs
+of a group of neurons are highly correlated, this group of
+neurons may be well represented by a single neuron.
+As shown in Fig. 3, if neurons at a particular layer are
+clustered into three groups for the network in the left panel,
+the network on the left panel is reduced to one on the
+right, replacing each subgroup of neurons by its single-neuron
+representative.
+Clustering requires a similarity measure. To this end, we
+considered a standard similarity measure ρX,Y between ran-
+dom variables X and Y defined by
+ρX,Y = 1 − p
+E(XY )
+E(X 2 )E(Y 2 )
+.
+A variety of clustering techniques can be applied once a
+similarity measure is chosen. In particular, hierarchical ag-
+glomerative clustering [43] allows us to control the number
+and the sizes of clusters.
+In Section V, we present numerical results on the structure
+of the neural network using the above clustering analysis. The
+results from these experiments suggest that a network with a
+bulging middle section seems to perform better.
+In contrast to the conventional bad-data detection methods that
+are based on residue errors computed after state estimation, we
+propose a pre-estimation bad detection technique by exploiting
+the learned (prior) distributions of the measurements.
+We used data sets from the Pecan Street collection§ for
+distribution learning. Specifically, a data set covering May 21st
+to September 21st of 2015 was used for training, and a data
+set covering the same period in 2016 was used for testing. The
+data sets included power measurements from 82 households,
+from which 55 had solar PV installed. Power consumptions
+and solar PV generations were measured separately. Distribu-
+tions of active power consumptions and solar generations were
+learned from data separately.
+Separate neural networks were implemented and trained
+for each hour of the day. We generated 10,000 training and
+10,000 validation samples. The training of the networks took
+on average 500 update iterations.
+This paper presents a deep learning approach to Bayesian
+state estimation for unobservable distribution systems under
+a stochastic generation and demand model. The proposed
+approach employs two machine learning techniques: distribu-
+tion learning of power injection and regression learning of
+MMSE estimator. A bad-data detection algorithm developed
+that detects and remove bad data prior to state estimation. The
+use of deep neural network plays a crucial role in overcoming
+computation complexity in Bayesian estimation, making the
+online computation significantly lower than the traditional
+WLS solutions. Simulation results demonstrate the potential
+of the Bayesian state estimation for cases that are otherwise
+intractable for conventional WLS-based techniques.
+The Bayesian approach presented here has its limitations;
+further research and evaluations outside the scope of this
+paper are needed. First, because prior distribution plays such
+an important role in Bayesian techniques, the estimator is
+less capable of adapting to changes in the network such as
+line and generation outages. Second, the training of deep
+neural networks is an area of research undergoing intensive
+investigation. Techniques available are largely ad hoc with
+little guarantee of performance. For this reason, while the
+Bayesian approach is sound and promising, the performance
+reported here are results of careful tuning of some of the design
+parameters for the specific systems studied.
+Several extensions are possible to improve further the
+proposed state estimation and bad-data detection techniques.
+Although we focus on SCADA measurements, the approach
+developed here also applies to micro-PMU measurements that
+are not sufficient to achieve observability. It is also possible
+to exploit temporal dependencies and employing convolutional
+or recurrent neural networks.
+
+26. FeederGAN: Synthetic Feeder Generation
+via Deep Graph Adversarial Nets
+
+
 
         TIaccuracy was set at 95%, while the DSSEaccuracy was set
 at 0.15 for phase angle mean absolute error (MAE) and

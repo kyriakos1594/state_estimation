@@ -3,8 +3,8 @@ import sys
 #TODO Basic configurations
 dataset = "IEEE33"
 #meterType = "PMU_caseA" # PMU_caseA, PMU_caseB, conventional
-#meterType = "PMU_caseB"
-meterType = "conventional"
+meterType = "PMU_caseB"
+#meterType = "conventional"
 GLOBAL_BRANCH_LIST = [6]
 NUM_TOPOLOGIES = 15
 NUM_SIMULATIONS = 1000
@@ -229,11 +229,11 @@ y_test_PMU_caseB  = f"datasets/{dataset}_PMU_caseB_y_test.npy"
 
 #TODO Data files for conventional meters
 conventional_dataset = f"datasets/{dataset}_conventional_dataset.csv"
-conventional_input   = f"datasets/{dataset}conventional_input.npy"
-conventional_output  = f"datasets/{dataset}conventional_output.npy"
+conventional_input   = f"datasets/{dataset}_conventional_input.npy"
+conventional_output  = f"datasets/{dataset}_conventional_output.npy"
 X_train_conventional = f"datasets/{dataset}_conventional_X_train.npy"
-y_train_conventional = f"datasets/{dataset}_PMU_caseA_y_train.npy"
-X_val_conventional   = f"datasets/{dataset}_PMU_caseA_X_val.npy"
-y_val_conventional   = f"datasets/{dataset}_PMU_caseA_y_val.npy"
-X_test_conventional  = f"datasets/{dataset}_PMU_caseA_X_test.npy"
-y_test_conventional  = f"datasets/{dataset}_PMU_caseA_y_test.npy"
+y_train_conventional = f"datasets/{dataset}_conventional_y_train.npy"
+X_val_conventional   = f"datasets/{dataset}_conventional_X_val.npy"
+y_val_conventional   = f"datasets/{dataset}_conventional_y_val.npy"
+X_test_conventional  = f"datasets/{dataset}_conventional_X_test.npy"
+y_test_conventional  = f"datasets/{dataset}_conventional_y_test.npy"

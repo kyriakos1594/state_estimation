@@ -901,17 +901,17 @@ class GATNoEdgeAttrs(torch.nn.Module):
         # Graph Attention layers (GATConv)
         # Here, `edge_attr_dim` is the size of the edge features
         # GAT Layers
-        self.conv1 = GATConv(num_features, 16, heads=heads, concat=True)
-        self.conv2 = GATConv(16 * heads, 8, heads=heads, concat=True)
-        self.conv3 = GATConv(8 * heads, 4, heads=heads, concat=True)
-        self.conv4 = GATConv(4 * heads, 2, heads=heads, concat=True)
+        self.conv1 = GATConv(num_features, 64, heads=heads, concat=True)
+        self.conv2 = GATConv(64 * heads, 16, heads=heads, concat=True)
+        #self.conv3 = GATConv(16 * heads, 8, heads=heads, concat=True)
+        #self.conv4 = GATConv(8 * heads, 4, heads=heads, concat=True)
         # self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Fourth GAT layer
 
         # Dropout layer
         self.dropout = torch.nn.Dropout(0.3)
 
         # Fully connected layer for classification
-        self.fc = torch.nn.Linear(2 * heads, output_dim)
+        self.fc = torch.nn.Linear(4 * heads, output_dim)
 
     def forward(self, data):
         # If there are no node features, initialize with zeros (dummy features)
@@ -931,14 +931,14 @@ class GATNoEdgeAttrs(torch.nn.Module):
         x = self.dropout(x)
 
         # Third GAT layer with edge attributes
-        x = self.conv3(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
+        #x = self.conv3(x, edge_index)
+        #x = F.relu(x)
+        #x = self.dropout(x)
 
         # Third GAT layer with edge attributes
-        x = self.conv4(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
+        #x = self.conv4(x, edge_index)
+        #x = F.relu(x)
+        #x = self.dropout(x)
 
         # Fourth GAT layer with edge attributes
         # x = self.conv4(x, edge_index, edge_attr)
@@ -1932,15 +1932,16 @@ class Train_GNN_DSSE:
         if self.meterType == "PMU_caseA":
             self.model = GATWithEdgeAttrs(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, heads=8).to(self.device)
         elif self.meterType == "PMU_caseB":
-            self.model = GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=16).to(self.device)
+            self.model = GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=8).to(self.device)
             #self.model = SparseGAT(num_features=4,output_dim=NUM_NODES, heads=8).to(self.device)
             #self.model = GATTransformer(num_features=4, output_dim=NUM_NODES, heads=16, num_transformer_layers=2, num_attention_heads=16).to(self.device)
             #self.model = GAT_ED_Transformer(num_features=4,output_dim=NUM_NODES,heads=8,num_encoder_layers=2,num_decoder_layers=2).to(self.device)
             #self.model = GAT_EED_Transformer(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=12,heads=16,num_encoder_layers=2, num_decoder_layers=2).to(self.device)
-            print(self.model.parameters())
         elif self.meterType == "conventional":
             self.model = GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
 
+        print(self.model)
+        print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
         self.criterion = nn.MSELoss()

@@ -223,11 +223,12 @@ class LoadPowerFlow:
 # Test topologies
 class GenerateDataset:
 
-    def __init__(self, filepath, N_topologies, N_samples):
+    def __init__(self, filepath, N_topologies, N_samples, dataset):
 
         self.filepath = filepath
         self.N_topologies = N_topologies
         self.N_samples = N_samples
+        self.dataset = dataset
 
 
     def generate_dataset(self):
@@ -239,14 +240,14 @@ class GenerateDataset:
                 topology = i+1
                 print("Topology: ", i+1, "Sample: ", j+1)
                 LPF = LoadPowerFlow(filename=self.filepath,
-                                    dataset="IEEE33",
+                                    dataset=self.dataset,
                                     topology=f"""T{topology}""")
                 df_results = LPF.get_powerflow_results()
                 df_results["TopNo"] = pd.DataFrame([topology for k in range(df_results.shape[0])])
                 df_results["Simulation"] = pd.DataFrame([j+1 for k in range(df_results.shape[0])])
                 concat_frame = pd.concat([concat_frame, df_results], axis=0)
 
-        concat_frame.to_csv("mesogeia_topologies.csv")
+        concat_frame.to_csv(f"datasets/{self.dataset}.csv")
 
 if __name__ == "__main__":
     #PFS = PowerFlowSampler()
@@ -259,6 +260,6 @@ if __name__ == "__main__":
     #lpf.compute_PQ_pu()
     #lpf.compute_Inj_currents()
     #lpf.get_results()
-    GD = GenerateDataset(filepath="IEEE33aveg.mat",N_topologies=15,N_samples=3000)
+    GD = GenerateDataset(filepath="IEEE33aveg.mat",N_topologies=15,N_samples=1000)
     GD.generate_dataset()
 
