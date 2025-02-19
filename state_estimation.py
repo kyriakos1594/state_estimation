@@ -21,9 +21,12 @@ from sklearn.feature_selection import mutual_info_classif
 from sklearn.preprocessing import StandardScaler
 import torch
 import torch.nn as nn
-
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch_geometric.nn import GATConv, global_mean_pool
+from torch.nn import TransformerEncoder, TransformerEncoderLayer, TransformerDecoder, TransformerDecoderLayer
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
@@ -34,10 +37,8 @@ from captum.attr import IntegratedGradients
 from torch_geometric.nn import MLP, EdgeConv # Multi-layer Perceptron
 from torch.nn import Linear, Dropout
 import shap
-# Set the device globally
-
-#TODO Insert from TI
 from topology_identification import Preprocess
+from config_file import *
 
 #GLOBAL_BRANCH_LIST = [2, 1, 0, 34, 32, 60, 47, 59, 44, 46, 45, 40, 65, 64, 63, 62, 61, 130, 129, 128, 127, 126, 125, 124, 123, 122, 121, 119, 117, 116, 115, 114, 113, 112, 111, 110, 120, 109, 118, 108, 107, 106, 105, 103, 102, 101, 100, 99, 98, 97, 96, 95, 104, 94, 92, 91, 90, 89, 88, 87, 86, 85, 84, 83, 68, 67, 66, 43, 42, 93, 58, 57, 56, 54, 53, 52, 51, 50, 49, 48, 82, 69, 70, 41, 81, 80, 79, 78, 77, 71, 72, 31, 74, 73, 29, 76, 75, 33, 25, 37, 36, 35, 23, 30, 9, 39, 38, 55, 22, 28, 27, 26, 21, 24, 20, 17, 16, 14, 19, 18, 13, 15, 4, 12, 3, 10, 6]
 
@@ -55,346 +56,6 @@ from topology_identification import Preprocess
 # at 0.15 for phase angle mean absolute error (MAE) and
 # 0.30% for voltage magnitude mean absolute percentage error
 # (MAPE).
-
-NUM_NODES    = 33
-NUM_BRANCHES = 35
-NUM_TOPOLOGIES = 15
-NUM_SAMPLES = 1000
-MAPE_v_threshold = 0.30
-MAE_a_threshold  = 0.15
-
-#branch_data = {
-#    0: {'sending_node': 0, 'receiving_node': 1},
-#    1: {'sending_node': 1, 'receiving_node': 2},
-#    2: {'sending_node': 2, 'receiving_node': 3},
-#    3: {'sending_node': 3, 'receiving_node': 4},
-#    4: {'sending_node': 4, 'receiving_node': 5},
-#    5: {'sending_node': 5, 'receiving_node': 6},
-#    6: {'sending_node': 6, 'receiving_node': 7},
-#    7: {'sending_node': 7, 'receiving_node': 8},
-#    8: {'sending_node': 8, 'receiving_node': 9},
-#    9: {'sending_node': 9, 'receiving_node': 10},
-#    10: {'sending_node': 10, 'receiving_node': 11},
-#    11: {'sending_node': 11, 'receiving_node': 12},
-#    12: {'sending_node': 12, 'receiving_node': 13},
-#    13: {'sending_node': 13, 'receiving_node': 14},
-#    14: {'sending_node': 14, 'receiving_node': 15},
-#    15: {'sending_node': 15, 'receiving_node': 16},
-#    16: {'sending_node': 16, 'receiving_node': 17},
-#    17: {'sending_node': 1, 'receiving_node': 18},
-#    18: {'sending_node': 18, 'receiving_node': 19},
-#    19: {'sending_node': 19, 'receiving_node': 20},
-#    20: {'sending_node': 20, 'receiving_node': 21},
-#    21: {'sending_node': 2, 'receiving_node': 22},
-#    22: {'sending_node': 22, 'receiving_node': 23},
-#    23: {'sending_node': 23, 'receiving_node': 24},
-#    24: {'sending_node': 5, 'receiving_node': 25},
-#    25: {'sending_node': 25, 'receiving_node': 26},
-#    26: {'sending_node': 26, 'receiving_node': 27},
-#    27: {'sending_node': 27, 'receiving_node': 28},
-#    29: {'sending_node': 29, 'receiving_node': 30},
-#    30: {'sending_node': 30, 'receiving_node': 31},
-#    31: {'sending_node': 31, 'receiving_node': 32},
-#    32: {'sending_node': 20, 'receiving_node': 7},
-#    33: {'sending_node': 11, 'receiving_node': 21},
-#    34: {'sending_node': 24, 'receiving_node': 28}
-#}
-
-# MESOGEIA
-branch_data = {
-    0: {"sending_node": 1, "receiving_node": 0},
-    1: {"sending_node": 1, "receiving_node": 2},
-    2: {"sending_node": 2, "receiving_node": 3},
-    3: {"sending_node": 2, "receiving_node": 4},
-    4: {"sending_node": 5, "receiving_node": 3},
-    5: {"sending_node": 3, "receiving_node": 6},
-    6: {"sending_node": 7, "receiving_node": 5},
-    7: {"sending_node": 6, "receiving_node": 8},
-    8: {"sending_node": 8, "receiving_node": 9},
-    9: {"sending_node": 8, "receiving_node": 10},
-    10: {"sending_node": 11, "receiving_node": 10},
-    11: {"sending_node": 10, "receiving_node": 12},
-    12: {"sending_node": 12, "receiving_node": 13},
-    13: {"sending_node": 14, "receiving_node": 11},
-    14: {"sending_node": 17, "receiving_node": 6},
-    15: {"sending_node": 15, "receiving_node": 12},
-    16: {"sending_node": 13, "receiving_node": 16},
-    17: {"sending_node": 13, "receiving_node": 18},
-    18: {"sending_node": 16, "receiving_node": 19},
-    19: {"sending_node": 16, "receiving_node": 21},
-    20: {"sending_node": 22, "receiving_node": 19},
-    21: {"sending_node": 20, "receiving_node": 17},
-    22: {"sending_node": 19, "receiving_node": 23},
-    23: {"sending_node": 23, "receiving_node": 24},
-    24: {"sending_node": 24, "receiving_node": 25},
-    25: {"sending_node": 26, "receiving_node": 23},
-    26: {"sending_node": 21, "receiving_node": 27},
-    27: {"sending_node": 24, "receiving_node": 28},
-    28: {"sending_node": 28, "receiving_node": 29},
-    29: {"sending_node": 29, "receiving_node": 30},
-    30: {"sending_node": 28, "receiving_node": 31},
-    31: {"sending_node": 30, "receiving_node": 32},
-    32: {"sending_node": 33, "receiving_node": 29},
-    33: {"sending_node": 32, "receiving_node": 34},
-    34: {"sending_node": 35, "receiving_node": 30},
-    35: {"sending_node": 34, "receiving_node": 37},
-    36: {"sending_node": 32, "receiving_node": 36},
-    37: {"sending_node": 35, "receiving_node": 40},
-    38: {"sending_node": 34, "receiving_node": 38},
-    39: {"sending_node": 36, "receiving_node": 39},
-    40: {"sending_node": 38, "receiving_node": 47},
-    41: {"sending_node": 39, "receiving_node": 41},
-    42: {"sending_node": 43, "receiving_node": 39},
-    43: {"sending_node": 45, "receiving_node": 35},
-    44: {"sending_node": 41, "receiving_node": 42},
-    45: {"sending_node": 44, "receiving_node": 45},
-    46: {"sending_node": 46, "receiving_node": 43},
-    47: {"sending_node": 48, "receiving_node": 46},
-    48: {"sending_node": 42, "receiving_node": 49},
-    49: {"sending_node": 52, "receiving_node": 48},
-    50: {"sending_node": 53, "receiving_node": 46},
-    51: {"sending_node": 49, "receiving_node": 50},
-    52: {"sending_node": 48, "receiving_node": 51},
-    53: {"sending_node": 54, "receiving_node": 44},
-    54: {"sending_node": 54, "receiving_node": 44},
-    55: {"sending_node": 47, "receiving_node": 55},
-    56: {"sending_node": 42, "receiving_node": 59},
-    57: {"sending_node": 51, "receiving_node": 56},
-    58: {"sending_node": 55, "receiving_node": 62},
-    59: {"sending_node": 57, "receiving_node": 49},
-    60: {"sending_node": 59, "receiving_node": 58},
-    61: {"sending_node": 60, "receiving_node": 52},
-    62: {"sending_node": 45, "receiving_node": 61},
-    63: {"sending_node": 47, "receiving_node": 65},
-    64: {"sending_node": 50, "receiving_node": 63},
-    65: {"sending_node": 58, "receiving_node": 64},
-    66: {"sending_node": 63, "receiving_node": 66},
-    67: {"sending_node": 67, "receiving_node": 50},
-    68: {"sending_node": 64, "receiving_node": 82},
-    69: {"sending_node": 51, "receiving_node": 70},
-    70: {"sending_node": 57, "receiving_node": 68},
-    71: {"sending_node": 69, "receiving_node": 57},
-    72: {"sending_node": 66, "receiving_node": 74},
-    73: {"sending_node": 75, "receiving_node": 66},
-    74: {"sending_node": 71, "receiving_node": 56},
-    75: {"sending_node": 70, "receiving_node": 72},
-    76: {"sending_node": 63, "receiving_node": 79},
-    77: {"sending_node": 74, "receiving_node": 73},
-    78: {"sending_node": 76, "receiving_node": 67},
-    79: {"sending_node": 71, "receiving_node": 83},
-    80: {"sending_node": 72, "receiving_node": 84},
-    81: {"sending_node": 77, "receiving_node": 54},
-    82: {"sending_node": 79, "receiving_node": 78},
-    83: {"sending_node": 73, "receiving_node": 85},
-    84: {"sending_node": 80, "receiving_node": 67},
-    85: {"sending_node": 69, "receiving_node": 81},
-    86: {"sending_node": 78, "receiving_node": 87},
-    87: {"sending_node": 89, "receiving_node": 69},
-    88: {"sending_node": 83, "receiving_node": 86},
-    89: {"sending_node": 84, "receiving_node": 91},
-    90: {"sending_node": 88, "receiving_node": 74},
-    91: {"sending_node": 86, "receiving_node": 90},
-    92: {"sending_node": 92, "receiving_node": 71},
-    93: {"sending_node": 87, "receiving_node": 98},
-    94: {"sending_node": 75, "receiving_node": 93},
-    95: {"sending_node": 81, "receiving_node": 94},
-    96: {"sending_node": 86, "receiving_node": 95},
-    97: {"sending_node": 90, "receiving_node": 96},
-    98: {"sending_node": 91, "receiving_node": 97},
-    99: {"sending_node": 85, "receiving_node": 99},
-    100: {"sending_node": 93, "receiving_node": 100},
-    101: {"sending_node": 93, "receiving_node": 104},
-    102: {"sending_node": 101, "receiving_node": 97},
-    103: {"sending_node": 102, "receiving_node": 87},
-    104: {"sending_node": 100, "receiving_node": 103},
-    105: {"sending_node": 105, "receiving_node": 91},
-    106: {"sending_node": 107, "receiving_node": 103},
-    107: {"sending_node": 108, "receiving_node": 101},
-    108: {"sending_node": 103, "receiving_node": 106},
-    109: {"sending_node": 97, "receiving_node": 111},
-    110: {"sending_node": 99, "receiving_node": 112},
-    111: {"sending_node": 109, "receiving_node": 99},
-    112: {"sending_node": 111, "receiving_node": 110},
-    113: {"sending_node": 81, "receiving_node": 113},
-    114: {"sending_node": 81, "receiving_node": 113},
-    115: {"sending_node": 110, "receiving_node": 114},
-    116: {"sending_node": 113, "receiving_node": 117},
-    117: {"sending_node": 106, "receiving_node": 115},
-    118: {"sending_node": 113, "receiving_node": 119},
-    119: {"sending_node": 117, "receiving_node": 116},
-    120: {"sending_node": 106, "receiving_node": 118},
-    121: {"sending_node": 121, "receiving_node": 107},
-    122: {"sending_node": 116, "receiving_node": 122},
-    123: {"sending_node": 112, "receiving_node": 120},
-    124: {"sending_node": 122, "receiving_node": 123},
-    125: {"sending_node": 122, "receiving_node": 124},
-    126: {"sending_node": 114, "receiving_node": 125},
-    127: {"sending_node": 123, "receiving_node": 128},
-    128: {"sending_node": 125, "receiving_node": 126},
-    129: {"sending_node": 126, "receiving_node": 129},
-    130: {"sending_node": 127, "receiving_node": 120},
-    131: {"sending_node": 127, "receiving_node": 128},
-    132: {"sending_node": 129, "receiving_node": 130},
-}
-
-branch_data = {
-    0: {'sending_node': 0, 'receiving_node': 1},
-    1: {'sending_node': 1, 'receiving_node': 2},
-    2: {'sending_node': 2, 'receiving_node': 3},
-    3: {'sending_node': 3, 'receiving_node': 4},
-    4: {'sending_node': 4, 'receiving_node': 5},
-    5: {'sending_node': 5, 'receiving_node': 6},
-    6: {'sending_node': 6, 'receiving_node': 7},
-    7: {'sending_node': 7, 'receiving_node': 8},
-    8: {'sending_node': 8, 'receiving_node': 9},
-    9: {'sending_node': 9, 'receiving_node': 10},
-    10: {'sending_node': 10, 'receiving_node': 11},
-    11: {'sending_node': 11, 'receiving_node': 12},
-    12: {'sending_node': 12, 'receiving_node': 13},
-    13: {'sending_node': 13, 'receiving_node': 14},
-    14: {'sending_node': 14, 'receiving_node': 15},
-    15: {'sending_node': 15, 'receiving_node': 16},
-    16: {'sending_node': 16, 'receiving_node': 17},
-    17: {'sending_node': 17, 'receiving_node': 18},
-    18: {'sending_node': 2, 'receiving_node': 19},
-    19: {'sending_node': 19, 'receiving_node': 20},
-    20: {'sending_node': 20, 'receiving_node': 21},
-    21: {'sending_node': 2, 'receiving_node': 22},
-    22: {'sending_node': 22, 'receiving_node': 23},
-    23: {'sending_node': 23, 'receiving_node': 24},
-    24: {'sending_node': 5, 'receiving_node': 25},
-    25: {'sending_node': 25, 'receiving_node': 26},
-    26: {'sending_node': 26, 'receiving_node': 27},
-    27: {'sending_node': 27, 'receiving_node': 28},
-    28: {'sending_node': 28, 'receiving_node': 29},
-    29: {'sending_node': 29, 'receiving_node': 30},
-    30: {'sending_node': 30, 'receiving_node': 31},
-    31: {'sending_node': 31, 'receiving_node': 32},
-    32: {'sending_node': 20, 'receiving_node': 7},
-    33: {'sending_node': 11, 'receiving_node': 21},
-    34: {'sending_node': 24, 'receiving_node': 28}
-}
-
-NODE_PICK_LIST   = [4, 7, 9, 14, 15, 17, 18, 20, 21, 22, 25, 26, 27, 31, 33, 37, 40, 45, 53, 59, 60, 62, 68, 70, 75, 76, 77, 79, 80, 82, 83, 85, 88, 89, 90, 92, 94, 95, 96, 98, 102, 104, 105, 107, 108, 109, 111, 112, 114, 115, 117, 118, 119, 121, 124, 127, 128, 129, 130]
-BRANCH_PICK_LIST = [key for key in branch_data.keys() if ((branch_data[key]["receiving_node"] in NODE_PICK_LIST) or (branch_data[key]["sending_node"] in NODE_PICK_LIST))]
-print(BRANCH_PICK_LIST)
-
-class Preprocess_SE(Preprocess):
-
-    def __init__(self):
-
-        super().__init__()
-        self.scaler_m = StandardScaler()
-        self.scaler_a = StandardScaler()
-
-    def DSSE_store_data(self):
-
-        df = pd.read_csv(self.dataset_filename)
-        df = df[["Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"]]
-        data = []
-        inputs = []
-        labels = []
-
-        print(df.columns)
-        print(df.corr())
-
-        for topology in range(1, self.topologies + 1):
-            for simulation in range(1, self.simulations + 1):
-
-                #TODO Input
-                Vm_m = df[(df["TopoNo"] == topology) & (df["SimNo"] == simulation)]["Vm_m"].values.tolist()[:-2]
-                Va_m = df[(df["TopoNo"] == topology) & (df["SimNo"] == simulation)]["Va_m"].values.tolist()[:-2]
-                Ifm_m = df[(df["TopoNo"] == topology) & (df["SimNo"] == simulation)]["Ifm_m"].values.tolist()
-                Ifa_m = df[(df["TopoNo"] == topology) & (df["SimNo"] == simulation)]["Ifa_m"].values.tolist()
-
-                #TODO Output
-                Vm_t = df[(df["TopoNo"] == topology) & (df["SimNo"] == simulation)]["Vm_t"].values.tolist()[:-2]
-                Va_t = df[(df["TopoNo"] == topology) & (df["SimNo"] == simulation)]["Va_t"].values.tolist()[:-2]
-
-                print(topology, simulation)
-                #TODO - Choice of a PMU means Choice of Vm, Va, Im, Ia
-
-                data.append([Vm_m + Va_m + Ifm_m + Ifa_m, Vm_t + Va_t])
-
-        for [x, y] in data:
-            inputs.append(np.array(x))
-            #TODO Assume Currents are measured at branch i: (node j -> node k)
-            # Datset is ordered as [Vm, Va, Im, Ia] - [33, 33, 35, 35]
-            # For chosen branch:
-            #   Get measurement of j        (Voltage Magnitude)
-            #   Get measurement of 33 + j   (Voltage Magnitude)
-            #   Get measurement of 66 + i   (Current Magnitude)
-            #   Get measurement of 100 + i  (Current angle)
-            # If a node is already chosen, ignore its importance, since we already use it
-
-
-
-            if (len(x) != 136): # 0 -> 0-32, 33 -> 33-65, 66 -> 66-100, 101 -> 101-135
-                print("Issue on sample: ", x, y)
-            labels.append(y)
-
-        print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
-        print("Dataset Size", len(labels))
-
-        print(f"Saving input into 16_topologies_DSSE_input")
-        np.save('datasets/16_topologies_DSSE_input.npy', inputs)
-        print(f"Saving input into 16_topologies_DSSE_output")
-        np.save('datasets/16_topologies_DSSE_output.npy', labels)
-
-    def DSSE_read_data(self):
-
-        print("----------PREPROCESSIING DATASET------------")
-
-        inputs  = np.load('datasets/16_topologies_DSSE_input.npy')
-        outputs = np.load('datasets/16_topologies_DSSE_output.npy')
-
-        print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
-        print("Label size: ", len(outputs))
-
-        # Reshape the labels to a 2D array
-        labels_reshaped = outputs.reshape(-1, 1)
-
-        print("Sample")
-        print(inputs[0], outputs[0])
-
-
-        return [inputs, outputs]
-
-
-    def DSSE_preprocess_data(self):
-
-        inputs, outputs = self.DSSE_read_data()
-
-
-        # First split: train+validation and test
-        X_train_val, X_test, y_train_val, y_test = train_test_split(inputs, outputs, test_size=0.2, random_state=42)
-
-        # Second split: train and validation
-        X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=0.20,
-                                                          random_state=42)  # 0.25 x 0.8 = 0.2
-
-        # Step 1: Initialize the StandardScaler
-        scaler = StandardScaler()
-        self.scaler = scaler
-
-        # Step 2: Fit the scaler on the training set and transform it
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_train_scaled = X_train
-
-        # Step 3: Apply the same scaler to the test and validation sets (using transform, not fit_transform)
-        X_test_scaled = scaler.transform(X_test)
-        X_test_scaled = X_test
-        X_val_scaled = scaler.transform(X_val)
-        X_val_scaled = X_val
-
-        print("Scaler: ", X_train[0], X_train_scaled[0])
-
-        print("Train: ", X_train.shape, y_train.shape)
-        print("Validation: ", X_val.shape, y_val.shape)
-        print("Test: ", X_test.shape, y_test.shape)
-
-
-        return X_train_scaled, y_train, X_val_scaled, y_val, X_test_scaled, y_test
 
 class FSPreProc_SE():
 
@@ -894,6 +555,7 @@ class GATWithEdgeAttrs(torch.nn.Module):
         x = self.fc(x)
 
         return x
+
 class GATNoEdgeAttrs(torch.nn.Module):
     def __init__(self, num_features, output_dim, heads=4):
         super(GATNoEdgeAttrs, self).__init__()
@@ -902,7 +564,7 @@ class GATNoEdgeAttrs(torch.nn.Module):
         # Here, `edge_attr_dim` is the size of the edge features
         # GAT Layers
         self.conv1 = GATConv(num_features, 64, heads=heads, concat=True)
-        self.conv2 = GATConv(64 * heads, 16, heads=heads, concat=True)
+        self.conv2 = GATConv(64 * heads, 4, heads=heads, concat=True)
         #self.conv3 = GATConv(16 * heads, 8, heads=heads, concat=True)
         #self.conv4 = GATConv(8 * heads, 4, heads=heads, concat=True)
         # self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Fourth GAT layer
@@ -951,211 +613,6 @@ class GATNoEdgeAttrs(torch.nn.Module):
 
         return x
 
-class SparseGAT(torch.nn.Module):
-    def __init__(self, num_features, output_dim, heads=4, sparse_threshold=1e-5):
-        super(SparseGAT, self).__init__()
-        self.sparse_threshold = sparse_threshold  # Define threshold for sparsity
-
-        # GAT Layers
-        self.conv1 = GATConv(num_features, 64, heads=heads, concat=True)
-        self.conv2 = GATConv(64 * heads, 32, heads=heads, concat=True)
-        self.conv3 = GATConv(32 * heads, 16, heads=heads, concat=True)
-        self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True)
-
-        # Dropout layer
-        self.dropout = Dropout(0.3)
-
-        # Fully connected classifier
-        self.fc = Linear(8 * heads, output_dim)
-
-    def forward(self, data):
-        # ---- 1. Handle Missing Features ----
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float, device=data.edge_index.device)
-
-        x, edge_index, batch = data.x, data.edge_index, data.batch
-
-        # ---- 2. Create Mask for Significant Nodes ----
-        mask = x.abs().sum(dim=1) > self.sparse_threshold  # Find nodes with meaningful values
-        filtered_nodes = mask.nonzero().squeeze()  # Get indices of kept nodes
-
-        if filtered_nodes.numel() == 0:
-            return torch.zeros((batch.max().item() + 1, self.fc.out_features), device=x.device)
-
-        # ---- 3. Reindex Edge Index ----
-        node_map = torch.full((x.size(0),), -1, device=x.device)  # Mapping for new indices
-        node_map[filtered_nodes] = torch.arange(filtered_nodes.size(0), device=x.device)  # Assign new indices
-
-        mask_edges = mask[edge_index[0]] & mask[edge_index[1]]  # Keep edges between valid nodes
-        edge_index = edge_index[:, mask_edges]  # Apply mask
-        edge_index = node_map[edge_index]  # Update indices
-
-        # ---- 4. Apply GAT Layers ----
-        x = x[filtered_nodes]  # Select nonzero nodes
-
-        x = self.conv1(x, edge_index)
-        x = F.leaky_relu(x, negative_slope=0.2)
-        x = self.dropout(x)
-
-        x = self.conv2(x, edge_index)
-        x = F.leaky_relu(x, negative_slope=0.2)
-        x = self.dropout(x)
-
-        x = self.conv3(x, edge_index)
-        x = F.leaky_relu(x, negative_slope=0.2)
-        x = self.dropout(x)
-
-        x = self.conv4(x, edge_index)
-        x = F.leaky_relu(x, negative_slope=0.2)
-        x = self.dropout(x)
-
-        # ---- 5. Graph-Level Pooling ----
-        x = global_mean_pool(x, batch[filtered_nodes])  # Pooling only valid nodes
-
-        # ---- 6. Fully Connected Classifier ----
-        x = self.fc(x)
-
-        return x
-
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch_geometric.nn import GATConv, global_mean_pool
-from torch.nn import TransformerEncoder, TransformerEncoderLayer, TransformerDecoder, TransformerDecoderLayer
-class GATTransformer(nn.Module):
-    def __init__(self, num_features, output_dim, heads=4, num_transformer_layers=2, num_attention_heads=8):
-        super(GATTransformer, self).__init__()
-
-        # Graph Attention Network Layers
-        self.conv1 = GATConv(num_features, 8, heads=heads, concat=True)  # First GAT layer
-        self.conv2 = GATConv(8 * heads, 4, heads=heads, concat=True)  # Second GAT layer
-        #self.conv3 = GATConv(8 * heads, 4, heads=heads, concat=True)  # Third GAT layer
-        #self.conv4 = GATConv(4 * heads, 2, heads=heads, concat=True)  # Third GAT layer
-
-        # Transformer Encoder Layer (to process long-range dependencies)
-        self.transformer_encoder_layer = TransformerEncoderLayer(d_model=4 * heads, nhead=num_attention_heads)
-        self.transformer_encoder = TransformerEncoder(self.transformer_encoder_layer, num_layers=num_transformer_layers)
-
-        # Dropout for regularization
-        self.dropout = nn.Dropout(0.3)
-
-        # Fully connected output layer for classification/regression
-        self.fc = nn.Linear(4 * heads, output_dim)
-
-    def forward(self, data):
-        # If there are no node features, initialize sparse tensor
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)  # Default dummy node features
-
-        x, edge_index, batch = data.x, data.edge_index, data.batch
-
-        # ---- 1. First GAT Layer ----
-        x = self.conv1(x, edge_index)
-        x = F.leaky_relu(x)
-        x = self.dropout(x)
-
-        # ---- 2. Second GAT Layer ----
-        x = self.conv2(x, edge_index)
-        x = F.leaky_relu(x)
-        x = self.dropout(x)
-
-        # ---- 3. Third GAT Layer ----
-        #x = self.conv3(x, edge_index)
-        #x = F.leaky_relu(x)
-        #x = self.dropout(x)
-
-        # ---- 4. Third GAT Layer ----
-        #x = self.conv4(x, edge_index)
-        #x = F.leaky_relu(x)
-        #x = self.dropout(x)
-
-
-        # ---- 4. Apply Transformer Encoder ----
-        # The transformer expects inputs with shape (sequence_length, batch_size, feature_dim)
-        # So, we need to reshape the output to match that
-        x = x.unsqueeze(0)  # Add a batch dimension at the start (sequence length, batch size, feature dimension)
-        x = self.transformer_encoder(x)  # Pass through the transformer encoder
-        x = x.squeeze(0)  # Remove the sequence dimension after passing through transformer
-
-        # ---- 5. Global Pooling (Mean) ----
-        x = global_mean_pool(x, batch)
-
-        # ---- 6. Fully Connected Layer ----
-        x = self.fc(x)
-
-        return x
-
-class GAT_ED_Transformer(nn.Module):
-    def __init__(self, num_features, output_dim, heads=4, num_encoder_layers=2, num_decoder_layers=2):
-        super(GAT_ED_Transformer, self).__init__()
-
-        # Graph Attention Network Layers (Encoder)
-        self.conv1 = GATConv(num_features, 64, heads=heads, concat=True)  # First GAT layer
-        self.conv2 = GATConv(64 * heads, 16, heads=heads, concat=True)  # Second GAT layer
-        #self.conv3 = GATConv(16 * heads, 8, heads=heads, concat=True)  # Second GAT layer
-
-        # Transformer Encoder Layer (to process long-range dependencies)
-        self.transformer_encoder_layer = TransformerEncoderLayer(d_model=16 * heads, nhead=heads)
-        self.transformer_encoder = TransformerEncoder(self.transformer_encoder_layer, num_layers=num_encoder_layers)
-
-        # Transformer Decoder Layer (to generate output sequence)
-        self.transformer_decoder_layer = TransformerDecoderLayer(d_model=16 * heads, nhead=heads)
-        self.transformer_decoder = TransformerDecoder(self.transformer_decoder_layer, num_layers=num_decoder_layers)
-
-        # Dropout for regularization
-        self.dropout = nn.Dropout(0.3)
-
-        # Fully connected output layer for classification/regression
-        self.fc = nn.Linear(16 * heads, output_dim)
-
-    def forward(self, data):
-        # If there are no node features, initialize sparse tensor
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)  # Default dummy node features
-
-        x, edge_index, batch = data.x, data.edge_index, data.batch
-
-        # ---- 1. First GAT Layer (Encoder) ----
-        x = self.conv1(x, edge_index)
-        x = F.leaky_relu(x)
-        x = self.dropout(x)
-
-        # ---- 2. Second GAT Layer (Encoder) ----
-        x = self.conv2(x, edge_index)
-        x = F.leaky_relu(x)
-        x = self.dropout(x)
-
-        # ---- 3. Second GAT Layer (Encoder) ----
-        #x = self.conv3(x, edge_index)
-        #x = F.leaky_relu(x)
-        #x = self.dropout(x)
-
-        # ---- 3. Apply Transformer Encoder ----
-        # The transformer expects inputs with shape (sequence_length, batch_size, feature_dim)
-        # So, we need to reshape the output to match that
-        x = x.unsqueeze(0)  # Add a batch dimension at the start (sequence length, batch size, feature dimension)
-
-        # Pass through the transformer encoder
-        encoder_output = self.transformer_encoder(x)  # Encoder output
-
-        # ---- 4. Apply Transformer Decoder ----
-        # The decoder takes the encoder output (context) and generates an output sequence
-        # We can pass a target sequence or the encoder output itself if we are doing classification/regression
-        decoder_output = self.transformer_decoder(encoder_output,
-                                                  encoder_output)  # No target sequence here, self-attention
-
-        # ---- 5. Take Output from Decoder ----
-        # We can take the last output from the decoder, or apply pooling
-        x = decoder_output.squeeze(0)  # Remove sequence dimension
-
-        x = global_mean_pool(x, batch)
-
-        # ---- 6. Fully Connected Layer ----
-        x = self.fc(x)
-
-        return x
-
 class GAT_EED_Transformer(nn.Module):
     def __init__(self, num_nodes, num_features, output_dim, embedding_dim=32, heads=4, num_encoder_layers=2, num_decoder_layers=2):
         super(GAT_EED_Transformer, self).__init__()
@@ -1167,22 +624,22 @@ class GAT_EED_Transformer(nn.Module):
         self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
 
         # 🔹 GAT Layers
-        self.conv1 = GATConv(embedding_dim, 32, heads=heads, concat=True)
-        self.conv2 = GATConv(32 * heads, 16, heads=heads, concat=True)
+        self.conv1 = GATConv(embedding_dim, 8, heads=heads, concat=True)
+        self.conv2 = GATConv(8 * heads, 4, heads=heads, concat=True)
 
         # 🔹 Transformer Encoder
-        self.transformer_encoder_layer = TransformerEncoderLayer(d_model=16 * heads, nhead=heads)
+        self.transformer_encoder_layer = TransformerEncoderLayer(d_model=4 * heads, nhead=heads)
         self.transformer_encoder = TransformerEncoder(self.transformer_encoder_layer, num_layers=num_encoder_layers)
 
         # 🔹 Transformer Decoder
-        self.transformer_decoder_layer = TransformerDecoderLayer(d_model=16 * heads, nhead=heads)
+        self.transformer_decoder_layer = TransformerDecoderLayer(d_model=4 * heads, nhead=heads)
         self.transformer_decoder = TransformerDecoder(self.transformer_decoder_layer, num_layers=num_decoder_layers)
 
         # 🔹 Dropout for Regularization
         self.dropout = nn.Dropout(0.3)
 
         # 🔹 Fully Connected Output Layer
-        self.fc = nn.Linear(16 * heads, output_dim)
+        self.fc = nn.Linear(4 * heads, output_dim)
 
     def forward(self, data):
         x, edge_index, batch = data.x, data.edge_index, data.batch
@@ -1919,8 +1376,6 @@ class DSSE_GNN_Preprocess:
 
         return edge_index, train_loader, val_loader, test_loader
 
-
-
 class Train_GNN_DSSE:
 
     def __init__(self, meterType, train_loader, val_loader, test_loader):
@@ -1932,11 +1387,8 @@ class Train_GNN_DSSE:
         if self.meterType == "PMU_caseA":
             self.model = GATWithEdgeAttrs(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, heads=8).to(self.device)
         elif self.meterType == "PMU_caseB":
-            self.model = GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=8).to(self.device)
-            #self.model = SparseGAT(num_features=4,output_dim=NUM_NODES, heads=8).to(self.device)
-            #self.model = GATTransformer(num_features=4, output_dim=NUM_NODES, heads=16, num_transformer_layers=2, num_attention_heads=16).to(self.device)
-            #self.model = GAT_ED_Transformer(num_features=4,output_dim=NUM_NODES,heads=8,num_encoder_layers=2,num_decoder_layers=2).to(self.device)
-            #self.model = GAT_EED_Transformer(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=12,heads=16,num_encoder_layers=2, num_decoder_layers=2).to(self.device)
+            #self.model = GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=16).to(self.device)
+            self.model = GAT_EED_Transformer(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=8,heads=16,num_encoder_layers=1, num_decoder_layers=1).to(self.device)
         elif self.meterType == "conventional":
             self.model = GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
 
