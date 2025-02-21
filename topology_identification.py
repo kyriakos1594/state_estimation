@@ -389,7 +389,7 @@ class Preprocess:
 
         if type == "PMU_caseA":
             # TODO Case A - Store then read for each measurement Vm, Va, Im, Ia
-            #self.store_data_PMU_caseA()
+            self.store_data_PMU_caseA()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseA")
         elif type == "PMU_caseB":
             # TODO Case B - Store then read for each measurement Vm, Va, Iinjm, Iinja
@@ -397,7 +397,7 @@ class Preprocess:
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseB")
         elif type == "conventional":
             # TODO Case B - Store then read for each measurement Vm, Pinj, Qinj
-            #self.store_data_conventional()
+            self.store_data_conventional()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("conventional")
         else:
             print("Please enter known meter type")

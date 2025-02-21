@@ -260,6 +260,6 @@ if __name__ == "__main__":
     #lpf.compute_PQ_pu()
     #lpf.compute_Inj_currents()
     #lpf.get_results()
-    GD = GenerateDataset(filepath="IEEE33aveg.mat",N_topologies=15,N_samples=1000)
+    GD = GenerateDataset(filepath="IEEE33aveg.mat",N_topologies=15,N_samples=1000,dataset="IEEE33")
     GD.generate_dataset()
 

@@ -26,7 +26,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv, global_mean_pool
 from torch.nn import TransformerEncoder, TransformerEncoderLayer, TransformerDecoder, TransformerDecoderLayer
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
@@ -39,6 +38,10 @@ from torch.nn import Linear, Dropout
 import shap
 from topology_identification import Preprocess
 from config_file import *
+from model import GATEncoderDecoder, GATTransformer, SE_GATNoEdgeAttrs
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(device)
 
 #GLOBAL_BRANCH_LIST = [2, 1, 0, 34, 32, 60, 47, 59, 44, 46, 45, 40, 65, 64, 63, 62, 61, 130, 129, 128, 127, 126, 125, 124, 123, 122, 121, 119, 117, 116, 115, 114, 113, 112, 111, 110, 120, 109, 118, 108, 107, 106, 105, 103, 102, 101, 100, 99, 98, 97, 96, 95, 104, 94, 92, 91, 90, 89, 88, 87, 86, 85, 84, 83, 68, 67, 66, 43, 42, 93, 58, 57, 56, 54, 53, 52, 51, 50, 49, 48, 82, 69, 70, 41, 81, 80, 79, 78, 77, 71, 72, 31, 74, 73, 29, 76, 75, 33, 25, 37, 36, 35, 23, 30, 9, 39, 38, 55, 22, 28, 27, 26, 21, 24, 20, 17, 16, 14, 19, 18, 13, 15, 4, 12, 3, 10, 6]
 
@@ -556,122 +559,6 @@ class GATWithEdgeAttrs(torch.nn.Module):
 
         return x
 
-class GATNoEdgeAttrs(torch.nn.Module):
-    def __init__(self, num_features, output_dim, heads=4):
-        super(GATNoEdgeAttrs, self).__init__()
-
-        # Graph Attention layers (GATConv)
-        # Here, `edge_attr_dim` is the size of the edge features
-        # GAT Layers
-        self.conv1 = GATConv(num_features, 64, heads=heads, concat=True)
-        self.conv2 = GATConv(64 * heads, 4, heads=heads, concat=True)
-        #self.conv3 = GATConv(16 * heads, 8, heads=heads, concat=True)
-        #self.conv4 = GATConv(8 * heads, 4, heads=heads, concat=True)
-        # self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Fourth GAT layer
-
-        # Dropout layer
-        self.dropout = torch.nn.Dropout(0.3)
-
-        # Fully connected layer for classification
-        self.fc = torch.nn.Linear(4 * heads, output_dim)
-
-    def forward(self, data):
-        # If there are no node features, initialize with zeros (dummy features)
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)  # Default node features (1 feature per node)
-
-        x, edge_index, batch = data.x, data.edge_index, data.batch
-
-        # First GAT layer with edge attributes
-        x = self.conv1(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Second GAT layer with edge attributes
-        x = self.conv2(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Third GAT layer with edge attributes
-        #x = self.conv3(x, edge_index)
-        #x = F.relu(x)
-        #x = self.dropout(x)
-
-        # Third GAT layer with edge attributes
-        #x = self.conv4(x, edge_index)
-        #x = F.relu(x)
-        #x = self.dropout(x)
-
-        # Fourth GAT layer with edge attributes
-        # x = self.conv4(x, edge_index, edge_attr)
-
-        # Global mean pooling: Aggregate node features into graph-level features
-        x = global_mean_pool(x, batch)
-
-        # Fully connected layer: Output the final classes
-        x = self.fc(x)
-
-        return x
-
-class GAT_EED_Transformer(nn.Module):
-    def __init__(self, num_nodes, num_features, output_dim, embedding_dim=32, heads=4, num_encoder_layers=2, num_decoder_layers=2):
-        super(GAT_EED_Transformer, self).__init__()
-
-        # 🔹 Node Embedding Layer
-        self.node_embedding = nn.Embedding(num_nodes, embedding_dim)
-
-        # 🔹 Feature Transformation (if needed)
-        self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
-
-        # 🔹 GAT Layers
-        self.conv1 = GATConv(embedding_dim, 8, heads=heads, concat=True)
-        self.conv2 = GATConv(8 * heads, 4, heads=heads, concat=True)
-
-        # 🔹 Transformer Encoder
-        self.transformer_encoder_layer = TransformerEncoderLayer(d_model=4 * heads, nhead=heads)
-        self.transformer_encoder = TransformerEncoder(self.transformer_encoder_layer, num_layers=num_encoder_layers)
-
-        # 🔹 Transformer Decoder
-        self.transformer_decoder_layer = TransformerDecoderLayer(d_model=4 * heads, nhead=heads)
-        self.transformer_decoder = TransformerDecoder(self.transformer_decoder_layer, num_layers=num_decoder_layers)
-
-        # 🔹 Dropout for Regularization
-        self.dropout = nn.Dropout(0.3)
-
-        # 🔹 Fully Connected Output Layer
-        self.fc = nn.Linear(4 * heads, output_dim)
-
-    def forward(self, data):
-        x, edge_index, batch = data.x, data.edge_index, data.batch
-
-        # 🔹 Combine Node Embeddings with Features
-        if x is not None and self.feature_fc is not None:
-            x = self.feature_fc(x)  # Project features to embedding_dim
-
-        # 🔹 GAT Layers
-        x = self.conv1(x, edge_index)
-        x = F.leaky_relu(x)
-        x = self.dropout(x)
-
-        x = self.conv2(x, edge_index)
-        x = F.leaky_relu(x)
-        x = self.dropout(x)
-
-        # 🔹 Transformer Encoder
-        x = x.unsqueeze(0)  # Reshape for transformer
-        encoder_output = self.transformer_encoder(x)
-
-        # 🔹 Transformer Decoder
-        decoder_output = self.transformer_decoder(encoder_output, encoder_output)
-        x = decoder_output.squeeze(0)  # Remove sequence dimension
-
-        # 🔹 Global Pooling
-        x = global_mean_pool(x, batch)
-
-        # 🔹 Fully Connected Output Layer
-        x = self.fc(x)
-
-        return x
 
 class SimpleNN(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -1222,7 +1109,7 @@ class DSSE_GNN_Preprocess:
 
             train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
 
-        self.train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+        self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
 
         val_data = []
@@ -1235,7 +1122,7 @@ class DSSE_GNN_Preprocess:
 
             val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
 
-        self.val_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+        self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
 
         test_data = []
@@ -1249,7 +1136,7 @@ class DSSE_GNN_Preprocess:
 
             test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
 
-        self.test_loader = DataLoader(test_data, batch_size=16, shuffle=True)
+        self.test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
 
         return self.edge_index, self.train_loader, self.val_loader, self.test_loader
 
@@ -1279,7 +1166,7 @@ class DSSE_GNN_Preprocess:
 
             train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+        self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
         val_data = []
         for i in range(self.X_val.shape[0]):
@@ -1290,7 +1177,7 @@ class DSSE_GNN_Preprocess:
 
             val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.val_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+        self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
         test_data = []
         for i in range(self.X_test.shape[0]):
@@ -1302,7 +1189,7 @@ class DSSE_GNN_Preprocess:
 
             test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.test_loader = DataLoader(test_data, batch_size=16, shuffle=True)
+        self.test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
 
         return self.edge_index, self.train_loader, self.val_loader, self.test_loader
 
@@ -1334,7 +1221,7 @@ class DSSE_GNN_Preprocess:
 
             train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+        self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
         val_data = []
         for i in range(self.X_val.shape[0]):
@@ -1347,7 +1234,7 @@ class DSSE_GNN_Preprocess:
 
             val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.val_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+        self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
         test_data = []
         for i in range(self.X_test.shape[0]):
@@ -1361,7 +1248,7 @@ class DSSE_GNN_Preprocess:
 
             test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.test_loader = DataLoader(test_data, batch_size=16, shuffle=True)
+        self.test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
 
         return self.edge_index, self.train_loader, self.val_loader, self.test_loader
 
@@ -1387,10 +1274,15 @@ class Train_GNN_DSSE:
         if self.meterType == "PMU_caseA":
             self.model = GATWithEdgeAttrs(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, heads=8).to(self.device)
         elif self.meterType == "PMU_caseB":
-            #self.model = GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=16).to(self.device)
-            self.model = GAT_EED_Transformer(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=8,heads=16,num_encoder_layers=1, num_decoder_layers=1).to(self.device)
+            #self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=4).to(self.device)
+            #self.model = GATEncoderDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
+            #                                  heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
+            #                                  ff_hid_dim=24)
+            self.model = GATTransformer(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
+                                              heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
+                                              ff_hid_dim=24)
         elif self.meterType == "conventional":
-            self.model = GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
+            self.model = SE_GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
 
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
@@ -1405,7 +1297,7 @@ class Train_GNN_DSSE:
     def _train(self):
 
         # Early stopping parameters
-        patience = 80  # Number of epochs to wait for improvement
+        patience = 50  # Number of epochs to wait for improvement
         min_delta = 0.00000001  # Minimum change in validation loss to qualify as an improvement
         best_val_loss = float('inf')
         early_stop_counter = 0

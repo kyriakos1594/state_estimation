@@ -11,12 +11,16 @@ NUM_SIMULATIONS = 1000
 EXISTING_METER_BRANCHES = []
 EXISTING_METER_NODES    = []
 RAW_FILENAME    = f"datasets/{dataset}.csv"
-
+MAPE_v_threshold = 0.30
+MAE_a_threshold  = 0.15
+BATCH_SIZE = 32
 
 if dataset == "MESOGEIA":
     # MESOGEIA
     NUM_NODES = 131
     NUM_BRANCHES = 133
+    NUM_TOPOLOGIES = 2
+    NUM_SAMPLES = 5000
     branch_data = {
     0: {"sending_node": 1, "receiving_node": 0},
     1: {"sending_node": 1, "receiving_node": 2},
@@ -162,6 +166,8 @@ if dataset == "MESOGEIA":
 elif dataset == "IEEE33":
     NUM_NODES = 33  # 131 #33
     NUM_BRANCHES = 35  # 133 #35
+    NUM_TOPOLOGIES = 15
+    NUM_SAMPLES = 1000
     branch_data = {
         0: {'sending_node': 0, 'receiving_node': 1},
         1: {'sending_node': 1, 'receiving_node': 2},
