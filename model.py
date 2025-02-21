@@ -351,4 +351,104 @@ class GATTransformer(nn.Module):
 
         return self.fc(x)  # Final Output
 
+class GraphAttentionTransformerEncoder(nn.Module):
+    def __init__(self, num_nodes, num_features, embedding_dim=4, heads=4, GATConv_dim=64):
+        super(GraphAttentionTransformerEncoder, self).__init__()
+
+        # Node embedding layer (if needed, otherwise use raw features)
+        self.node_embedding = nn.Embedding(num_nodes, embedding_dim)
+        self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
+
+        # Single GAT Layer (Graph Attention)
+        self.conv1 = GATConv(embedding_dim, GATConv_dim, heads=heads, concat=True)
+
+    def forward(self, x, edge_index):
+        # Embedding node features if needed
+        if x is None:
+            x = self.node_embedding(x)
+        elif self.feature_fc is not None:
+            x = self.feature_fc(x)
+
+        # Apply GAT layers to process graph structure and features
+        x = self.conv1(x, edge_index)
+        x = F.leaky_relu(x)
+        return x
+
+
+class GA_TransformerDecoderLayer(nn.Module):
+    def __init__(self, d_model, nhead, dim_feedforward=128):
+        super(GA_TransformerDecoderLayer, self).__init__()
+
+        # Multihead Attention Layer (Self Attention on original signal)
+        self.self_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=nhead)
+
+        # Multihead Attention Layer (Encoder-Decoder Attention - Cross Attention with encoder's output)
+        self.multihead_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=nhead)
+
+        # Linear functions (Feedforward Network)
+        self.linear1 = nn.Linear(d_model, dim_feedforward)
+        self.linear2 = nn.Linear(dim_feedforward, d_model)
+
+        # Activation functions
+        self.activation1 = nn.ReLU()
+        self.activation2 = nn.ReLU()
+
+    def forward(self, tgt, memory):
+        # Self-attention (decoder layer self-attention) on the original signal
+        self_attn_output, _ = self.self_attn(tgt, tgt, tgt)
+
+        # Encoder-Decoder Attention (cross-attention) with encoder's output (memory)
+        attn_output, _ = self.multihead_attn(self_attn_output, memory, memory)
+
+        # Feedforward Network without residual connection
+        output = self.linear1(attn_output)
+        output = self.activation1(output)
+        output = self.linear2(output)
+        output = self.activation2(output)
+
+        return output
+
+
+class GA_GATTransformer(nn.Module):
+    def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4,
+                 num_encoder_layers=1, num_decoder_layers=1, GATConv_dim=64, ff_hid_dim=32):
+        super(GA_GATTransformer, self).__init__()
+
+        # GAT-based Encoder
+        self.encoder = GraphAttentionTransformerEncoder(num_nodes, num_features, embedding_dim, heads, GATConv_dim)
+
+        # Transformer Decoder
+        self.transformer_decoder = nn.ModuleList([
+            GA_TransformerDecoderLayer(d_model=GATConv_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim)
+            for _ in range(num_decoder_layers)
+        ])
+
+        # Output layer
+        self.fc = nn.Linear(GATConv_dim * heads, output_dim)
+
+    def forward(self, data):
+        x, edge_index, batch = data.x, data.edge_index, data.batch
+
+        # Pass through GAT Encoder
+        x = self.encoder(x, edge_index)
+
+        # Prepare for Transformer (add batch dimension for Transformer)
+        x = x.unsqueeze(0)  # Shape: [1, batch_size, feature_dim]
+
+        # Prepare memory from encoder output
+        memory = x
+
+        # Transformer Decoder (self-attention and cross-attention)
+        for decoder_layer in self.transformer_decoder:
+            x = decoder_layer(x, memory)  # Cross-attention with memory
+
+        # Squeeze to remove the batch dimension
+        x = x.squeeze(0)
+
+        # Apply global mean pooling to aggregate node-level features to graph-level features
+        x = global_mean_pool(x, batch)
+
+        # Final output layer
+        return self.fc(x)
+
 
