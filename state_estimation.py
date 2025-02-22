@@ -1282,8 +1282,8 @@ class Train_GNN_DSSE:
             #                                  heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
             #                                  ff_hid_dim=24)
             self.model = GA_GATTransformer(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
-                                              heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv_dim=64,
-                                              ff_hid_dim=24)
+                                              heads=4, num_encoder_layers=2,num_decoder_layers=2,GATConv_dim=16,
+                                              ff_hid_dim=16)
         elif self.meterType == "conventional":
             self.model = SE_GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
 

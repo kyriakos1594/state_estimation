@@ -375,6 +375,7 @@ class GraphAttentionTransformerEncoder(nn.Module):
         return x
 
 
+
 class GA_TransformerDecoderLayer(nn.Module):
     def __init__(self, d_model, nhead, dim_feedforward=128):
         super(GA_TransformerDecoderLayer, self).__init__()
@@ -386,12 +387,12 @@ class GA_TransformerDecoderLayer(nn.Module):
         self.multihead_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=nhead)
 
         # Linear functions (Feedforward Network)
-        self.linear1 = nn.Linear(d_model, dim_feedforward)
-        self.linear2 = nn.Linear(dim_feedforward, d_model)
+        self.linear1 = nn.Linear(d_model, d_model)
+        #self.linear2 = nn.Linear(dim_feedforward, d_model)
 
         # Activation functions
         self.activation1 = nn.ReLU()
-        self.activation2 = nn.ReLU()
+        #self.activation2 = nn.ReLU()
 
     def forward(self, tgt, memory):
         # Self-attention (decoder layer self-attention) on the original signal
@@ -403,10 +404,11 @@ class GA_TransformerDecoderLayer(nn.Module):
         # Feedforward Network without residual connection
         output = self.linear1(attn_output)
         output = self.activation1(output)
-        output = self.linear2(output)
-        output = self.activation2(output)
+        #output = self.linear2(output)
+        #output = self.activation2(output)
 
         return output
+
 
 
 class GA_GATTransformer(nn.Module):
@@ -414,8 +416,11 @@ class GA_GATTransformer(nn.Module):
                  num_encoder_layers=1, num_decoder_layers=1, GATConv_dim=64, ff_hid_dim=32):
         super(GA_GATTransformer, self).__init__()
 
-        # GAT-based Encoder
-        self.encoder = GraphAttentionTransformerEncoder(num_nodes, num_features, embedding_dim, heads, GATConv_dim)
+        # GAT-based Encoder (multiple layers)
+        self.encoder = nn.ModuleList([
+             GraphAttentionTransformerEncoder(num_nodes, num_features, embedding_dim, heads, GATConv_dim)
+             for _ in range(num_encoder_layers)
+        ])
 
         # Transformer Decoder
         self.transformer_decoder = nn.ModuleList([
@@ -429,8 +434,9 @@ class GA_GATTransformer(nn.Module):
     def forward(self, data):
         x, edge_index, batch = data.x, data.edge_index, data.batch
 
-        # Pass through GAT Encoder
-        x = self.encoder(x, edge_index)
+        # Pass through multiple GAT Encoder layers (stackable)
+        for encoder_layer in self.encoder:
+            x = encoder_layer(x, edge_index)
 
         # Prepare for Transformer (add batch dimension for Transformer)
         x = x.unsqueeze(0)  # Shape: [1, batch_size, feature_dim]
