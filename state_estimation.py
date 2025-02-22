@@ -38,7 +38,7 @@ from torch.nn import Linear, Dropout
 import shap
 from topology_identification import Preprocess
 from config_file import *
-from model import GATEncoderDecoder, GATTransformer, SE_GATNoEdgeAttrs, GA_GATTransformer
+from model import GATEncoderDecoder, GATTransformer, SE_GATNoEdgeAttrs, GATConvTransformer
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
@@ -1281,9 +1281,8 @@ class Train_GNN_DSSE:
             #self.model = GATTransformer(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
             #                                  heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
             #                                  ff_hid_dim=24)
-            self.model = GA_GATTransformer(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
-                                              heads=4, num_encoder_layers=2,num_decoder_layers=2,GATConv_dim=16,
-                                              ff_hid_dim=16)
+            self.model = GATConvTransformer(num_features=4,output_dim=NUM_NODES,embedding_dim=16,
+                                              heads=4, num_encoder_layers=2,num_decoder_layers=2,)
         elif self.meterType == "conventional":
             self.model = SE_GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
 
