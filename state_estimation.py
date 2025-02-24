@@ -38,7 +38,7 @@ from torch.nn import Linear, Dropout
 import shap
 from topology_identification import Preprocess
 from config_file import *
-from model import GATEncoderDecoder, GATTransformer, SE_GATNoEdgeAttrs, GATConvTransformer
+from model import GATEncoderDecoder, SE_GATNoEdgeAttrs, GATConvTransformer, GATTransformerEncoderDecoder
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
@@ -1274,15 +1274,13 @@ class Train_GNN_DSSE:
         if self.meterType == "PMU_caseA":
             self.model = GATWithEdgeAttrs(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, heads=8).to(self.device)
         elif self.meterType == "PMU_caseB":
-            #self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=4).to(self.device)
+            self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=6).to(self.device)
             #self.model = GATEncoderDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
-            #                                  heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
-            #                                  ff_hid_dim=24)
-            #self.model = GATTransformer(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
-            #                                  heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
-            #                                  ff_hid_dim=24)
-            self.model = GATConvTransformer(num_features=4,output_dim=NUM_NODES,embedding_dim=16,
-                                              heads=4, num_encoder_layers=2,num_decoder_layers=2,)
+            #                                  heads=4, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
+            #                                  ff_hid_dim=36).to(self.device)
+            #self.model = GATTransformerEncoderDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
+            #                                  heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=24,
+            #                                  ff_hid_dim=24).to(self.device)
         elif self.meterType == "conventional":
             self.model = SE_GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
 
@@ -1299,7 +1297,7 @@ class Train_GNN_DSSE:
     def _train(self):
 
         # Early stopping parameters
-        patience = 50  # Number of epochs to wait for improvement
+        patience = 80  # Number of epochs to wait for improvement
         min_delta = 0.00000001  # Minimum change in validation loss to qualify as an improvement
         best_val_loss = float('inf')
         early_stop_counter = 0
