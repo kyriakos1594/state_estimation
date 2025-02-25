@@ -29,7 +29,7 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer, TransformerDec
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from torch_geometric.nn import MessagePassing, global_mean_pool, GCNConv, GATConv, GATv2Conv, SAGEConv, APPNP, GINConv, GraphNorm
+from torch_geometric.nn import MessagePassing, global_mean_pool, GCNConv, GATConv, GATv2Conv, SAGEConv, APPNP, GraphNorm
 from torch_geometric.data import Data, DataLoader
 from torch_geometric.utils import degree
 from captum.attr import IntegratedGradients
@@ -38,7 +38,7 @@ from torch.nn import Linear, Dropout
 import shap
 from topology_identification import Preprocess
 from config_file import *
-from model import GATEncoderDecoder, SE_GATNoEdgeAttrs, GATConvTransformer, GATTransformerEncoderDecoder
+from model import GATTransfomerOnlyDecoder, SE_GATNoEdgeAttrs, GATConvTransformer, GATTransformerEncoderDecoder, SparseGATConvModel
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
@@ -1274,13 +1274,14 @@ class Train_GNN_DSSE:
         if self.meterType == "PMU_caseA":
             self.model = GATWithEdgeAttrs(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, heads=8).to(self.device)
         elif self.meterType == "PMU_caseB":
-            self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=6).to(self.device)
-            #self.model = GATEncoderDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
+            #self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=10).to(self.device)
+            #self.model = GATTransfomerOnlyDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
             #                                  heads=4, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
-            #                                  ff_hid_dim=36).to(self.device)
+            #                                 ff_hid_dim=32).to(self.device)
             #self.model = GATTransformerEncoderDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
             #                                  heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=24,
             #                                  ff_hid_dim=24).to(self.device)
+            self.model = SparseGATConvModel(num_features=4, output_dim=33, heads=4)
         elif self.meterType == "conventional":
             self.model = SE_GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
 
