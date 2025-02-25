@@ -1,24 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import math
-from torch_geometric.nn import GATConv
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch_geometric.nn import MessagePassing, global_mean_pool, GCNConv, GATConv, GATv2Conv, SAGEConv, APPNP, GINConv, GraphNorm
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import math
-from torch_geometric.nn import GATConv
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch_geometric.nn import MessagePassing, global_mean_pool, GCNConv, GATConv, GATv2Conv, SAGEConv, APPNP, GINConv, GraphNorm
-
-print_flag = True
-
+from torch_geometric.nn import MessagePassing, global_mean_pool, GCNConv, GATConv, GATv2Conv, SAGEConv, APPNP
+from model_components import *
 #TODO To define the Transformer Encoder and Transformer Decoder layers manually without relying
 #      on TransformerEncoderLayer and TransformerDecoderLayer from PyTorch, we can break down the individual
 #      components of a Transformer layer, which are:
@@ -28,6 +12,10 @@ print_flag = True
 #      is applied to each token. Normalization: After each sub-layer (self-attention and FFN), layer normalization
 #      is applied to stabilize training. Residual Connections: The output of each sub-layer is added back to the input,
 #      creating residual connections.
+
+print_flag = True
+
+
 #TODO Simple GATConv stacking
 class SE_GATNoEdgeAttrs(torch.nn.Module):
     def __init__(self, num_features, output_dim, heads=4):
@@ -86,71 +74,13 @@ class SE_GATNoEdgeAttrs(torch.nn.Module):
 
         return x
 
-#TODO Encoder-Decoder
-class EncoderLayer(nn.Module):
-    def __init__(self, d_model, nhead, dim_feedforward=128):
-        super(EncoderLayer, self).__init__()
 
-        # Multihead Attention Layer
-        self.self_attention = nn.MultiheadAttention(embed_dim=d_model, num_heads=nhead)
+#TODO Only Decoder Transformer - only self attention
 
-        # Feedforward Network
-        self.linear1 = nn.Linear(d_model, dim_feedforward)
-        self.linear2 = nn.Linear(dim_feedforward, d_model)
-
-        # Activation
-        self.activation1 = nn.ReLU()
-        self.activation2 = nn.ReLU()
-
-    def forward(self, src):
-        # Self-attention
-        tgt, _ = self.self_attention(src, src, src)  # Q=K=V=src
-
-        output = self.linear1(tgt)
-        output = self.activation1(output)
-        output = self.linear2(output)
-        output = self.activation2(output)
-
-        return output
-
-class DecoderLayer(nn.Module):
-    def __init__(self, d_model, nhead, dim_feedforward=128):
-        super(DecoderLayer, self).__init__()
-
-        #TODO Used for best model so far
-        # Multihead Attention Layer (Self-Attention)
-        # self.self_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=nhead)
-
-        # Multihead Attention Layer (Encoder-Decoder Attention)
-        self.multihead_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=nhead)
-
-        # Linear functions
-        self.linear1 = nn.Linear(d_model, dim_feedforward)
-        self.linear2 = nn.Linear(dim_feedforward, d_model)
-
-        # Activation functions
-        self.activation1 = nn.ReLU()
-        self.activation2 = nn.ReLU()
-
-
-    def forward(self, tgt, memory):
-        # Self-attention (decoder layer self-attention)
-        #tgt, _ = self.self_attn(tgt, tgt, tgt)
-
-        # Multihead attention
-        attn_output, _ = self.multihead_attn(tgt, memory, memory)
-
-        output = self.linear1(attn_output)
-        output = self.activation1(output)
-        output = self.linear2(output)
-        output = self.activation2(output)
-
-        return output
-
-class GATEncoderDecoder(nn.Module):
+class GATTransfomerOnlyDecoder(nn.Module):
     def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4, num_encoder_layers=1,
                  num_decoder_layers=1, GATConv1_dim=64, GATConv2_dim=16, ff_hid_dim=32):
-        super(GATEncoderDecoder, self).__init__()
+        super(GATTransfomerOnlyDecoder, self).__init__()
 
         # Node embedding layer (if needed, otherwise use raw features)
         self.node_embedding = nn.Embedding(num_nodes, embedding_dim)
@@ -163,13 +93,13 @@ class GATEncoderDecoder(nn.Module):
         self.conv2 = GATConv(GATConv1_dim * heads, GATConv2_dim, heads=heads, concat=True)
 
         # Custom Transformer Encoder Layer
-        self.transformer_encoder = nn.ModuleList([
-            EncoderLayer(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_encoder_layers)
-        ])
+        #self.transformer_encoder = nn.ModuleList([
+        #    TransfromerDecoderLayer1(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_encoder_layers)
+        #])
 
         # Custom Transformer Decoder Layer
         self.transformer_decoder = nn.ModuleList([
-            DecoderLayer(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_decoder_layers)
+            TransfromerDecoderLayer2(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_decoder_layers)
         ])
 
         # Dropout layer for regularization
@@ -218,8 +148,8 @@ class GATEncoderDecoder(nn.Module):
         #    x = decoder_layer(x, memory)  # Decoder attends to encoder output and decoder's initial signal input
 
         #TODO Encode and decode input signal with self attention and multi attention
-        for encoder_layer in self.transformer_encoder:
-            x = encoder_layer(x)
+        #for encoder_layer in self.transformer_encoder:
+        #    x = encoder_layer(x)
 
         for decoder_layer in self.transformer_decoder:
             x = decoder_layer(x, x)  # Decoder attends to encoder output only
@@ -235,66 +165,8 @@ class GATEncoderDecoder(nn.Module):
 
         return x
 
-#TODO Transfomer with self and cross-attention
-class TransformerEncoderLayer(nn.Module):
-    def __init__(self, d_model, nhead, dim_feedforward=128):
-        super(TransformerEncoderLayer, self).__init__()
 
-        # Multihead Attention Layer
-        self.self_attention = nn.MultiheadAttention(embed_dim=d_model, num_heads=nhead)
-
-        # Feedforward Network
-        self.linear1 = nn.Linear(d_model, dim_feedforward)
-        self.linear2 = nn.Linear(dim_feedforward, d_model)
-
-        # Activation
-        self.activation1 = nn.ReLU()
-        self.activation2 = nn.ReLU()
-
-    def forward(self, src):
-        # Self-attention
-        tgt, _ = self.self_attention(src, src, src)  # Q=K=V=src
-
-        output = self.linear1(tgt)
-        output = self.activation1(output)
-        output = self.linear2(output)
-        output = self.activation2(output)
-
-        return output
-
-class TransformerDecoderLayer(nn.Module):
-    def __init__(self, d_model, nhead, dim_feedforward=128):
-        super(TransformerDecoderLayer, self).__init__()
-
-        #TODO Used for best model so far
-        # Multihead Attention Layer (Self-Attention)
-        # self.self_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=nhead)
-
-        # Multihead Attention Layer (Encoder-Decoder Attention)
-        self.multihead_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=nhead)
-
-        # Linear functions
-        self.linear1 = nn.Linear(d_model, dim_feedforward)
-        self.linear2 = nn.Linear(dim_feedforward, d_model)
-
-        # Activation functions
-        self.activation1 = nn.ReLU()
-        self.activation2 = nn.ReLU()
-
-
-    def forward(self, tgt, memory):
-        # Self-attention (decoder layer self-attention)
-        #tgt, _ = self.self_attn(tgt, tgt, tgt)
-
-        # Multihead attention
-        attn_output, _ = self.multihead_attn(tgt, memory, memory)
-
-        output = self.linear1(attn_output)
-        output = self.activation1(output)
-        output = self.linear2(output)
-        output = self.activation2(output)
-
-        return output
+#TODO Transfomer Encoder-Decoder with self and cross-attention
 
 class GATTransformerEncoderDecoder(nn.Module):
     def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4, num_encoder_layers=1,
@@ -313,12 +185,12 @@ class GATTransformerEncoderDecoder(nn.Module):
 
         # Custom Transformer Encoder Layer
         self.transformer_encoder = nn.ModuleList([
-            EncoderLayer(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_encoder_layers)
+            TransformerEncoderLayer(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_encoder_layers)
         ])
 
         # Custom Transformer Decoder Layer
         self.transformer_decoder = nn.ModuleList([
-            DecoderLayer(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_decoder_layers)
+            TransformerDecoderLayer(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_decoder_layers)
         ])
 
         # Dropout layer for regularization
@@ -386,71 +258,7 @@ class GATTransformerEncoderDecoder(nn.Module):
         return x
 
 
-class GATConvTransformerEncoderLayer(nn.Module):
-    def __init__(self, d_model, nhead, num_features, dim_feedforward=128):
-        super(GATConvTransformerEncoderLayer, self).__init__()
-
-        # GAT for self-attention inside the encoder
-        self.gat1 = GATConv(num_features, d_model, heads=nhead, concat=True)
-        self.gat2 = GATConv(nhead * d_model, d_model, heads=nhead, concat=True)  # Additional GATConv
-
-        # Feedforward network
-        self.linear1 = nn.Linear(nhead * d_model, nhead * dim_feedforward)
-        self.activation1 = nn.ReLU()
-
-    def forward(self, src, edge_index):
-        # First GAT-based self-attention
-        src = self.gat1(src, edge_index)
-        src = F.leaky_relu(src)
-
-        # Second GAT-based self-attention
-        src = self.gat2(src, edge_index)
-        src = F.leaky_relu(src)
-
-        # Feedforward
-        output = self.linear1(src)
-        output = self.activation1(output)
-
-        return output
-
-
-class GATConvTransformerDecoderLayer(nn.Module):
-    def __init__(self, d_model, nhead, num_features, dim_feedforward=128):
-        super(GATConvTransformerDecoderLayer, self).__init__()
-
-        # GAT for self-attention inside the decoder
-        self.self_gat = GATConv(num_features, d_model, heads=nhead, concat=True)
-
-        # MultiheadAttention for cross-attention with encoder output
-        self.cross_attn = nn.MultiheadAttention(embed_dim=nhead * d_model, num_heads=nhead, dropout=0.1)
-
-        # Feedforward network
-        self.linear1 = nn.Linear(nhead * d_model, dim_feedforward)
-        self.activation1 = nn.ReLU()
-
-    def forward(self, tgt, memory, original_signal, edge_index):
-        # Self-attention using GAT
-        tgt = self.self_gat(tgt, edge_index)
-        tgt = F.leaky_relu(tgt)
-
-        # Attention-based fusion of encoder output and original signal
-        # Project both memory (encoder output) and original_signal (input features) into the same space
-        query = tgt  # Using target as query
-        key = memory  # Encoder output as key
-        value = original_signal  # Using original signal as value
-
-        # Apply MultiheadAttention to fuse encoder output and original signal
-        attn_output, _ = self.cross_attn(query.unsqueeze(0), key.unsqueeze(0), value.unsqueeze(0))
-
-        # Remove sequence dimension (because the output of multihead attention has shape [1, num_nodes, d_model])
-        fused_output = attn_output.squeeze(0)
-
-        # Feedforward network
-        output = self.linear1(fused_output)
-        output = self.activation1(output)
-
-        return output
-
+# TODO Encoder and decoder layers with GATConv layers
 
 class GATConvTransformer(nn.Module):
     def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4, ff_hid_dim=32):
@@ -487,6 +295,52 @@ class GATConvTransformer(nn.Module):
 
         return self.fc(x)
 
+
+# TODO Sparse GAT layer
+class SparseGATConvModel(torch.nn.Module):
+    def __init__(self, num_features, output_dim, heads=4):
+        super(SparseGATConvModel, self).__init__()
+
+        # Graph Attention layers (GATConv)
+        # Here, `edge_attr_dim` is the size of the edge features
+        # GAT Layers
+        self.conv1 = SparseAwareGATConv(in_channels=num_features, out_channels=64, heads=heads, concat=True)
+        self.conv2 = SparseAwareGATConv(in_channels=64 * heads, out_channels=16, heads=heads, concat=True)
+        # self.conv3 = GATConv(16 * heads, 8, heads=heads, concat=True)
+        # self.conv4 = GATConv(8 * heads, 4, heads=heads, concat=True)
+        # self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Fourth GAT layer
+
+        # Dropout layer
+        self.dropout = torch.nn.Dropout(0.3)
+
+        # Fully connected layer for classification
+        self.fc = torch.nn.Linear(16 * heads, output_dim)
+
+    def forward(self, data):
+        # If there are no node features, initialize with zeros (dummy features)
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1),
+                                 dtype=torch.float)  # Default node features (1 feature per node)
+
+        x, edge_index, batch = data.x, data.edge_index, data.batch
+
+        # First GAT layer with edge attributes
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Second GAT layer with edge attributes
+        x = self.conv2(x, edge_index)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        # Global mean pooling: Aggregate node features into graph-level features
+        x = global_mean_pool(x, batch)
+
+        # Fully connected layer: Output the final classes
+        x = self.fc(x)
+
+        return x
 
 
 
