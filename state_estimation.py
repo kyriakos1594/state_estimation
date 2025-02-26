@@ -38,7 +38,10 @@ from torch.nn import Linear, Dropout
 import shap
 from topology_identification import Preprocess
 from config_file import *
-from model import GATTransfomerOnlyDecoder, SE_GATNoEdgeAttrs, GATConvTransformer, GATTransformerEncoderDecoder, SparseGATConvModel
+from model import SE_GATNoEdgeAttrsMask, SE_GATNoEdgeAttrsNoMask, SE_OnlySourceNodeAttentionNoMaskGATConvModel, \
+    SE_OnlySourceAttentionMaskGATConvModel, SE_FirstSourceNodeAttentionNoMaskGATConvModel, \
+    SE_FirstSourceAttentionMaskGATConvModel, SE_GATNoEdgeAttrsSelectiveMask
+from model import GATTransfomerOnlyDecoder, GATConvTransformer, GATTransformerEncoderDecoder
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
@@ -1145,7 +1148,7 @@ class DSSE_GNN_Preprocess:
         num_nodes = NUM_NODES
         num_features = 4
 
-        print(self.selected_edges)
+        print("selected edges: ", self.selected_edges)
 
         # self.selected_edges = [6, 32, 9]
 
@@ -1163,8 +1166,8 @@ class DSSE_GNN_Preprocess:
 
             if output == "magnitudes": label = torch.tensor(self.y_train[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_train[i, NUM_NODES:], dtype=torch.float)
-
-            train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+            edge_mask = torch.tensor([1 if i in self.selected_edges else 0 for i in range(NUM_BRANCHES)], dtype=torch.bool)  # 1 means the node is active, 0 means it's masked
+            train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_mask=edge_mask, y=label))
 
         self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1174,8 +1177,8 @@ class DSSE_GNN_Preprocess:
 
             if output == "magnitudes": label = torch.tensor(self.y_val[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_val[i, NUM_NODES:], dtype=torch.float)
-
-            val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+            edge_mask = torch.tensor([1 if i in self.selected_edges else 0 for i in range(NUM_BRANCHES)], dtype=torch.bool)  # 1 means the node is active, 0 means it's masked
+            val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_mask=edge_mask, y=label))
 
         self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1186,8 +1189,8 @@ class DSSE_GNN_Preprocess:
 
             if output == "magnitudes": label = torch.tensor(self.y_test[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_test[i, NUM_NODES:], dtype=torch.float)
-
-            test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+            edge_mask = torch.tensor([1 if i in self.selected_edges else 0 for i in range(NUM_BRANCHES)], dtype=torch.bool)  # 1 means the node is active, 0 means it's masked
+            test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_mask=edge_mask, y=label))
 
         self.test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1274,16 +1277,37 @@ class Train_GNN_DSSE:
         if self.meterType == "PMU_caseA":
             self.model = GATWithEdgeAttrs(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, heads=8).to(self.device)
         elif self.meterType == "PMU_caseB":
-            #self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=10).to(self.device)
+            print()
+
+            #TODO Vanilla GATConv
+            self.model = SE_GATNoEdgeAttrsNoMask(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
+
+            # TODO Vanilla GATConv - Masked Input only on chosen edge source node
+            #self.model = SE_GATNoEdgeAttrsMask(num_features=4,output_dim=NUM_NODES, heads=8, mask=True).to(self.device)
+
+            # TODO Custom GATConv
+            #self.model = SE_OnlySourceNodeAttentionNoMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=8, mask=True).to(self.device)
+
+            #TODO Custom GatConv - Masked Input only on chosen edge source node
+            #self.model = SE_OnlySourceAttentionMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=8, mask=True).to(self.device)
+
+            # TODO First  GatConv
+            #self.model = SE_FirstSourceNodeAttentionNoMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=8, mask=True).to(self.device)
+
+            # TODO First  GatConv - Masked Input only on chosen edge source node
+            #self.model = SE_FirstSourceAttentionMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=8, mask=True).to(self.device)
+
+            #TODO Selective Mask GAT
+            #self.model = SE_GATNoEdgeAttrsSelectiveMask(num_features=4,output_dim=NUM_NODES, heads=8).to(self.device)
+
             #self.model = GATTransfomerOnlyDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
-            #                                  heads=4, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
-            #                                 ff_hid_dim=32).to(self.device)
-            #self.model = GATTransformerEncoderDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
-            #                                  heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=24,
-            #                                  ff_hid_dim=24).to(self.device)
-            self.model = SparseGATConvModel(num_features=4, output_dim=33, heads=4)
+                    #                                  heads=4, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
+                    #                                 ff_hid_dim=32).to(self.device)
+                    #self.model = GATTransformerEncoderDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
+                    #                                  heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=24,
+                    #                                  ff_hid_dim=24).to(self.device)
         elif self.meterType == "conventional":
-            self.model = SE_GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
+            self.model = SE_GATNoEdgeAttrsNoMask(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
 
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))

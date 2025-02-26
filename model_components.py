@@ -11,88 +11,20 @@ from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.utils import add_self_loops, softmax
 
 
-class SparseAwareGATConv(MessagePassing):
-    def __init__(self, in_channels: int, out_channels: int, heads: int = 1, concat: bool = True,
-                 negative_slope: float = 0.2, dropout: float = 0.0, add_self_loops: bool = True, bias: bool = True):
-        super(SparseAwareGATConv, self).__init__(aggr='add')  # "Add" aggregation (standard in GAT)
+import torch
+from torch import nn
+from torch_geometric.nn import MessagePassing
+from torch_geometric.utils import add_self_loops, remove_self_loops
+import torch
+from torch import nn
+from torch_geometric.nn import MessagePassing
+from torch_geometric.utils import add_self_loops, remove_self_loops
+import torch.nn.functional as F
 
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.heads = heads
-        self.concat = concat
-        self.negative_slope = negative_slope
-        self.dropout = dropout
-        self.add_self_loops = add_self_loops
 
-        # Linear transformation for node features
-        self.lin = Linear(in_channels, heads * out_channels, bias=False)
-
-        # Attention parameters
-        self.att = Parameter(torch.Tensor(1, heads, 2 * out_channels))
-
-        # Bias term
-        if bias:
-            self.bias = Parameter(torch.Tensor(heads * out_channels if concat else out_channels))
-        else:
-            self.register_parameter('bias', None)
-
-        # Learnable small feature vector for zero nodes
-        self.zero_placeholder = Parameter(torch.zeros(in_channels))
-
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        torch.nn.init.xavier_uniform_(self.lin.weight)
-        torch.nn.init.xavier_uniform_(self.att)
-        if self.bias is not None:
-            torch.nn.init.zeros_(self.bias)
-
-    def forward(self, x: Tensor, edge_index):
-        if self.add_self_loops:
-            edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
-
-        # Identify zero-feature nodes
-        zero_mask = (x.abs().sum(dim=1) == 0)
-
-        # Replace zero nodes with learnable placeholder
-        x = x.clone()
-        x[zero_mask] = self.zero_placeholder
-
-        # Apply linear transformation
-        x = self.lin(x).view(-1, self.heads, self.out_channels)
-
-        # Compute attention scores
-        x_i = x[edge_index[0]]  # Source nodes
-        x_j = x[edge_index[1]]  # Target nodes
-        alpha = (torch.cat([x_i, x_j], dim=-1) * self.att).sum(dim=-1)
-        alpha = F.leaky_relu(alpha, self.negative_slope)
-
-        # Apply masking: Ignore edges where **both nodes** are zero
-        valid_edges = ~(zero_mask[edge_index[0]] & zero_mask[edge_index[1]])
-        alpha[~valid_edges] = float('-inf')  # Assign -inf to softmax to ignore
-
-        # Compute softmax attention weights
-        alpha = softmax(alpha, edge_index[1])
-        alpha = F.dropout(alpha, p=self.dropout, training=self.training)
-
-        # Perform message passing
-        out = self.propagate(edge_index, x=x, alpha=alpha)
-
-        # If concat, reshape; otherwise, take mean
-        if self.concat:
-            out = out.view(-1, self.heads * self.out_channels)
-        else:
-            out = out.mean(dim=1)
-
-        # Apply bias if available
-        if self.bias is not None:
-            out += self.bias
-
-        return out
-
-    def message(self, x_j: Tensor, alpha: Tensor) -> Tensor:
-        return alpha.unsqueeze(-1) * x_j
-
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 class TransfromerDecoderLayer1(nn.Module):
     def __init__(self, d_model, nhead, dim_feedforward=128):
