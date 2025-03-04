@@ -14,6 +14,7 @@ RAW_FILENAME    = f"datasets/{dataset}.csv"
 MAPE_v_threshold = 0.30
 MAE_a_threshold  = 0.15
 BATCH_SIZE = 32
+PROFILES_FILEPATH = f"datasets/weekly_alligned_scaled_profiles.csv"
 
 if dataset == "MESOGEIA":
     # MESOGEIA
@@ -207,6 +208,22 @@ elif dataset == "IEEE33":
     }
     NODE_PICK_LIST = []
     BRANCH_PICK_LIST = []
+
+    bus_types = {
+        "slack": [0],
+        "PV_wind": [32],
+        "PV_solar": [17, 21],
+        "PQ_MV": [2, 10, 30, 13],
+        "PQ_LV": [i for i in range(NUM_NODES) if i not in [0, 17, 21, 32, 2, 10, 30, 13]],
+    }
+
+    profile_titles = {
+        "PV": ["PV_profile 1", "PV_profile 2", "PV_profile 3", "PV_profile 4", "PV_profile 5", "PV_profile 6", "PV_profile 7"],
+        "WD": ["WD 1"],
+        "MV": ["R210 Load","X84_1 MV Load_x","X84_1 MV Load_y"],
+        "LV": ["R1", "R2", "R3", "R4", "R5", "R6"]
+    }
+
 else:
     print("Enter known dataset")
     sys.exit(0)

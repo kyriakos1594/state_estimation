@@ -1283,19 +1283,19 @@ class Train_GNN_DSSE:
             self.model = SE_GATNoEdgeAttrsNoMask(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
 
             # TODO Vanilla GATConv - Masked Input only on chosen edge source node
-            #self.model = SE_GATNoEdgeAttrsMask(num_features=4,output_dim=NUM_NODES, heads=8, mask=True).to(self.device)
+            self.model = SE_GATNoEdgeAttrsMask(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
 
             # TODO Custom GATConv
-            #self.model = SE_OnlySourceNodeAttentionNoMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=8, mask=True).to(self.device)
+            self.model = SE_OnlySourceNodeAttentionNoMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
 
             #TODO Custom GatConv - Masked Input only on chosen edge source node
-            #self.model = SE_OnlySourceAttentionMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=8, mask=True).to(self.device)
+            #self.model = SE_OnlySourceAttentionMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
 
             # TODO First  GatConv
-            #self.model = SE_FirstSourceNodeAttentionNoMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=8, mask=True).to(self.device)
+            #self.model = SE_FirstSourceNodeAttentionNoMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
 
             # TODO First  GatConv - Masked Input only on chosen edge source node
-            #self.model = SE_FirstSourceAttentionMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=8, mask=True).to(self.device)
+            #self.model = SE_FirstSourceAttentionMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
 
             #TODO Selective Mask GAT
             #self.model = SE_GATNoEdgeAttrsSelectiveMask(num_features=4,output_dim=NUM_NODES, heads=8).to(self.device)
