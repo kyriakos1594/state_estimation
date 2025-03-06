@@ -144,11 +144,11 @@ class Preprocess:
             for simulation in range(1, self.simulations + 1):
                 # TODO Input
                 Vm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
-                #Vm_m = [v * (1 + np.random.uniform(-error, error)) for v in Vm_m]  # Adding ±1% noise
+                Vm_m = [v * (1 + np.random.uniform(-error, error)) for v in Vm_m]  # Adding ±1% noise
                 P_pu = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["P_pu"].values.tolist()[:-2]
-                #P_pu = [p * (1 + np.random.uniform(-error, error)) for p in P_pu]  # Adding ±1% noise
+                P_pu = [p * (1 + np.random.uniform(-error, error)) for p in P_pu]  # Adding ±1% noise
                 Q_pu = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Q_pu"].values.tolist()[:-2]
-                #Q_pu = [q * (1 + np.random.uniform(-error, error)) for q in Q_pu]  # Adding ±1% noise
+                Q_pu = [q * (1 + np.random.uniform(-error, error)) for q in Q_pu]  # Adding ±1% noise
 
                 print(f"Inserted {100*error}% noise to conventional meters")
 
@@ -173,10 +173,10 @@ class Preprocess:
         print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
         print("Dataset Size", len(labels))
 
-        print(f"Saving input into ", PMU_caseB_input)
-        np.save(f"{PMU_caseB_input}", inputs)
-        print(f"Saving input into {PMU_caseB_output}")
-        np.save(f"{PMU_caseB_output}", labels)
+        print(f"Saving input into ", conventional_input)
+        np.save(f"{conventional_input}", inputs)
+        print(f"Saving input into {conventional_output}")
+        np.save(f"{conventional_output}", labels)
 
         self.train_test_split_dataset(meterType)
 
@@ -321,10 +321,10 @@ class Preprocess:
 
 
         # First split: train+validation and test
-        X_train, X_test, y_train, y_test = train_test_split(inputs, outputs, test_size=0.1, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(inputs, outputs, test_size=0.15, random_state=42, stratify=1)
 
         # Second split: train and validation
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.125, random_state=42)  # 0.25 x 0.8 = 0.2
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.20, random_state=42, stratify=1)  # 0.25 x 0.8 = 0.2
 
         scaler   = StandardScaler()
         X_train  = scaler.fit_transform(X_train)
