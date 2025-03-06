@@ -321,10 +321,10 @@ class Preprocess:
 
 
         # First split: train+validation and test
-        X_train, X_test, y_train, y_test = train_test_split(inputs, outputs, test_size=0.15, random_state=42, stratify=1)
+        X_train, X_test, y_train, y_test = train_test_split(inputs, outputs, test_size=0.15, random_state=42)
 
         # Second split: train and validation
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.20, random_state=42, stratify=1)  # 0.25 x 0.8 = 0.2
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.20, random_state=42)  # 0.25 x 0.8 = 0.2
 
         scaler   = StandardScaler()
         X_train  = scaler.fit_transform(X_train)
