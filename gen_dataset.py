@@ -347,7 +347,9 @@ class LoadPowerFlow:
             net.line["in_service"] = pd.Series(False if (i in open_branches) else True for i in range(net.line.shape[0]))
 
     def randomize_loads(self, net):
-        self.net.load["LOAD_CHANGE_FLAG"] = np.random.choice([0, 1], size=len(self.net.load))
+        #self.net.load["LOAD_CHANGE_FLAG"] = np.random.choice([0, 1], size=len(self.net.load))
+        self.net.load["LOAD_CHANGE_FLAG"] = np.array([1 for i in range(self.net.load.shape[0])])
+        #TODO 1 always
         r = 0.3
         # var_vector (same size as the number of loads) defines the scaling factors
         # For simplicity, we'll use a vector of ones. Adjust as needed.
@@ -444,7 +446,6 @@ class LoadPowerFlow:
                     net.load[net.load["bus"] == index]["p_mw"]   = P_bus
                     net.load[net.load["bus"] == index]["q_mvar"] = P_bus * np.sqrt(1 - cos_phi**2) / cos_phi
 
-
                 elif index in bus_types["PQ_LV"]:
                     net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - LV - {self.profile_dict[index]}"]
                     net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - MV - {self.profile_dict[index]}"]
@@ -452,7 +453,9 @@ class LoadPowerFlow:
                     profile = df_profiles[self.profile_dict[index]]
                     P_bus   = P_load * profile
                     Q_load  = net.load[net.load["bus"] == index]["q_mvar"].values.tolist()[0]
-                    cos_phi = P_load / np.sqrt(P_load ** 2 + Q_load ** 2)
+                    #cos_phi = P_load / np.sqrt(P_load ** 2 + Q_load ** 2)
+                    cos_phi = 0.95
+                    print(cos_phi)
                     net.load[net.load["bus"] == index]["p_mw"]   = P_bus
                     net.load[net.load["bus"] == index]["q_mvar"] = P_bus * np.sqrt(1 - cos_phi**2) / cos_phi
 

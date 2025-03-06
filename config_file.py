@@ -7,7 +7,7 @@ meterType = "PMU_caseB"
 #meterType = "conventional"
 GLOBAL_BRANCH_LIST = [6]
 NUM_TOPOLOGIES = 15
-NUM_SIMULATIONS = 1000
+NUM_SIMULATIONS = 7787
 EXISTING_METER_BRANCHES = []
 EXISTING_METER_NODES    = []
 RAW_FILENAME    = f"datasets/{dataset}.csv"
@@ -213,8 +213,8 @@ elif dataset == "IEEE33":
         "slack": [0],
         "PV_wind": [32],
         "PV_solar": [17, 21],
-        "PQ_MV": [2, 10, 30, 13],
-        "PQ_LV": [i for i in range(NUM_NODES) if i not in [0, 17, 21, 32, 2, 10, 30, 13]],
+        "PQ_MV": [3, 13, 23, 24, 28, 29, 30, 31],
+        "PQ_LV": [i for i in range(NUM_NODES) if i not in [0, 17, 21, 32, 3, 13, 23, 24, 28, 29, 30, 31]],
     }
 
     profile_titles = {
