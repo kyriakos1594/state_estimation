@@ -33,7 +33,7 @@ from torch_geometric.nn import MLP, EdgeConv # Multi-layer Perceptron
 from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
-from model import SimpleNNEdges
+from model import TI_SimpleNNEdges, TI_GATWithEdgeAttrs
 from torch.utils.data import DataLoader, TensorDataset
 
 # Set the device globally
@@ -991,9 +991,9 @@ class TIPredictorTrainProcess:
                 ML_model   = "NN"
                 if self.meterType == "PMU_caseA":
                     num_node_features = 2
-                    ANN = SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
+                    ANN = TI_SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
                 else:
-                    ANN = SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
+                    ANN = TI_SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
                 trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
                 print("X_train shape: ", X_train.shape)
                 test_accuracy = trainModel.evaluate()
@@ -1086,61 +1086,7 @@ class TIPredictorTrainProcess:
             # Return branch index list (i)
             return self.execute_GNN()
 
-class GATWithEdgeAttrs(torch.nn.Module):
-    def __init__(self, num_features, num_classes, edge_attr_dim, heads=4):
-        super(GATWithEdgeAttrs, self).__init__()
-        self.device             = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # Graph Attention layers (GATConv)
-        # Here, `edge_attr_dim` is the size of the edge features
-        self.conv1 = GATConv(num_features, 64, heads=heads, concat=True, edge_dim=edge_attr_dim)  # First GAT layer with edge features
-        self.conv2 = GATConv(64 * heads, 32, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Second GAT layer
-        self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Third GAT layer
-        #self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Fourth GAT layer
 
-        # Dropout layer
-        self.dropout = torch.nn.Dropout(0.3)
-
-        # Fully connected layer for classification
-        self.fc = torch.nn.Linear(8 * heads, num_classes)
-
-    def forward(self, data):
-        # If there are no node features, initialize with zeros (dummy features)
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)  # Default node features (1 feature per node)
-
-        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
-
-        x = x.to(self.device)
-        edge_index = edge_index.to(self.device)
-        if edge_attr is not None:
-            edge_attr = edge_attr.to(self.device)
-        batch = batch.to(self.device)
-
-        # First GAT layer with edge attributes
-        x = self.conv1(x, edge_index, edge_attr)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Second GAT layer with edge attributes
-        x = self.conv2(x, edge_index, edge_attr)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Third GAT layer with edge attributes
-        x = self.conv3(x, edge_index, edge_attr)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Fourth GAT layer with edge attributes
-        #x = self.conv4(x, edge_index, edge_attr)
-
-        # Global mean pooling: Aggregate node features into graph-level features
-        x = global_mean_pool(x, batch)
-
-        # Fully connected layer: Output the final classes
-        x = self.fc(x)
-
-        return F.log_softmax(x, dim=1)
 
 class GATNoEdgeAttrs(torch.nn.Module):
     def __init__(self, num_features, num_classes, heads=4):
@@ -1803,16 +1749,16 @@ class TrainGNN_TI:
         self.num_classes        = NUM_TOPOLOGIES
         self.num_edges          = NUM_BRANCHES
         if self.meterType == "PMU_caseA":
-            self.model          = GATWithEdgeAttrs(num_features=2, num_classes=NUM_TOPOLOGIES, edge_attr_dim=2, heads=8).to(self.device)
+            self.model          = TI_GATWithEdgeAttrs(num_features=2, num_classes=NUM_TOPOLOGIES, edge_attr_dim=2, heads=4).to(self.device)
         elif self.meterType =="PMU_caseB":
-            self.model          = GATNoEdgeAttrs(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
+            self.model          = GATNoEdgeAttrs(num_features=4, num_classes=NUM_TOPOLOGIES, heads=4).to(self.device)
             #self.model          = SparseGNNNoEdgeAttrsAPPNP(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
             #self.model          = GINNoEdgeModel(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
             #self.model          = GCNNoEdge(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
             #self.model          = GATLinearNN(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
             #self.model           = GATSAGE(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
         elif self.meterType == "conventional":
-            self.model          = GATNoEdgeAttrs(num_features=3, num_classes=NUM_TOPOLOGIES, heads=8).to(self.device)
+            self.model          = GATNoEdgeAttrs(num_features=3, num_classes=NUM_TOPOLOGIES, heads=4).to(self.device)
 
 
         self.optimizer          = optim.Adam(self.model.parameters(), lr=0.001)
@@ -2033,7 +1979,7 @@ if __name__ == "__main__":
     #meterType = meterType
     meterType = "conventional"
 
-    model = "NN"
+    model = "GNN"
     PP    = "RF"
     subPP = "rfe"
     threshold = 0.95

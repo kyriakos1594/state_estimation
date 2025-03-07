@@ -16,10 +16,10 @@ from customGATConv import *
 
 print_flag = True
 
-#TODO TI NN For PMU_caseB and conventional
-class SimpleNNEdges(nn.Module):
+#TODO TI NN FOr all cases
+class TI_SimpleNNEdges(nn.Module):
     def __init__(self, num_nodes, num_features, num_classes, branch_num=None, branch_feature_num=None):
-        super(SimpleNNEdges, self).__init__()
+        super(TI_SimpleNNEdges, self).__init__()
         self.branch_num = branch_num
         self.branch_feature_num = branch_feature_num
         if self.branch_feature_num is not None:
@@ -56,6 +56,63 @@ class SimpleNNEdges(nn.Module):
 
 
         return x  # No softmax, using CrossEntropyLoss
+
+#TODO TI GNN GAT - Only
+class TI_GATWithEdgeAttrs(torch.nn.Module):
+    def __init__(self, num_features, num_classes, edge_attr_dim, heads=4):
+        super(TI_GATWithEdgeAttrs, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # Graph Attention layers (GATConv)
+        # Here, `edge_attr_dim` is the size of the edge features
+        self.conv1  = GATConv(num_features, 64, heads=heads, concat=True, edge_dim=edge_attr_dim)  # First GAT layer with edge features
+        self.conv2  = GATConv(64 * heads, 32, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Second GAT layer
+        self.conv3  = GATConv(32 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Third GAT layer
+        #self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Fourth GAT layer
+
+        # Dropout layer
+        #self.dropout = torch.nn.Dropout(0.3)
+
+        # Fully connected layer for classification
+        self.fc     = torch.nn.Linear(8 * heads, num_classes)
+
+    def forward(self, data):
+        # If there are no node features, initialize with zeros (dummy features)
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)  # Default node features (1 feature per node)
+
+        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
+
+        x = x.to(self.device)
+        edge_index = edge_index.to(self.device)
+        if edge_attr is not None:
+            edge_attr = edge_attr.to(self.device)
+        batch = batch.to(self.device)
+
+        # First GAT layer with edge attributes
+        x = self.conv1(x, edge_index, edge_attr)
+        x = F.relu(x)
+        #x = self.dropout(x)
+
+        # Second GAT layer with edge attributes
+        x = self.conv2(x, edge_index, edge_attr)
+        x = F.relu(x)
+        #x = self.dropout(x)
+
+        # Third GAT layer with edge attributes
+        x = self.conv3(x, edge_index, edge_attr)
+        x = F.relu(x)
+        #x = self.dropout(x)
+
+        # Fourth GAT layer with edge attributes
+        #x = self.conv4(x, edge_index, edge_attr)
+
+        # Global mean pooling: Aggregate node features into graph-level features
+        x = global_mean_pool(x, batch)
+
+        # Fully connected layer: Output the final classes
+        x = self.fc(x)
+
+        return F.log_softmax(x, dim=1)
 
 #TODO Simple GATConv stacking - No Mask
 class SE_GATNoEdgeAttrsNoMask(torch.nn.Module):
