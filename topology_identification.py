@@ -34,6 +34,7 @@ from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
 from model import SimpleNNEdges
+from torch.utils.data import DataLoader, TensorDataset
 
 # Set the device globally
 np.set_printoptions(threshold=np.inf)
@@ -390,7 +391,7 @@ class Preprocess:
 
         if type == "PMU_caseA":
             # TODO Case A - Store then read for each measurement Vm, Va, Im, Ia
-            self.store_data_PMU_caseA()
+            #self.store_data_PMU_caseA()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseA")
         elif type == "PMU_caseB":
             # TODO Case B - Store then read for each measurement Vm, Va, Iinjm, Iinja
@@ -398,7 +399,7 @@ class Preprocess:
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseB")
         elif type == "conventional":
             # TODO Case B - Store then read for each measurement Vm, Pinj, Qinj
-            self.store_data_conventional()
+            #self.store_data_conventional()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("conventional")
         else:
             print("Please enter known meter type")
@@ -1937,48 +1938,48 @@ class TrainNN_TI:
         self.criterion     = nn.CrossEntropyLoss()
 
     def train(self):
+
+        # Create DataLoader for training and validation
+        train_dataset = TensorDataset(self.X_train, self.y_train)
+        val_dataset = TensorDataset(self.X_val, self.y_val)
+        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+
         max_epochs = 300
         best_val_loss = float('inf')
         early_stop_counter = 0
-        patience = 10
+        patience = 30
         min_delta = 0.0005
         best_model_weights = None
 
         for epoch in range(max_epochs):
             self.model.train()
             total_loss = 0
-            for i in range(self.X_train.shape[0]):
-                # Ensure the data is in the correct shape and device
-                X_train_sample = self.X_train[i].unsqueeze(0)  # Shape (1, num_features)
-                y_train_sample = self.y_train[i].unsqueeze(0)  # Shape (1,)
+            for X_batch, y_batch in train_loader:  # Process data in batches
+                X_batch, y_batch = X_batch.to(self.device), y_batch.to(self.device)  # Move to GPU if available
 
                 self.optimizer.zero_grad()
-
-                # Forward pass
-                out = self.model(X_train_sample)
-
-                # Compute the loss (CrossEntropyLoss expects class indices)
-                loss = self.criterion(out, y_train_sample)
+                out = self.model(X_batch)
+                loss = self.criterion(out, y_batch)
                 loss.backward()
                 self.optimizer.step()
 
-                total_loss += loss.item()
+                total_loss += loss.item() * X_batch.size(0)  # Multiply by batch size to get total loss
 
             # Validation
             self.model.eval()
             val_loss = 0
             with torch.no_grad():
-                for i in range(self.X_val.shape[0]):
-                    X_val_sample = self.X_val[i].unsqueeze(0)
-                    y_val_sample = self.y_val[i].unsqueeze(0)
-
-                    out_val = self.model(X_val_sample)
-                    loss = self.criterion(out_val, y_val_sample)
-                    val_loss += loss.item()
+                for X_batch, y_batch in val_loader:
+                    X_batch, y_batch = X_batch.to(self.device), y_batch.to(self.device)
+                    out_val = self.model(X_batch)
+                    loss = self.criterion(out_val, y_batch)
+                    val_loss += loss.item() * X_batch.size(0)  # Multiply by batch size
 
             # Early stopping check
-            if val_loss < best_val_loss - min_delta:
-                best_val_loss = val_loss
+            avg_val_loss = val_loss / len(val_dataset)  # Average validation loss
+            if avg_val_loss < best_val_loss - min_delta:
+                best_val_loss = avg_val_loss
                 early_stop_counter = 0
                 best_model_weights = self.model.state_dict()
             else:
@@ -1988,8 +1989,7 @@ class TrainNN_TI:
                 print(f"Early stopping at epoch {epoch + 1}")
                 break
 
-            print(
-                f'Epoch {epoch + 1}, Training Loss: {total_loss / self.X_train.shape[0]}, Validation Loss: {val_loss / self.X_val.shape[0]}')
+            print(f'Epoch {epoch + 1}, Training Loss: {total_loss / self.X_train.shape[0]}, Validation Loss: {val_loss / self.X_val.shape[0]}')
 
         if best_model_weights:
             self.model.load_state_dict(best_model_weights)

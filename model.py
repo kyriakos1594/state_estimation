@@ -54,6 +54,7 @@ class SimpleNNEdges(nn.Module):
         # Output layer (logits)
         x = self.fc4(x)
 
+
         return x  # No softmax, using CrossEntropyLoss
 
 #TODO Simple GATConv stacking - No Mask
