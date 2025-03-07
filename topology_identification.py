@@ -618,7 +618,7 @@ class PreProcFS:
         remaining_branches = [i for i in range(NUM_BRANCHES)]
         #remaining_branches = BRANCH_PICK_LIST
 
-        EXISTING_METER_BRANCHES = [15]
+        EXISTING_METER_BRANCHES = []
 
 
         #TODO Exclude existing branches
@@ -630,22 +630,24 @@ class PreProcFS:
         remaining_branches = [i for i in remaining_branches if i not in EXISTING_METER_BRANCHES]
 
         num_features = 4
-        used_branches = [] #EXISTING_METER_BRANCHES
 
-        #TODO Train RF initially with EXISTING NODES to find the residual
-        #print(self.X_train[0], self.y_train[0])
-        y_labels = np.argmax(self.y_train, axis=1).reshape(-1)
-        existing_meter_indices = []
-        for branch in EXISTING_METER_BRANCHES:
-            existing_meter_indices.extend((feature_group_dict[branch]))
-        X_train = self.X_train[:, existing_meter_indices]
-        #print(X_train[0], X_train.shape)
-        rf = RandomForestClassifier(n_estimators=10, max_depth=5, random_state=42)
-        rf.fit(X_train, y_labels)
-        y_pred = rf.predict(X_train)
-        misclassified = (y_pred != y_labels)
-        #print(y_pred.shape)
-        #print(misclassified)
+        #TODO - Remember for original meters
+        if False:
+            used_branches = []  # EXISTING_METER_BRANCHES
+            # TODO Train RF initially with EXISTING NODES to find the residual
+            # print(self.X_train[0], self.y_train[0])
+            y_labels = np.argmax(self.y_train, axis=1).reshape(-1)
+            existing_meter_indices = []
+            for branch in EXISTING_METER_BRANCHES:
+                existing_meter_indices.extend((feature_group_dict[branch]))
+            X_train = self.X_train[:, existing_meter_indices]
+            print(X_train[0], X_train.shape)
+            rf = RandomForestClassifier(n_estimators=10, max_depth=5, random_state=42)
+            rf.fit(X_train, y_labels)
+            y_pred = rf.predict(X_train)
+            misclassified = (y_pred != y_labels)
+            print(y_pred.shape)
+            print(misclassified)
 
         while len(remaining_branches) > 0:
 
@@ -659,21 +661,21 @@ class PreProcFS:
             #print("Used indices: ", used_indices)
 
             # Train Random Forest Classifier
-            rf = RandomForestClassifier(n_estimators=10, max_depth=5, random_state=42)
-            rf.fit(X_train[misclassified], self.y_train[misclassified])
+            rf = RandomForestClassifier(n_estimators=50, max_depth=7, random_state=42)
+            rf.fit(X_train, self.y_train)
             importances = rf.feature_importances_
 
             #TODO How to return from list of new indices back to the original ones
             # Remove from the original list the element of the worst index
             # Get back as remaining_features[j]
             group_importance_list = [sum(importances[num_features*i:(i+1)*num_features]) for i in range(len(remaining_branches))]
-            #print("Added importances per group: ", group_importance_list)
+            print("Added importances per group: ", group_importance_list)
             min_importance_branch = group_importance_list.index(min(group_importance_list))
-            #print("Minimum importance for worst group: ", min(group_importance_list))
-            #print("Chose: ", min_importance_branch)
-            #print(remaining_branches, min_importance_branch)
+            print("Minimum importance for worst group: ", min(group_importance_list))
+            print("Chose: ", min_importance_branch)
+            print(remaining_branches, min_importance_branch)
             real_branch_index = remaining_branches.pop(min_importance_branch)
-            #print("Min importance branch index in remaining list: ", min_importance_branch, "Min real index: ", real_branch_index)
+            print("Min importance branch index in remaining list: ", min_importance_branch, "Min real index: ", real_branch_index)
             used_branches.append(real_branch_index)
 
         used_branches.reverse()
@@ -711,27 +713,27 @@ class PreProcFS:
                 used_indices.extend(feature_group_dict[n_i])
 
             X_train = self.X_train[:, used_indices]
-            #print("Used indices: ", used_indices)
+            print("Used indices: ", used_indices)
 
             # Train Random Forest Classifier
-            rf = RandomForestClassifier(n_estimators=10, max_depth=5, random_state=42)
+            rf = RandomForestClassifier(n_estimators=50, max_depth=7, random_state=42)
             rf.fit(X_train, self.y_train)
             importances = rf.feature_importances_
-            #print("Importances: ", importances)
+            print("Importances: ", importances)
             #TODO How to return from list of new indices back to the original ones
             # Remove from the original list the element of the worst index
             # Get back as remaining_features[j]
             group_importance_list = [sum(importances[num_features*i:(i+1)*num_features]) for i in range(len(remaining_nodes))]
-            #print("Added importances per group: ", group_importance_list)
+            print("Added importances per group: ", group_importance_list)
             min_importance_node = group_importance_list.index(min(group_importance_list))
-            #print("Minimum importance for worst group: ", min(group_importance_list))
-            #print("Chose: ", min_importance_node)
-            #print("Remaining nodes: ", remaining_nodes)
-            #print("Minimum importance index: ", min_importance_node)
+            print("Minimum importance for worst group: ", min(group_importance_list))
+            print("Chose: ", min_importance_node)
+            print("Remaining nodes: ", remaining_nodes)
+            print("Minimum importance index: ", min_importance_node)
             real_node_index = remaining_nodes.pop(min_importance_node)
-            #print("Min importance branch index in remaining list: ", min_importance_node, "Min real index: ", real_node_index)
+            print("Min importance branch index in remaining list: ", min_importance_node, "Min real index: ", real_node_index)
             used_nodes.append(real_node_index)
-            #print(used_nodes)
+            print(used_nodes)
 
         used_nodes.reverse()
 
@@ -754,6 +756,8 @@ class PreProcFS:
                                       1*NUM_NODES + n_i,
                                       2*NUM_NODES + n_i] for n_i in remaining_nodes}
         num_features = 3
+
+        EXISTING_METER_NODES = []
         used_nodes = EXISTING_METER_NODES
 
         while len(remaining_nodes) > 0:
@@ -768,7 +772,7 @@ class PreProcFS:
             #print("Used indices: ", used_indices)
 
             # Train Random Forest Classifier
-            rf = RandomForestClassifier(n_estimators=10, max_depth=5, random_state=42)
+            rf = RandomForestClassifier(n_estimators=50, max_depth=7, random_state=42)
             rf.fit(X_train, self.y_train)
             importances = rf.feature_importances_
 
@@ -924,8 +928,6 @@ class TIPredictorTrainProcess:
             print(self.X_train.shape)
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
             features = FS.execute()
-            #features = [17, 26, 21, 28, 8, 12, 7, 5, 6, 9, 11, 24, 19, 16, 27, 25, 14, 13, 23, 4, 29, 10, 20, 15, 31, 32, 30, 18, 3, 2, 22, 1, 0]
-            print(features)
             if self.meterType == "PMU_caseA":
                 print("TI Feature Selection Order - Branches: ", features)
             elif self.meterType == "PMU_caseB":
@@ -1472,7 +1474,7 @@ class SimpleNN(nn.Module):
         self.fc4 = nn.Linear(4, num_classes)
 
         # Dropout for regularization
-        self.dropout = nn.Dropout(0.3)
+        #self.dropout = nn.Dropout(0.3)
 
     def forward(self, x):
         # Flatten the input (batch_size, num_nodes, num_features) -> (batch_size, num_nodes * num_features)
@@ -2049,8 +2051,8 @@ class TrainNN_TI:
 if __name__ == "__main__":
 
     #meterType = "PMU_caseA"
-    meterType = meterType
-    #meterType = "conventional"
+    #meterType = meterType
+    meterType = "conventional"
 
     model = "NN"
     PP    = "RF"
@@ -2059,8 +2061,8 @@ if __name__ == "__main__":
 
     PreProc = Preprocess()
     X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = PreProc.preprocess_meter_type(meterType)
-    #TI_PTP = TIPredictorTrainProcess(meterType, threshold, model, X_train, y_train_labels, X_val, y_val_labels, X_test, y_test_labels, PP, subPP)
-    #TI_PTP.execute()
+    TI_PTP = TIPredictorTrainProcess(meterType, threshold, model, X_train, y_train_labels, X_val, y_val_labels, X_test, y_test_labels, PP, subPP)
+    TI_PTP.execute()
 
 
 
