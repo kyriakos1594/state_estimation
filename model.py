@@ -16,6 +16,45 @@ from customGATConv import *
 
 print_flag = True
 
+#TODO TI NN For PMU_caseB and conventional
+class SimpleNNEdges(nn.Module):
+    def __init__(self, num_nodes, num_features, num_classes, branch_num=None, branch_feature_num=None):
+        super(SimpleNNEdges, self).__init__()
+        self.branch_num = branch_num
+        self.branch_feature_num = branch_feature_num
+        if self.branch_feature_num is not None:
+            self.input_dim = num_nodes * num_features + branch_num * branch_feature_num  # Flatten the entire graph input
+            print("Input dimension: ", self.input_dim)
+        else:
+            self.input_dim = num_nodes * num_features # Flatten the entire graph input
+            print("Input dimension: ", self.input_dim)
+
+        print("Input dimension for SimpleNN: ", self.input_dim, "nodes: ", num_nodes, "features: ", num_features, "branches: ", branch_num, "features (branches): ", branch_feature_num)
+
+        # Fully connected layers
+        self.fc1 = nn.Linear(self.input_dim, 64)
+        self.fc2 = nn.Linear(64, 16)
+        self.fc3 = nn.Linear(16, 4)
+        self.fc4 = nn.Linear(4, num_classes)
+
+        # Dropout for regularization
+        #self.dropout = nn.Dropout(0.3)
+
+    def forward(self, x):
+        # Flatten the input (batch_size, num_nodes, num_features) -> (batch_size, num_nodes * num_features)
+        #print("In net:", x)
+        x = x.view(x.size(0), -1)
+        #print("In net view: ", x)
+
+        # Forward pass through MLP
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+
+        # Output layer (logits)
+        x = self.fc4(x)
+
+        return x  # No softmax, using CrossEntropyLoss
 
 #TODO Simple GATConv stacking - No Mask
 class SE_GATNoEdgeAttrsNoMask(torch.nn.Module):

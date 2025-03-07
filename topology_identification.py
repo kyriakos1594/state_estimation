@@ -33,6 +33,7 @@ from torch_geometric.nn import MLP, EdgeConv # Multi-layer Perceptron
 from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
+from model import SimpleNNEdges
 
 # Set the device globally
 np.set_printoptions(threshold=np.inf)
@@ -927,12 +928,15 @@ class TIPredictorTrainProcess:
         if not self.iterative_fs:
             print(self.X_train.shape)
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
-            features = FS.execute()
+            #features = FS.execute()
             if self.meterType == "PMU_caseA":
+                features = IEEE33_PMU_caseA_TI_features
                 print("TI Feature Selection Order - Branches: ", features)
             elif self.meterType == "PMU_caseB":
+                features = IEEE33_PMU_caseB_TI_features
                 print("TI Feature Selection Order - Nodes: ", features)
             elif self.meterType == "conventional":
+                features = IEEE33_conventional_TI_features
                 print("TI Feature Selection Order - Nodes: ", features)
 
             #TODO For every Currenct branch input feature add the magnitude and its angle
@@ -986,9 +990,9 @@ class TIPredictorTrainProcess:
                 ML_model   = "NN"
                 if self.meterType == "PMU_caseA":
                     num_node_features = 2
-                    ANN = SimpleNN(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
+                    ANN = SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
                 else:
-                    ANN = SimpleNN(NNdimension, self.num_features, NUM_TOPOLOGIES).to(self.device)
+                    ANN = SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
                 trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
                 print("X_train shape: ", X_train.shape)
                 test_accuracy = trainModel.evaluate()
@@ -1013,8 +1017,18 @@ class TIPredictorTrainProcess:
 
         if not self.iterative_fs:
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
-            Ib_features = FS.execute()
+            #Ib_features = FS.execute()
             #Ib_features = GLOBAL_BRANCH_LIST
+            Ib_features = []
+            if self.meterType == "PMU_caseA":
+                Ib_features = IEEE33_PMU_caseA_TI_features
+                print("TI Feature Selection Order - Branches: ", Ib_features)
+            elif self.meterType == "PMU_caseB":
+                Ib_features = IEEE33_PMU_caseB_TI_features
+                print("TI Feature Selection Order - Nodes: ", Ib_features)
+            elif self.meterType == "conventional":
+                Ib_features = IEEE33_conventional_TI_features
+                print("TI Feature Selection Order - Nodes: ", Ib_features)
             print("TI Feature Selection Order: ", Ib_features)
 
             #TODO For every Currenct branch input feature add the magnitude and its angle
@@ -1455,42 +1469,7 @@ class GINNoEdgeModel(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 
-class SimpleNN(nn.Module):
-    def __init__(self, num_nodes, num_features, num_classes, branch_num=NUM_BRANCHES, branch_feature_num=None):
-        super(SimpleNN, self).__init__()
-        self.branch_num = branch_num
-        self.branch_feature_num = branch_feature_num
-        if self.branch_feature_num is not None:
-            self.input_dim = num_nodes * num_features + branch_num * branch_feature_num  # Flatten the entire graph input
-        else:
-            self.input_dim = num_nodes * num_features # Flatten the entire graph input
 
-        print("Input dimension for SimpleNN: ", self.input_dim, num_nodes, num_features, branch_num, branch_feature_num)
-
-        # Fully connected layers
-        self.fc1 = nn.Linear(self.input_dim, 64)
-        self.fc2 = nn.Linear(64, 16)
-        self.fc3 = nn.Linear(16, 4)
-        self.fc4 = nn.Linear(4, num_classes)
-
-        # Dropout for regularization
-        #self.dropout = nn.Dropout(0.3)
-
-    def forward(self, x):
-        # Flatten the input (batch_size, num_nodes, num_features) -> (batch_size, num_nodes * num_features)
-        #print("In net:", x)
-        x = x.view(x.size(0), -1)
-        #print("In net view: ", x)
-
-        # Forward pass through MLP
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-
-        # Output layer (logits)
-        x = self.fc4(x)
-
-        return x  # No softmax, using CrossEntropyLoss
 
 
 class GraphTIPreprocess_IV:
