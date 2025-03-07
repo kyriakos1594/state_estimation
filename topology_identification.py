@@ -27,6 +27,7 @@ import torch.optim as optim
 import numpy as np
 from torch_geometric.nn import MessagePassing, global_mean_pool, GCNConv, GATConv, GATv2Conv, SAGEConv, APPNP, GINConv, GraphNorm
 from torch_geometric.data import Data, DataLoader
+
 from torch_geometric.utils import degree
 from captum.attr import IntegratedGradients
 from torch_geometric.nn import MLP, EdgeConv # Multi-layer Perceptron
@@ -34,7 +35,7 @@ from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
 from model import TI_SimpleNNEdges, TI_GATWithEdgeAttrs
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
 
 # Set the device globally
 np.set_printoptions(threshold=np.inf)
@@ -1053,6 +1054,7 @@ class TIPredictorTrainProcess:
 
                 if self.meterType == "PMU_caseA":
                     edges, train_loader, validation_loader, test_loader = GTIP.generate_dataset_TI_GNN_PMU_caseA()
+                    print(train_loader)
                     Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader, validation_loader, test_loader)
                     acc = Train_GNN_TI.evaluate()
                 elif self.meterType == "PMU_caseB":
@@ -1593,7 +1595,7 @@ class GraphTIPreprocess_IV:
             #print(edge_index, edge_attr, mask, label)
             train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
 
-        self.train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+        self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
         val_data = []
         for i in range(self.X_val.shape[0]):
@@ -1607,7 +1609,7 @@ class GraphTIPreprocess_IV:
             # print(edge_index, edge_attr, mask, label)
             val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
 
-        self.val_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+        self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
         test_data = []
         for i in range(self.X_test.shape[0]):
@@ -1621,7 +1623,7 @@ class GraphTIPreprocess_IV:
             # print(edge_index, edge_attr, mask, label)
             test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
 
-        self.test_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+        self.test_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
         return [edge_index, self.train_loader, self.val_loader, self.test_loader]
 
@@ -1654,7 +1656,7 @@ class GraphTIPreprocess_IV:
             label = torch.tensor(self.y_train[i, :], dtype=torch.float)
             train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+        self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
         val_data = []
         for i in range(self.X_val.shape[0]):
@@ -1666,7 +1668,7 @@ class GraphTIPreprocess_IV:
             # print(edge_index, edge_attr, mask, label)
             val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.val_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+        self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
         test_data = []
         for i in range(self.X_test.shape[0]):
@@ -1678,7 +1680,7 @@ class GraphTIPreprocess_IV:
             # print(edge_index, edge_attr, mask, label)
             test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.test_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+        self.test_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
         return [edge_index, self.train_loader, self.val_loader, self.test_loader]
 
@@ -1711,7 +1713,7 @@ class GraphTIPreprocess_IV:
             label = torch.tensor(self.y_train[i, :], dtype=torch.float)
             train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+        self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
         val_data = []
         for i in range(self.X_val.shape[0]):
@@ -1723,7 +1725,7 @@ class GraphTIPreprocess_IV:
             # print(edge_index, edge_attr, mask, label)
             val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.val_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+        self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
         test_data = []
         for i in range(self.X_test.shape[0]):
@@ -1735,7 +1737,7 @@ class GraphTIPreprocess_IV:
             # print(edge_index, edge_attr, mask, label)
             test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
 
-        self.test_loader = DataLoader(val_data, batch_size=16, shuffle=True)
+        self.test_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
         return [edge_index, self.train_loader, self.val_loader, self.test_loader]
 
@@ -1781,7 +1783,6 @@ class TrainGNN_TI:
         for epoch in range(max_epochs):
             self.model.train()
             total_loss = 0
-
             for batch in self.train_loader:
                 batch = batch.to(self.device)
                 self.optimizer.zero_grad()
@@ -1886,10 +1887,10 @@ class TrainNN_TI:
     def train(self):
 
         # Create DataLoader for training and validation
-        train_dataset = TensorDataset(self.X_train, self.y_train)
-        val_dataset = TensorDataset(self.X_val, self.y_val)
-        train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        train_dataset = TD_NN(self.X_train, self.y_train)
+        val_dataset = TD_NN(self.X_val, self.y_val)
+        train_loader = DL_NN(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+        val_loader = DL_NN(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
         max_epochs = 300
         best_val_loss = float('inf')
@@ -1975,9 +1976,9 @@ class TrainNN_TI:
 
 if __name__ == "__main__":
 
-    #meterType = "PMU_caseA"
+    meterType = "PMU_caseA"
     #meterType = meterType
-    meterType = "conventional"
+    #meterType = "conventional"
 
     model = "GNN"
     PP    = "RF"
