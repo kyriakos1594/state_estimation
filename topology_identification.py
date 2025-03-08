@@ -135,7 +135,7 @@ class Preprocess:
 
     def store_data_conventional(self):
 
-        error = 0.05
+        error = 0.005
 
         df = pd.read_csv(self.dataset_filename)
         # "Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"
