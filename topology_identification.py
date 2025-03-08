@@ -635,8 +635,8 @@ class PreProcFS:
         num_features = 4
 
         #TODO - Remember for original meters
+        used_branches = EXISTING_METER_BRANCHES
         if False:
-            used_branches = []  # EXISTING_METER_BRANCHES
             # TODO Train RF initially with EXISTING NODES to find the residual
             # print(self.X_train[0], self.y_train[0])
             y_labels = np.argmax(self.y_train, axis=1).reshape(-1)
@@ -652,6 +652,8 @@ class PreProcFS:
             print(y_pred.shape)
             print(misclassified)
 
+        X_train_init, X_test_init, y_train, y_test = train_test_split(self.X_train, self.y_train, test_size=0.20, random_state=42)
+
         while len(remaining_branches) > 0:
 
             used_indices = []
@@ -660,23 +662,30 @@ class PreProcFS:
             for b_i in remaining_branches:
                 used_indices.extend(feature_group_dict[b_i])
 
-            X_train = self.X_train[:, used_indices]
+            X_train = X_train_init[:, used_indices]
+            X_test  = X_test_init[:, used_indices]
+
             #print("Used indices: ", used_indices)
 
             # Train Random Forest Classifier
-            rf = RandomForestClassifier(n_estimators=50, max_depth=7, random_state=42)
-            rf.fit(X_train, self.y_train)
+            rf = RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42)
+            rf.fit(X_train, y_train)
+
+            pred = rf.predict(X_test)
+            test_accuracy = accuracy_score(pred, y_test)
+            print("Test accuracy of RF: ", test_accuracy)
+
             importances = rf.feature_importances_
 
             #TODO How to return from list of new indices back to the original ones
             # Remove from the original list the element of the worst index
             # Get back as remaining_features[j]
             group_importance_list = [sum(importances[num_features*i:(i+1)*num_features]) for i in range(len(remaining_branches))]
-            print("Added importances per group: ", group_importance_list)
+            #print("Added importances per group: ", group_importance_list)
             min_importance_branch = group_importance_list.index(min(group_importance_list))
-            print("Minimum importance for worst group: ", min(group_importance_list))
-            print("Chose: ", min_importance_branch)
-            print(remaining_branches, min_importance_branch)
+            #print("Minimum importance for worst group: ", min(group_importance_list))
+            #print("Chose: ", min_importance_branch)
+            #print(remaining_branches, min_importance_branch)
             real_branch_index = remaining_branches.pop(min_importance_branch)
             print("Min importance branch index in remaining list: ", min_importance_branch, "Min real index: ", real_branch_index)
             used_branches.append(real_branch_index)
@@ -772,11 +781,21 @@ class PreProcFS:
                 used_indices.extend(feature_group_dict[n_i])
 
             X_train = self.X_train[:, used_indices]
+
+            # First, split the data into training + validation and test sets
+            X_train, X_test, y_train, y_test = train_test_split(X_train, self.y_train, test_size=0.2, random_state=42)
+
+
             #print("Used indices: ", used_indices)
 
             # Train Random Forest Classifier
-            rf = RandomForestClassifier(n_estimators=50, max_depth=7, random_state=42)
-            rf.fit(X_train, self.y_train)
+            rf = RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42)
+            rf.fit(X_train, y_train)
+
+            pred = rf.predict(X_test)
+
+            print("Random FOrest accuracy: ", )
+
             importances = rf.feature_importances_
 
             #TODO How to return from list of new indices back to the original ones
@@ -930,16 +949,16 @@ class TIPredictorTrainProcess:
         if not self.iterative_fs:
             print(self.X_train.shape)
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
-            #features = FS.execute()
-            if self.meterType == "PMU_caseA":
-                features = IEEE33_PMU_caseA_TI_features
-                print("TI Feature Selection Order - Branches: ", features)
-            elif self.meterType == "PMU_caseB":
-                features = IEEE33_PMU_caseB_TI_features
-                print("TI Feature Selection Order - Nodes: ", features)
-            elif self.meterType == "conventional":
-                features = IEEE33_conventional_TI_features
-                print("TI Feature Selection Order - Nodes: ", features)
+            features = FS.execute()
+            #if self.meterType == "PMU_caseA":
+            #    features = IEEE33_PMU_caseA_TI_features
+            #    print("TI Feature Selection Order - Branches: ", features)
+            #elif self.meterType == "PMU_caseB":
+            #    features = IEEE33_PMU_caseB_TI_features
+            #    print("TI Feature Selection Order - Nodes: ", features)
+            #elif self.meterType == "conventional":
+            #    features = IEEE33_conventional_TI_features
+            #    print("TI Feature Selection Order - Nodes: ", features)
 
             #TODO For every Currenct branch input feature add the magnitude and its angle
             # If the magnitude is at index X, then angle is at index X+35
@@ -1977,10 +1996,10 @@ class TrainNN_TI:
 if __name__ == "__main__":
 
     meterType = "PMU_caseA"
-    #meterType = meterType
+    #meterType = "PMU_caseB"
     #meterType = "conventional"
 
-    model = "GNN"
+    model = "NN"
     PP    = "RF"
     subPP = "rfe"
     threshold = 0.95
