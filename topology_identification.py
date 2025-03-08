@@ -912,7 +912,7 @@ class TIPredictorTrainProcess:
                 X_test  = self.X_test[:, all_indices]
 
                 #TODO Simple NN with keras
-                if False:
+                if True:
                     ML_model = "NN"
                     buildModel = BuildModel(ML_model)
                     input_dim = len(all_indices)
