@@ -927,15 +927,15 @@ class TIPredictorTrainProcess:
                 NNdimension = len(used_feature_indices)
 
 
-                ML_model   = "NN"
-                if self.meterType == "PMU_caseA":
+                #ML_model   = "NN"
+                #if self.meterType == "PMU_caseA":
                     num_node_features = 2
                     ANN = TI_SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
-                else:
-                    ANN = TI_SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
-                trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
-                print("X_train shape: ", X_train.shape)
-                test_accuracy = trainModel.evaluate()
+                #else:
+                #    ANN = TI_SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
+                #trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
+                #print("X_train shape: ", X_train.shape)
+                #test_accuracy = trainModel.evaluate()
 
                 print(used_feature_indices, test_accuracy)
                 with open("results.txt", "a") as wf:
