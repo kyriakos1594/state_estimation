@@ -527,95 +527,6 @@ class PreProcFS:
         self.X_test     = X_test
         self.y_test     = y_test
 
-    def execute_rf_model_magnitudes_and_angles_sum(self):
-
-        # Train Random Forest Classifier
-        rf = RandomForestClassifier(n_estimators=100, random_state=42)
-        rf.fit(self.X_train, self.y_train)
-
-        importances = rf.feature_importances_
-        #print("Per feature importance: ", importances)
-
-        #TODO We need to take into consideration the importance per branch and its nodes
-        # 33 Vm, 33 Va, 35 Im, 35 Ia
-        used_branches     = []
-        all_indices = [i for i in range(NUM_BRANCHES)]
-        for iteration in range(NUM_BRANCHES):
-            importance_pairs = []
-            #print("All indices: ", all_indices)
-            used_sending_nodes = [branch_data[i]["sending_node"] for i in used_branches]
-            #print("Used sending nodes: ", used_sending_nodes)
-            remaining_indices = [branch_index for branch_index in all_indices if (branch_index not in used_branches)]
-            #print("Remaining indices: ", remaining_indices)
-            for branch_index in remaining_indices:
-                sending_node_index = branch_data[branch_index]["sending_node"]
-                if sending_node_index not in used_sending_nodes:
-                    importance_pairs.append(sum([importances[sending_node_index],
-                                                importances[NUM_NODES + sending_node_index],
-                                                importances[2*NUM_NODES + branch_index],
-                                                importances[2*NUM_NODES + NUM_BRANCHES + branch_index]]))
-                else:
-                    importance_pairs.append(sum([importances[2*NUM_NODES + branch_index],
-                                                importances[2*NUM_NODES + NUM_BRANCHES + branch_index]]))
-
-            #Return branch index of max current importance combinations
-            max_value = max(importance_pairs)
-            max_importances_index = importance_pairs.index(max_value)
-            best_index = remaining_indices[max_importances_index]
-            #print("Best index: ", best_index)
-            used_branches.append(remaining_indices[importance_pairs.index(max_value)])
-
-        #print(used_branches)
-
-        # return sorted_indices
-        return used_branches
-
-    def execute_rf_model_magnitude_angles_max(self):
-
-        # Train Random Forest Classifier
-        rf = RandomForestClassifier(n_estimators=100, random_state=42)
-        rf.fit(self.X_train, self.y_train)
-
-        importances = rf.feature_importances_
-        #print("Per feature importance: ", importances)
-
-        #TODO We need to take into consideration the importance per branch and its nodes
-        # 33 Vm, 33 Va, 35 Im, 35 Ia
-        used_branches     = []
-        all_indices = [i for i in range(NUM_BRANCHES)]
-        for _ in range(NUM_BRANCHES):
-            importance_pairs = []
-            used_sending_nodes = [branch_data[i]["sending_node"] for i in used_branches]
-            #print("All indices: ", all_indices)
-            #print("Used sending nodes: ", used_sending_nodes)
-            remaining_indices = [branch_index for branch_index in all_indices if (branch_index not in used_branches)]
-            #print("Remaining indices: ", remaining_indices)
-
-            for branch_index in remaining_indices:
-                sending_node_index = branch_data[branch_index]["sending_node"]
-                if sending_node_index not in used_sending_nodes:
-                    importance_pairs.append(max(importances[sending_node_index],
-                                                importances[NUM_NODES + sending_node_index],
-                                                importances[2*NUM_NODES + branch_index],
-                                                importances[NUM_NODES+NUM_BRANCHES + branch_index]))
-                else:
-                    importance_pairs.append(max(importances[2*NUM_NODES + branch_index],
-                                                importances[2*NUM_NODES + NUM_BRANCHES + branch_index]))
-
-            #Return branch index of max current importance combinations
-            max_value = max(importance_pairs)
-            max_importances_index = importance_pairs.index(max_value)
-            #print("Importance pairs: ", importance_pairs)
-            #print("Index of max element in new importance list: ", max_importances_index)
-            best_index = remaining_indices[max_importances_index]
-            #print("Best index: ", best_index)
-            used_branches.append(remaining_indices[importance_pairs.index(max_value)])
-
-        #print(used_branches)
-
-        # return sorted_indices
-        return used_branches
-
     def execute_rfe_rf_PMU_caseA(self):
 
         remaining_branches = [i for i in range(NUM_BRANCHES)]
@@ -635,7 +546,7 @@ class PreProcFS:
         num_features = 4
 
         #TODO - Remember for original meters
-        used_branches = EXISTING_METER_BRANCHES
+        used_branches = []
         if False:
             # TODO Train RF initially with EXISTING NODES to find the residual
             # print(self.X_train[0], self.y_train[0])
@@ -645,7 +556,7 @@ class PreProcFS:
                 existing_meter_indices.extend((feature_group_dict[branch]))
             X_train = self.X_train[:, existing_meter_indices]
             print(X_train[0], X_train.shape)
-            rf = RandomForestClassifier(n_estimators=10, max_depth=5, random_state=42)
+            rf = RandomForestClassifier(n_estimators=RF_ESTIMATORS, max_depth=TREE_DEPTH, random_state=42)
             rf.fit(X_train, y_labels)
             y_pred = rf.predict(X_train)
             misclassified = (y_pred != y_labels)
@@ -668,7 +579,7 @@ class PreProcFS:
             #print("Used indices: ", used_indices)
 
             # Train Random Forest Classifier
-            rf = RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42)
+            rf = RandomForestClassifier(n_estimators=RF_ESTIMATORS, max_depth=TREE_DEPTH, random_state=42)
             rf.fit(X_train, y_train)
 
             pred = rf.predict(X_test)
@@ -715,21 +626,28 @@ class PreProcFS:
         num_features = 4
         used_nodes = [] #EXISTING_METER_NODES
 
+        X_train_init, X_test_init, y_train, y_test = train_test_split(self.X_train, self.y_train, test_size=0.20, random_state=42)
 
         while len(remaining_nodes) > 0:
 
             used_indices = []
 
             # Select Features per group to be used on RF training from remaining branches
-            for n_i in remaining_nodes:
-                used_indices.extend(feature_group_dict[n_i])
+            for b_i in remaining_nodes:
+                used_indices.extend(feature_group_dict[b_i])
 
-            X_train = self.X_train[:, used_indices]
-            print("Used indices: ", used_indices)
+            X_train = X_train_init[:, used_indices]
+            X_test = X_test_init[:, used_indices]
+
+            # print("Used indices: ", used_indices)
 
             # Train Random Forest Classifier
-            rf = RandomForestClassifier(n_estimators=50, max_depth=7, random_state=42)
-            rf.fit(X_train, self.y_train)
+            rf = RandomForestClassifier(n_estimators=RF_ESTIMATORS, max_depth=TREE_DEPTH, random_state=42)
+            rf.fit(X_train, y_train)
+
+            pred = rf.predict(X_test)
+            test_accuracy = accuracy_score(pred, y_test)
+            print("Test accuracy of RF: ", test_accuracy)
             importances = rf.feature_importances_
             print("Importances: ", importances)
             #TODO How to return from list of new indices back to the original ones
@@ -772,29 +690,30 @@ class PreProcFS:
         EXISTING_METER_NODES = []
         used_nodes = EXISTING_METER_NODES
 
+        X_train_init, X_test_init, y_train, y_test = train_test_split(self.X_train, self.y_train, test_size=0.20, random_state=42)
+
+
         while len(remaining_nodes) > 0:
 
             used_indices = []
 
             # Select Features per group to be used on RF training from remaining branches
-            for n_i in remaining_nodes:
-                used_indices.extend(feature_group_dict[n_i])
+            # Select Features per group to be used on RF training from remaining branches
+            for b_i in remaining_nodes:
+                used_indices.extend(feature_group_dict[b_i])
 
-            X_train = self.X_train[:, used_indices]
-
-            # First, split the data into training + validation and test sets
-            X_train, X_test, y_train, y_test = train_test_split(X_train, self.y_train, test_size=0.2, random_state=42)
-
+            X_train = X_train_init[:, used_indices]
+            X_test  = X_test_init[:, used_indices]
 
             #print("Used indices: ", used_indices)
 
             # Train Random Forest Classifier
-            rf = RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42)
+            rf = RandomForestClassifier(n_estimators=RF_ESTIMATORS, max_depth=TREE_DEPTH, random_state=42)
             rf.fit(X_train, y_train)
 
             pred = rf.predict(X_test)
-
-            print("Random FOrest accuracy: ", )
+            test_accuracy = accuracy_score(pred, y_test)
+            print("Test accuracy of RF: ", test_accuracy)
 
             importances = rf.feature_importances_
 

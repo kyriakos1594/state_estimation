@@ -13,8 +13,13 @@ EXISTING_METER_NODES    = []
 RAW_FILENAME    = f"datasets/{dataset}.csv"
 MAPE_v_threshold = 0.30
 MAE_a_threshold  = 0.15
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 PROFILES_FILEPATH = f"datasets/weekly_alligned_scaled_profiles.csv"
+
+#TODO Random Forest Variables
+TREE_DEPTH = 5
+RF_ESTIMATORS = 50
+
 
 IEEE33_PMU_caseA_TI_features    = [10, 32, 27, 5, 7, 6, 20, 33, 34, 4, 24, 8, 9, 26, 25, 19, 2, 17, 3, 11, 16, 12, 18, 23, 31, 13, 28, 29, 14, 21, 22, 15, 30, 1, 0]
 IEEE33_PMU_caseB_TI_features    = [21, 27, 17, 7, 10, 20, 24, 6, 8, 28, 13, 5, 25, 9, 11, 26, 19, 12, 14, 15, 32, 29, 4, 16, 30, 23, 31, 3, 22, 18, 2, 0, 1]
