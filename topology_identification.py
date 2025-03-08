@@ -929,8 +929,8 @@ class TIPredictorTrainProcess:
 
                 #ML_model   = "NN"
                 #if self.meterType == "PMU_caseA":
-                    num_node_features = 2
-                    ANN = TI_SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
+                #    num_node_features = 2
+                #    ANN = TI_SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
                 #else:
                 #    ANN = TI_SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
                 #trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
@@ -1914,8 +1914,8 @@ class TrainNN_TI:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseA"
-    #meterType = "PMU_caseB"
+    #meterType = "PMU_caseA"
+    meterType = "PMU_caseB"
     #meterType = "conventional"
 
     model = "NN"
