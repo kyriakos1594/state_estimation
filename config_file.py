@@ -17,7 +17,7 @@ BATCH_SIZE = 64
 PROFILES_FILEPATH = f"datasets/weekly_alligned_scaled_profiles.csv"
 
 #TODO Random Forest Variables
-TREE_DEPTH = 8
+TREE_DEPTH = 40
 RF_ESTIMATORS = 50
 
 

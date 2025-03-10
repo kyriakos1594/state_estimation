@@ -65,15 +65,15 @@ class TI_GATWithEdgeAttrs(torch.nn.Module):
         # Graph Attention layers (GATConv)
         # Here, `edge_attr_dim` is the size of the edge features
         self.conv1  = GATConv(num_features, 64, heads=heads, concat=True, edge_dim=edge_attr_dim)  # First GAT layer with edge features
-        self.conv2  = GATConv(64 * heads, 32, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Second GAT layer
-        self.conv3  = GATConv(32 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Third GAT layer
+        self.conv2  = GATConv(64 * heads, 16, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Second GAT layer
+        #self.conv3  = GATConv(32 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Third GAT layer
         #self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Fourth GAT layer
 
         # Dropout layer
         #self.dropout = torch.nn.Dropout(0.3)
 
         # Fully connected layer for classification
-        self.fc     = torch.nn.Linear(8 * heads, num_classes)
+        self.fc     = torch.nn.Linear(16 * heads, num_classes)
 
     def forward(self, data):
         # If there are no node features, initialize with zeros (dummy features)
@@ -99,8 +99,8 @@ class TI_GATWithEdgeAttrs(torch.nn.Module):
         #x = self.dropout(x)
 
         # Third GAT layer with edge attributes
-        x = self.conv3(x, edge_index, edge_attr)
-        x = F.relu(x)
+        #x = self.conv3(x, edge_index, edge_attr)
+        #x = F.relu(x)
         #x = self.dropout(x)
 
         # Fourth GAT layer with edge attributes

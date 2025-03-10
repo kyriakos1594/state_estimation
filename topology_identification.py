@@ -136,7 +136,7 @@ class Preprocess:
     def store_data_conventional(self):
 
         #Large error for conventional meters - 1%
-        error = 0.01
+        error = 0.009
 
         df = pd.read_csv(self.dataset_filename)
         # "Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"
@@ -148,7 +148,7 @@ class Preprocess:
             for simulation in range(1, self.simulations + 1):
                 # TODO Input
                 Vm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
-                Vm_m *= (1 + (error / 3) * np.random.randn(len(Vm_m)))
+                Vm_m *= (1 + ((error/2) / 3) * np.random.randn(len(Vm_m)))
                 Vm_m = list(Vm_m)
                 P_pu = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["P_pu"].values.tolist()[:-2]
                 P_pu *= (1 + (error / 3) * np.random.randn(len(P_pu)))
@@ -404,7 +404,7 @@ class Preprocess:
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseB")
         elif type == "conventional":
             # TODO Case B - Store then read for each measurement Vm, Pinj, Qinj
-            #self.store_data_conventional()
+            self.store_data_conventional()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("conventional")
         else:
             print("Please enter known meter type")
@@ -1714,11 +1714,11 @@ class TrainGNN_TI:
     def train(self):
 
         # Early stopping parameters
-        patience = 50  # Number of epochs to wait for improvement
+        patience = 5  # Number of epochs to wait for improvement
         min_delta = 0.0005  # Minimum change in validation loss to qualify as an improvement
         best_val_loss = float('inf')
         early_stop_counter = 0
-        max_epochs = 500  # Maximum number of epochs to train
+        max_epochs = 20  # Maximum number of epochs to train
         best_model_weights = None  # To store the best weights
 
         # Training loop
@@ -1922,7 +1922,7 @@ if __name__ == "__main__":
     #meterType = "PMU_caseB"
     meterType = "conventional"
 
-    model = "NN"
+    model = "GNN"
     PP    = "RF"
     subPP = "rfe"
     threshold = 0.95
