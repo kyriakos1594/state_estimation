@@ -6,7 +6,7 @@ dataset = "IEEE33"
 meterType = "PMU_caseB"
 #meterType = "conventional"
 GLOBAL_BRANCH_LIST = [6]
-NUM_TOPOLOGIES = 15
+NUM_TOPOLOGIES = 1 #15
 NUM_SIMULATIONS = 7787
 EXISTING_METER_BRANCHES = []
 EXISTING_METER_NODES    = []
@@ -17,7 +17,7 @@ BATCH_SIZE = 64
 PROFILES_FILEPATH = f"datasets/weekly_alligned_scaled_profiles.csv"
 
 #TODO Random Forest Variables
-TREE_DEPTH = 5
+TREE_DEPTH = 8
 RF_ESTIMATORS = 50
 
 

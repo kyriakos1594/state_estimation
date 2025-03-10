@@ -34,8 +34,8 @@ class TI_SimpleNNEdges(nn.Module):
         # Fully connected layers
         self.fc1 = nn.Linear(self.input_dim, 64)
         self.fc2 = nn.Linear(64, 16)
-        self.fc3 = nn.Linear(16, 4)
-        self.fc4 = nn.Linear(4, num_classes)
+        self.fc3 = nn.Linear(16, num_classes)
+        #self.fc4 = nn.Linear(4, num_classes)
 
         # Dropout for regularization
         #self.dropout = nn.Dropout(0.3)
@@ -49,11 +49,11 @@ class TI_SimpleNNEdges(nn.Module):
         # Forward pass through MLP
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
+        #x = F.relu(self.fc3(x))
+        x = self.fc3(x)
 
         # Output layer (logits)
-        x = self.fc4(x)
-
+        #x = self.fc4(x)
 
         return x  # No softmax, using CrossEntropyLoss
 

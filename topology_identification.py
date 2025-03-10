@@ -135,7 +135,8 @@ class Preprocess:
 
     def store_data_conventional(self):
 
-        error = 0.005
+        #Large error for conventional meters - 1%
+        error = 0.01
 
         df = pd.read_csv(self.dataset_filename)
         # "Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"
@@ -147,11 +148,14 @@ class Preprocess:
             for simulation in range(1, self.simulations + 1):
                 # TODO Input
                 Vm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
-                Vm_m = [v * (1 + np.random.uniform(-error, error)) for v in Vm_m]  # Adding ±1% noise
+                Vm_m *= (1 + (error / 3) * np.random.randn(len(Vm_m)))
+                Vm_m = list(Vm_m)
                 P_pu = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["P_pu"].values.tolist()[:-2]
-                P_pu = [p * (1 + np.random.uniform(-error, error)) for p in P_pu]  # Adding ±1% noise
+                P_pu *= (1 + (error / 3) * np.random.randn(len(P_pu)))
+                P_pu =list(P_pu)
                 Q_pu = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Q_pu"].values.tolist()[:-2]
-                Q_pu = [q * (1 + np.random.uniform(-error, error)) for q in Q_pu]  # Adding ±1% noise
+                Q_pu *= (1 + (error / 3) * np.random.randn(len(Q_pu)))
+                Q_pu = list(Q_pu)
 
                 print(f"Inserted {100*error}% noise to conventional meters")
 
@@ -446,12 +450,12 @@ class BuildModel:
         # First hidden layer with 64 neurons and ReLU activation
        # x = layers.Dense(128, activation='relu')(inputs)
 
-        x = layers.Dense(128, activation='relu')(inputs)
+        x = layers.Dense(32, activation='relu')(inputs)
 
-        x = layers.Dense(64, activation='relu')(x)
+        x = layers.Dense(16, activation='relu')(x)
 
         # First hidden layer with 64 neurons and ReLU activation
-        x = layers.Dense(32, activation='relu')(x)
+        #x = layers.Dense(16, activation='relu')(x)
 
         # Second hidden layer with 32 neurons and ReLU activation
         #x = layers.Dense(16, activation='relu')(x)
@@ -485,7 +489,7 @@ class TrainModel:
         self.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
         # Train the model and save the history
-        history = self.model.fit(self.X_train, self.y_train, epochs=1, batch_size=32, validation_data=(self.X_val, self.y_val))
+        history = self.model.fit(self.X_train, self.y_train, epochs=20, batch_size=16, validation_data=(self.X_val, self.y_val))
 
         # Plot training & validation accuracy and loss values
         plt.figure(figsize=(14, 5))
@@ -912,7 +916,7 @@ class TIPredictorTrainProcess:
                 X_test  = self.X_test[:, all_indices]
 
                 #TODO Simple NN with keras
-                if True:
+                if False:
                     ML_model = "NN"
                     buildModel = BuildModel(ML_model)
                     input_dim = len(all_indices)
@@ -927,15 +931,15 @@ class TIPredictorTrainProcess:
                 NNdimension = len(used_feature_indices)
 
 
-                #ML_model   = "NN"
-                #if self.meterType == "PMU_caseA":
-                #    num_node_features = 2
-                #    ANN = TI_SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
-                #else:
-                #    ANN = TI_SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
-                #trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
-                #print("X_train shape: ", X_train.shape)
-                #test_accuracy = trainModel.evaluate()
+                ML_model   = "NN"
+                if self.meterType == "PMU_caseA":
+                    num_node_features = 2
+                    ANN = TI_SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
+                else:
+                    ANN = TI_SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
+                trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
+                print("X_train shape: ", X_train.shape)
+                test_accuracy = trainModel.evaluate()
 
                 print(used_feature_indices, test_accuracy)
                 with open("results.txt", "a") as wf:
@@ -957,19 +961,19 @@ class TIPredictorTrainProcess:
 
         if not self.iterative_fs:
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
-            #Ib_features = FS.execute()
+            Ib_features = FS.execute()
             #Ib_features = GLOBAL_BRANCH_LIST
-            Ib_features = []
-            if self.meterType == "PMU_caseA":
-                Ib_features = IEEE33_PMU_caseA_TI_features
-                print("TI Feature Selection Order - Branches: ", Ib_features)
-            elif self.meterType == "PMU_caseB":
-                Ib_features = IEEE33_PMU_caseB_TI_features
-                print("TI Feature Selection Order - Nodes: ", Ib_features)
-            elif self.meterType == "conventional":
-                Ib_features = IEEE33_conventional_TI_features
-                print("TI Feature Selection Order - Nodes: ", Ib_features)
-            print("TI Feature Selection Order: ", Ib_features)
+            #Ib_features = []
+            #if self.meterType == "PMU_caseA":
+            #    Ib_features = IEEE33_PMU_caseA_TI_features
+            #    print("TI Feature Selection Order - Branches: ", Ib_features)
+            #elif self.meterType == "PMU_caseB":
+            #    Ib_features = IEEE33_PMU_caseB_TI_features
+            #    print("TI Feature Selection Order - Nodes: ", Ib_features)
+            #elif self.meterType == "conventional":
+            #    Ib_features = IEEE33_conventional_TI_features
+            #    print("TI Feature Selection Order - Nodes: ", Ib_features)
+            #print("TI Feature Selection Order: ", Ib_features)
 
             #TODO For every Currenct branch input feature add the magnitude and its angle
             # If the magnitude is at index X, then angle is at index X+35
@@ -1830,10 +1834,10 @@ class TrainNN_TI:
         train_loader = DL_NN(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
         val_loader = DL_NN(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-        max_epochs = 300
+        max_epochs = 30
         best_val_loss = float('inf')
         early_stop_counter = 0
-        patience = 30
+        patience = 10
         min_delta = 0.0005
         best_model_weights = None
 
@@ -1915,8 +1919,8 @@ class TrainNN_TI:
 if __name__ == "__main__":
 
     #meterType = "PMU_caseA"
-    meterType = "PMU_caseB"
-    #meterType = "conventional"
+    #meterType = "PMU_caseB"
+    meterType = "conventional"
 
     model = "NN"
     PP    = "RF"
