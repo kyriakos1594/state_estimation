@@ -34,7 +34,7 @@ from torch_geometric.nn import MLP, EdgeConv # Multi-layer Perceptron
 from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
-from model import TI_SimpleNNEdges, TI_GATWithEdgeAttrs
+from model import TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs
 from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
 
 # Set the device globally
@@ -404,7 +404,7 @@ class Preprocess:
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseB")
         elif type == "conventional":
             # TODO Case B - Store then read for each measurement Vm, Pinj, Qinj
-            self.store_data_conventional()
+            #self.store_data_conventional()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("conventional")
         else:
             print("Please enter known meter type")
@@ -872,16 +872,16 @@ class TIPredictorTrainProcess:
         if not self.iterative_fs:
             print(self.X_train.shape)
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
-            features = FS.execute()
-            #if self.meterType == "PMU_caseA":
-            #    features = IEEE33_PMU_caseA_TI_features
-            #    print("TI Feature Selection Order - Branches: ", features)
-            #elif self.meterType == "PMU_caseB":
-            #    features = IEEE33_PMU_caseB_TI_features
-            #    print("TI Feature Selection Order - Nodes: ", features)
-            #elif self.meterType == "conventional":
-            #    features = IEEE33_conventional_TI_features
-            #    print("TI Feature Selection Order - Nodes: ", features)
+            #features = FS.execute()
+            if self.meterType == "PMU_caseA":
+                features = IEEE33_PMU_caseA_TI_features
+                print("TI Feature Selection Order - Branches: ", features)
+            elif self.meterType == "PMU_caseB":
+                features = IEEE33_PMU_caseB_TI_features
+                print("TI Feature Selection Order - Nodes: ", features)
+            elif self.meterType == "conventional":
+                features = IEEE33_conventional_TI_features
+                print("TI Feature Selection Order - Nodes: ", features)
 
             #TODO For every Currenct branch input feature add the magnitude and its angle
             # If the magnitude is at index X, then angle is at index X+35
@@ -961,19 +961,19 @@ class TIPredictorTrainProcess:
 
         if not self.iterative_fs:
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
-            Ib_features = FS.execute()
+            #Ib_features = FS.execute()
             #Ib_features = GLOBAL_BRANCH_LIST
-            #Ib_features = []
-            #if self.meterType == "PMU_caseA":
-            #    Ib_features = IEEE33_PMU_caseA_TI_features
-            #    print("TI Feature Selection Order - Branches: ", Ib_features)
-            #elif self.meterType == "PMU_caseB":
-            #    Ib_features = IEEE33_PMU_caseB_TI_features
-            #    print("TI Feature Selection Order - Nodes: ", Ib_features)
-            #elif self.meterType == "conventional":
-            #    Ib_features = IEEE33_conventional_TI_features
-            #    print("TI Feature Selection Order - Nodes: ", Ib_features)
-            #print("TI Feature Selection Order: ", Ib_features)
+            Ib_features = []
+            if self.meterType == "PMU_caseA":
+                Ib_features = IEEE33_PMU_caseA_TI_features
+                print("TI Feature Selection Order - Branches: ", Ib_features)
+            elif self.meterType == "PMU_caseB":
+                Ib_features = IEEE33_PMU_caseB_TI_features
+                print("TI Feature Selection Order - Nodes: ", Ib_features)
+            elif self.meterType == "conventional":
+                Ib_features = IEEE33_conventional_TI_features
+                print("TI Feature Selection Order - Nodes: ", Ib_features)
+            print("TI Feature Selection Order: ", Ib_features)
 
             #TODO For every Currenct branch input feature add the magnitude and its angle
             # If the magnitude is at index X, then angle is at index X+35
@@ -1031,64 +1031,6 @@ class TIPredictorTrainProcess:
             return self.execute_GNN()
 
 
-
-class GATNoEdgeAttrs(torch.nn.Module):
-    def __init__(self, num_features, num_classes, heads=4):
-        super(GATNoEdgeAttrs, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        # Graph Attention layers (without edge features)
-        self.conv1 = GATConv(num_features, 64, heads=heads, concat=True)  # No edge_dim
-        self.conv2 = GATConv(64 * heads, 16, heads=heads, concat=True)  # No edge_dim
-        #self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True)
-        #self.conv4 = GATConv(8  * heads, 4, heads=heads, concat=True)
-        #self.conv4 = GATConv(16  * heads, 4, heads=heads, concat=True)
-
-        # Dropout layer
-        self.dropout = torch.nn.Dropout(0.3)
-
-        # Fully connected layer for classification
-        self.fc1 = torch.nn.Linear(16 * heads, num_classes)
-
-    def forward(self, data):
-        # If no node features exist, initialize dummy features
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
-
-        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
-
-        # First GAT layer
-        x = self.conv1(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Second GAT layer
-        x = self.conv2(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Third GAT layer
-        #x = self.conv3(x, edge_index)
-        #x = F.relu(x)
-        #x = self.dropout(x)
-
-        # Fourth GAT layer
-        #x = self.conv4(x, edge_index)
-        #x = F.relu(x)
-        #x = self.dropout(x)
-
-        # feourth GAT layer
-        #x = self.conv4(x, edge_index)
-        #x = F.relu(x)
-        #x = self.dropout(x)
-
-        # Global mean pooling
-        x = global_mean_pool(x, batch)
-
-        # Fully connected layer for classification
-        x = self.fc1(x)
-
-        return F.log_softmax(x, dim=1)
 
 class GATLinearNN(torch.nn.Module):
     def __init__(self, num_features, num_classes, heads=4):
@@ -1693,16 +1635,16 @@ class TrainGNN_TI:
         self.num_classes        = NUM_TOPOLOGIES
         self.num_edges          = NUM_BRANCHES
         if self.meterType == "PMU_caseA":
-            self.model          = TI_GATWithEdgeAttrs(num_features=2, num_classes=NUM_TOPOLOGIES, edge_attr_dim=2, heads=4).to(self.device)
+            self.model          = TI_GATWithEdgeAttrs(num_features=2, num_classes=NUM_TOPOLOGIES, edge_attr_dim=2, heads=6).to(self.device)
         elif self.meterType =="PMU_caseB":
-            self.model          = GATNoEdgeAttrs(num_features=4, num_classes=NUM_TOPOLOGIES, heads=4).to(self.device)
+            self.model          = TI_GATNoEdgeAttrs(num_features=4, num_classes=NUM_TOPOLOGIES, heads=4).to(self.device)
             #self.model          = SparseGNNNoEdgeAttrsAPPNP(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
             #self.model          = GINNoEdgeModel(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
             #self.model          = GCNNoEdge(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
             #self.model          = GATLinearNN(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
             #self.model           = GATSAGE(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
         elif self.meterType == "conventional":
-            self.model          = GATNoEdgeAttrs(num_features=3, num_classes=NUM_TOPOLOGIES, heads=4).to(self.device)
+            self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=NUM_TOPOLOGIES, heads=8).to(self.device)
 
 
         self.optimizer          = optim.Adam(self.model.parameters(), lr=0.001)
@@ -1711,14 +1653,17 @@ class TrainGNN_TI:
         self.validation_loader  = validation_loader
         self.test_loader        = test_loader
 
+        # Initialize the learning rate scheduler
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', patience=10, factor=0.5, verbose=True)
+
     def train(self):
 
         # Early stopping parameters
-        patience = 5  # Number of epochs to wait for improvement
-        min_delta = 0.0005  # Minimum change in validation loss to qualify as an improvement
+        patience = 25  # Number of epochs to wait for improvement
+        min_delta = 0.0000001  # Minimum change in validation loss to qualify as an improvement
         best_val_loss = float('inf')
         early_stop_counter = 0
-        max_epochs = 20  # Maximum number of epochs to train
+        max_epochs = 150  # Maximum number of epochs to train
         best_model_weights = None  # To store the best weights
 
         # Training loop
@@ -1756,6 +1701,9 @@ class TrainGNN_TI:
                 best_model_weights = self.model.state_dict()  # Save the best weights
             else:
                 early_stop_counter += 1
+
+            # Reduce learning rate if validation loss plateaus
+            self.scheduler.step(val_loss)
 
             if early_stop_counter >= patience:
                 print(f"Early stopping at epoch {epoch + 1}")
@@ -1834,11 +1782,11 @@ class TrainNN_TI:
         train_loader = DL_NN(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
         val_loader = DL_NN(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-        max_epochs = 30
+        max_epochs = 100
         best_val_loss = float('inf')
         early_stop_counter = 0
         patience = 10
-        min_delta = 0.0005
+        min_delta = 0.000001
         best_model_weights = None
 
         for epoch in range(max_epochs):
