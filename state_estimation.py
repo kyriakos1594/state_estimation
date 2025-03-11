@@ -461,9 +461,9 @@ class DSSE_BuildModel:
         model = Sequential()
 
         # Input Layer (66 inputs)
-        model.add(Dense(512, input_dim=input_dim, activation='linear'))
-        model.add(Dense(256, activation='linear'))
-        model.add(Dense(128, activation='linear'))
+        #model.add(Dense(512, input_dim=input_dim, activation='linear'))
+        #model.add(Dense(256, activation='linear'))
+        model.add(Dense(128, input_dim=input_dim, activation='linear'))
         model.add(Dense(64, activation='linear'))
         model.add(Dense(32, activation='linear'))
 
@@ -568,20 +568,20 @@ class SimpleNN(nn.Module):
         super(SimpleNN, self).__init__()
 
         # Define the layers
-        self.fc1 = nn.Linear(input_dim, 512)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 128)
-        self.fc4 = nn.Linear(128, 64)
+        #self.fc1 = nn.Linear(input_dim, 512)
+        #self.fc2 = nn.Linear(512, 256)
+        #self.fc3 = nn.Linear(256, 128)
+        self.fc4 = nn.Linear(input_dim, 64)
         self.fc5 = nn.Linear(64, 32)
         self.fc6 = nn.Linear(32, output_dim)
 
     def forward(self, x):
         # Pass the input through the layers
-        x = self.fc1(x)
-        x = self.fc2(x)
-        x = self.fc3(x)
-        x = self.fc4(x)
-        x = self.fc5(x)
+        #x = self.fc1(x)
+        #x = self.fc2(x)
+        #x = self.fc3(x)
+        x = torch.nn.relu(self.fc4(x))
+        x = torch.nn.relu(self.fc5(x))
         x = self.fc6(x)  # Output layer (no activation for regression)
         return x
 
@@ -591,6 +591,8 @@ class DSSE_TrainModel:
 
         self.model = model
         self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test = X_train, y_train, X_val, y_val, X_test, y_test
+        print(self.model)
+
 
     def train_model(self):
         # Define the EarlyStopping callback
@@ -603,10 +605,10 @@ class DSSE_TrainModel:
         # Train the model and save the history
         history = self.model.fit(self.X_train,
                                  self.y_train,
-                                 epochs=5,
-                                 batch_size=32,
+                                 epochs=100,
+                                 batch_size=BATCH_SIZE,
                                  callbacks=[early_stopping],
-                                 validation_data=(self.X_val, self.y_val), verbose=0)
+                                 validation_data=(self.X_val, self.y_val), verbose=1)
 
         # Plot training & validation accuracy and loss values
         plt.figure(figsize=(14, 5))
@@ -709,7 +711,8 @@ class DSSE_Estimator_TrainProcess:
 
             FS = FSPreProc_SE(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test, self.old_PMUs)
 
-            features = FS.execute()
+            #features = FS.execute()
+            features =  [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
             print(features)
             print("SE Feature Selection Order: ", features)
 
@@ -1435,15 +1438,16 @@ class Train_GNN_DSSE:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseB"
+    meterType = "conventional"
     if meterType == "conventional":
         old_PMUs = [27, 13] #[124, 127, 128]
+        old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
     elif meterType == "PMU_caseB":
         old_PMUs = [17, 26]
     elif meterType == "PMU_caseA":
         old_PMUs = [6, 10] #[127, 123]
 
-    model    = "GNN"
+    model    = "NN"
     PP       = "RF"
     subPP    = "rfe"
 

@@ -34,7 +34,7 @@ from torch_geometric.nn import MLP, EdgeConv # Multi-layer Perceptron
 from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
-from model import TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs
+from model import TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs, TI_TransformerNoEdges
 from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
 
 # Set the device globally
@@ -905,6 +905,10 @@ class TIPredictorTrainProcess:
                     all_indices = node_indices
                 elif self.meterType == "conventional":
                     used_feature_indices.append(i)
+
+                    #TODO - Static TI
+                    used_feature_indices = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
+
                     print("Chose feature - node: ", i, "Total feature indices: ", used_feature_indices)
                     node_indices = [i for i in used_feature_indices] + \
                                    [NUM_NODES + i for i in used_feature_indices] + \
@@ -1032,60 +1036,6 @@ class TIPredictorTrainProcess:
             # Return branch index list (i)
             return self.execute_GNN()
 
-
-
-class GATLinearNN(torch.nn.Module):
-    def __init__(self, num_features, num_classes, heads=4):
-        super(GATLinearNN, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        # First layer: GAT for attention-based feature extraction
-        self.gat = GATConv(num_features, 64, heads=heads, concat=True)  # No edge_dim
-
-        # Linear layers (instead of GAT for deeper processing)
-        self.fc1 = torch.nn.Linear(64 * heads, 32)
-        self.fc2 = torch.nn.Linear(32, 16)
-        self.fc3 = torch.nn.Linear(16, 4)
-
-        # Dropout layer
-        self.dropout = torch.nn.Dropout(0.3)
-
-        # Fully connected layer for classification
-        self.fc_out = torch.nn.Linear(4, num_classes)
-
-    def forward(self, data):
-        # If no node features exist, initialize dummy features
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
-
-        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
-
-        # First GAT layer (Attention-based feature selection)
-        x = self.gat(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Fully connected layers (Non-attention based)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        x = self.fc2(x)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        x = self.fc3(x)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Global mean pooling
-        x = global_mean_pool(x, batch)
-
-        # Fully connected output layer
-        x = self.fc_out(x)
-
-        return F.log_softmax(x, dim=1)
-
 class GCNNoEdge(torch.nn.Module):
     def __init__(self, num_features, num_classes):
         super(GCNNoEdge, self).__init__()
@@ -1137,175 +1087,6 @@ class GCNNoEdge(torch.nn.Module):
         x = self.fc(x)
 
         return F.log_softmax(x, dim=1)
-
-class GATSAGE(torch.nn.Module):
-    def __init__(self, num_features, num_classes, heads=4):
-        super(GATSAGE, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        # Add SAGEConv for initial feature aggregation (good for sparse data)
-        self.sage = SAGEConv(num_features, 64 * heads)
-
-        # Graph normalization layer (can help with noisy data and sparse inputs)
-        self.graph_norm1 = GraphNorm(64 * heads)
-        self.graph_norm2 = GraphNorm(32 * heads)
-        self.graph_norm3 = GraphNorm(16 * heads)
-        self.graph_norm4 = GraphNorm(8 * heads)
-
-        # Graph Attention layers (without edge features)
-        self.conv1 = GATConv(64 * heads , 32, heads=heads, concat=True)
-        self.conv2 = GATConv(32 * heads, 16, heads=heads, concat=True)
-        self.conv3 = GATConv(16 * heads, 8, heads=heads, concat=True)
-        self.conv4 = GATConv(8 * heads, 4, heads=heads, concat=True)
-
-        # Dropout layer
-        self.dropout = torch.nn.Dropout(0.1)
-
-        # Fully connected layer for classification
-        self.fc1 = torch.nn.Linear(4 * heads, num_classes)
-
-    def forward(self, data):
-        # If no node features exist, initialize dummy features
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
-
-        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
-
-        # Initial SAGEConv Layer (Feature Aggregation)
-        x = self.sage(x, edge_index)
-        x = F.relu(x)
-        x = self.graph_norm1(x)  # Apply GraphNorm
-        x = self.dropout(x)
-
-        # First GAT layer
-        x = self.conv1(x, edge_index)
-        x = F.relu(x)
-        x = self.graph_norm2(x)  # Apply GraphNorm
-        x = self.dropout(x)
-
-        # Second GAT layer
-        x = self.conv2(x, edge_index)
-        x = F.relu(x)
-        x = self.graph_norm3(x)  # Apply GraphNorm
-        x = self.dropout(x)
-
-        # Third GAT layer
-        x = self.conv3(x, edge_index)
-        x = F.relu(x)
-        x = self.graph_norm4(x)  # Apply GraphNorm
-        x = self.dropout(x)
-
-        # Fourth GAT layer
-        x = self.conv4(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Global mean pooling
-        x = global_mean_pool(x, batch)
-
-        # Fully connected layer for classification
-        x = self.fc1(x)
-
-        return F.log_softmax(x, dim=1)
-
-class SparseGNNNoEdgeAttrsAPPNP(torch.nn.Module):
-    def __init__(self, num_features, num_classes, K=10, alpha=0.1):
-        super(SparseGNNNoEdgeAttrsAPPNP, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        # Using APPNP for better propagation in sparse graphs
-        self.appnp = APPNP(K=K, alpha=alpha)
-
-        # Initial MLP layers before propagation
-        self.fc1 = torch.nn.Linear(num_features, 64)
-        self.fc2 = torch.nn.Linear(64, 32)
-        self.fc3 = torch.nn.Linear(32, 8)
-
-        # Dropout layer
-        self.dropout = torch.nn.Dropout(0.3)
-
-        # Fully connected layer for classification
-        self.fc_out = torch.nn.Linear(8, num_classes)
-
-    def forward(self, data):
-        # If no node features exist, initialize dummy features
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float, device=self.device)
-
-        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
-
-        # MLP before propagation
-        x = F.elu(self.fc1(x))
-        x = self.dropout(x)
-        x = F.elu(self.fc2(x))
-        x = self.dropout(x)
-        x = F.elu(self.fc3(x))
-        x = self.dropout(x)
-
-        # APPNP propagation
-        x = self.appnp(x, edge_index)
-
-        # Global mean pooling
-        x = global_mean_pool(x, batch)
-
-        # Fully connected layer for classification
-        x = self.fc_out(x)
-
-        return F.log_softmax(x, dim=1)
-
-class GINNoEdgeModel(torch.nn.Module):
-    def __init__(self, num_features, num_classes):
-        super(GINNoEdgeModel, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        from torch.nn import Linear, Sequential, ReLU
-        # Define MLPs for GINConv
-        self.mlp1 = Sequential(Linear(num_features, 16), ReLU(), Linear(16, 16))
-        self.mlp2 = Sequential(Linear(16, 8), ReLU(), Linear(8, 8))
-        self.mlp3 = Sequential(Linear(8, 4), ReLU(), Linear(4, 4))
-
-        # GIN Convolution layers
-        self.conv1 = GINConv(self.mlp1)
-        self.conv2 = GINConv(self.mlp2)
-        self.conv3 = GINConv(self.mlp3)
-
-        # Dropout for regularization
-        self.dropout = torch.nn.Dropout(0.3)
-
-        # Fully connected layer for classification
-        self.fc = Linear(4, num_classes)
-
-    def forward(self, data):
-        # Initialize dummy features if no node features exist
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
-
-        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
-
-        # First GIN layer
-        x = self.conv1(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Second GIN layer
-        x = self.conv2(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Third GIN layer
-        x = self.conv3(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Global mean pooling
-        x = global_mean_pool(x, batch)
-
-        # Fully connected layer for classification
-        x = self.fc(x)
-
-        return F.log_softmax(x, dim=1)
-
-
-
 
 class GraphTIPreprocess_IV:
 
@@ -1597,7 +1378,7 @@ class GraphTIPreprocess_IV:
             tmp_node_mask = torch.tensor(train_node_mask[i].reshape(-1, num_features), dtype=torch.float)
 
             label = torch.tensor(self.y_train[i, :], dtype=torch.float)
-            train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+            train_data.append(Data(x=tmp_node_attr, mask=tmp_node_mask, edge_index=self.edge_index, y=label))
 
         self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1609,7 +1390,7 @@ class GraphTIPreprocess_IV:
 
             label = torch.tensor(self.y_val[i, :], dtype=torch.float)
             # print(edge_index, edge_attr, mask, label)
-            val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+            val_data.append(Data(x=tmp_node_attr, mask=tmp_node_mask, edge_index=self.edge_index, y=label))
 
         self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1621,7 +1402,7 @@ class GraphTIPreprocess_IV:
 
             label = torch.tensor(self.y_test[i, :], dtype=torch.float)
             # print(edge_index, edge_attr, mask, label)
-            test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+            test_data.append(Data(x=tmp_node_attr, mask=tmp_node_mask, edge_index=self.edge_index, y=label))
 
         self.test_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1646,8 +1427,14 @@ class TrainGNN_TI:
             #self.model          = GATLinearNN(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
             #self.model           = GATSAGE(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
         elif self.meterType == "conventional":
-            self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=NUM_TOPOLOGIES, heads=4).to(self.device)
+            #self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=NUM_TOPOLOGIES, heads=4).to(self.device)
+            self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=15,
+                                                        embedding_dim=4,heads=4,num_encoder_layers=1,
+                                                        num_decoder_layers=1,GATConv1_dim=16,GATConv2_dim=4,
+                                                        ff_hid_dim=8).to(self.device)
 
+        print(self.model)
+        print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
 
         self.optimizer          = optim.Adam(self.model.parameters(), lr=0.001)
         self.criterion          = nn.CrossEntropyLoss()
@@ -1656,16 +1443,16 @@ class TrainGNN_TI:
         self.test_loader        = test_loader
 
         # Initialize the learning rate scheduler
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', patience=10, factor=0.5, verbose=True)
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', patience=20, factor=0.5, verbose=True)
 
     def train(self):
 
         # Early stopping parameters
-        patience = 50  # Number of epochs to wait for improvement
+        patience = 40  # Number of epochs to wait for improvement
         min_delta = 0.0000001  # Minimum change in validation loss to qualify as an improvement
         best_val_loss = float('inf')
         early_stop_counter = 0
-        max_epochs = 500  # Maximum number of epochs to train
+        max_epochs = 1000  # Maximum number of epochs to train
         best_model_weights = None  # To store the best weights
 
         # Training loop
@@ -1776,6 +1563,9 @@ class TrainNN_TI:
         self.optimizer     = optim.Adam(self.model.parameters(), lr=0.001)
         self.criterion     = nn.CrossEntropyLoss()
 
+        print(self.model)
+        print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
+
     def train(self):
 
         # Create DataLoader for training and validation
@@ -1784,10 +1574,10 @@ class TrainNN_TI:
         train_loader = DL_NN(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
         val_loader = DL_NN(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-        max_epochs = 100
+        max_epochs = 500
         best_val_loss = float('inf')
         early_stop_counter = 0
-        patience = 10
+        patience = 20
         min_delta = 0.000001
         best_model_weights = None
 

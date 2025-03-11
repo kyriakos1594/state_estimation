@@ -13,7 +13,7 @@ EXISTING_METER_NODES    = []
 RAW_FILENAME    = f"datasets/{dataset}.csv"
 MAPE_v_threshold = 0.30
 MAE_a_threshold  = 0.15
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 PROFILES_FILEPATH = f"datasets/weekly_alligned_scaled_profiles.csv"
 
 #TODO Random Forest Variables
