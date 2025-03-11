@@ -981,6 +981,8 @@ class TIPredictorTrainProcess:
             for i in Ib_features:
                 #print("Chose Ibranch: ", i)
                 used_feature_indices.append(i)
+                #TODO FOr a certain meter only
+                used_feature_indices = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
 
                 X_train_TI = self.X_train
                 y_train_labels = self.y_train
@@ -1644,7 +1646,7 @@ class TrainGNN_TI:
             #self.model          = GATLinearNN(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
             #self.model           = GATSAGE(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
         elif self.meterType == "conventional":
-            self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=NUM_TOPOLOGIES, heads=8).to(self.device)
+            self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=NUM_TOPOLOGIES, heads=4).to(self.device)
 
 
         self.optimizer          = optim.Adam(self.model.parameters(), lr=0.001)
@@ -1659,11 +1661,11 @@ class TrainGNN_TI:
     def train(self):
 
         # Early stopping parameters
-        patience = 25  # Number of epochs to wait for improvement
+        patience = 50  # Number of epochs to wait for improvement
         min_delta = 0.0000001  # Minimum change in validation loss to qualify as an improvement
         best_val_loss = float('inf')
         early_stop_counter = 0
-        max_epochs = 150  # Maximum number of epochs to train
+        max_epochs = 500  # Maximum number of epochs to train
         best_model_weights = None  # To store the best weights
 
         # Training loop

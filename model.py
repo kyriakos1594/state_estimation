@@ -121,17 +121,16 @@ class TI_GATNoEdgeAttrs(torch.nn.Module):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # Graph Attention layers (without edge features)
-        self.conv1 = GATConv(num_features, 16, heads=heads, concat=True)  # No edge_dim
-        self.conv2 = GATConv(16 * heads, 4, heads=heads, concat=True)  # No edge_dim
+        self.conv1 = GATConv(num_features, 64, heads=heads, concat=True)  # No edge_dim
+        self.conv2 = GATConv(64 * heads, 16, heads=heads, concat=True)  # No edge_dim
         #self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True)
         #self.conv4 = GATConv(8  * heads, 4, heads=heads, concat=True)
         #self.conv4 = GATConv(16  * heads, 4, heads=heads, concat=True)
 
-        # Dropout layer
-        #self.dropout = torch.nn.Dropout(0.3)
+        self.fc1 = torch.nn.Linear(16 * heads, 32)
 
         # Fully connected layer for classification
-        self.fc1 = torch.nn.Linear(4 * heads, num_classes)
+        self.fc2 = torch.nn.Linear(32, num_classes)
 
     def forward(self, data):
         # If no node features exist, initialize dummy features
@@ -153,8 +152,10 @@ class TI_GATNoEdgeAttrs(torch.nn.Module):
         # Global mean pooling
         x = global_mean_pool(x, batch)
 
-        # Fully connected layer for classification
         x = self.fc1(x)
+        x = F.relu(x)
+
+        x = self.fc2(x)
 
         return x
 
