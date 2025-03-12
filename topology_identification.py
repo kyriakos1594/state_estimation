@@ -34,8 +34,9 @@ from torch_geometric.nn import MLP, EdgeConv # Multi-layer Perceptron
 from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
-from model import TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs, TI_TransformerNoEdges
+from model import TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs, TI_TransformerNoEdges, TI_GCNNoEdgeAttrs, TI_GATNoEdges_EDGE_Classifier
 from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
+from IEEE_datasets.IEEE33 import config_dict
 
 # Set the device globally
 np.set_printoptions(threshold=np.inf)
@@ -1378,7 +1379,11 @@ class GraphTIPreprocess_IV:
             tmp_node_mask = torch.tensor(train_node_mask[i].reshape(-1, num_features), dtype=torch.float)
 
             label = torch.tensor(self.y_train[i, :], dtype=torch.float)
-            train_data.append(Data(x=tmp_node_attr, mask=tmp_node_mask, edge_index=self.edge_index, y=label))
+            #TODO Turn into edge probabilities for the sample
+            topology=f"T{str(torch.argmax(label).item()+1)}"
+            y_edge = [1 if j not in config_dict["IEEE33"][topology]["open_branches"] else 0 for j in range(NUM_BRANCHES)]
+
+            train_data.append(Data(x=tmp_node_attr, mask=tmp_node_mask, edge_index=self.edge_index, y=label, y_edge=y_edge))
 
         self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1389,8 +1394,11 @@ class GraphTIPreprocess_IV:
             tmp_node_mask = torch.tensor(val_node_mask[i].reshape(-1, num_features), dtype=torch.float)
 
             label = torch.tensor(self.y_val[i, :], dtype=torch.float)
-            # print(edge_index, edge_attr, mask, label)
-            val_data.append(Data(x=tmp_node_attr, mask=tmp_node_mask, edge_index=self.edge_index, y=label))
+            # TODO Turn into edge probabilities for the sample
+            topology = f"T{str(torch.argmax(label).item() + 1)}"
+            y_edge = [1 if j not in config_dict["IEEE33"][topology]["open_branches"] else 0 for j in range(NUM_BRANCHES)]
+
+            val_data.append(Data(x=tmp_node_attr, mask=tmp_node_mask, edge_index=self.edge_index, y=label, y_edge=y_edge))
 
         self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1401,8 +1409,11 @@ class GraphTIPreprocess_IV:
             tmp_node_mask = torch.tensor(test_node_mask[i].reshape(-1, num_features), dtype=torch.float)
 
             label = torch.tensor(self.y_test[i, :], dtype=torch.float)
+            # TODO Turn into edge probabilities for the sample
+            topology = f"T{str(torch.argmax(label).item() + 1)}"
+            y_edge = [1 if j not in config_dict["IEEE33"][topology]["open_branches"] else 0 for j in range(NUM_BRANCHES)]
             # print(edge_index, edge_attr, mask, label)
-            test_data.append(Data(x=tmp_node_attr, mask=tmp_node_mask, edge_index=self.edge_index, y=label))
+            test_data.append(Data(x=tmp_node_attr, mask=tmp_node_mask, edge_index=self.edge_index, y=label, y_edge=y_edge))
 
         self.test_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1427,11 +1438,13 @@ class TrainGNN_TI:
             #self.model          = GATLinearNN(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
             #self.model           = GATSAGE(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
         elif self.meterType == "conventional":
-            #self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=NUM_TOPOLOGIES, heads=4).to(self.device)
-            self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=15,
-                                                        embedding_dim=4,heads=4,num_encoder_layers=1,
-                                                        num_decoder_layers=1,GATConv1_dim=16,GATConv2_dim=4,
-                                                        ff_hid_dim=8).to(self.device)
+            self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=self.num_classes, heads=4).to(self.device)
+            #self.model          = TI_GATNoEdges_EDGE_Classifier(num_features=3, num_classes=self.num_classes, heads=5).to(self.device)
+            #self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=15,
+            #                                            embedding_dim=4,heads=4,num_encoder_layers=1,
+            #                                            num_decoder_layers=1,GATConv1_dim=16,GATConv2_dim=4,
+            #                                            ff_hid_dim=8).to(self.device)
+            #self.model          = TI_GCNNoEdgeAttrs(num_features=3,num_classes=15).to(self.device)
 
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
@@ -1448,11 +1461,11 @@ class TrainGNN_TI:
     def train(self):
 
         # Early stopping parameters
-        patience = 40  # Number of epochs to wait for improvement
+        patience = 30  # Number of epochs to wait for improvement
         min_delta = 0.0000001  # Minimum change in validation loss to qualify as an improvement
         best_val_loss = float('inf')
         early_stop_counter = 0
-        max_epochs = 1000  # Maximum number of epochs to train
+        max_epochs = 300  # Maximum number of epochs to train
         best_model_weights = None  # To store the best weights
 
         # Training loop
@@ -1466,6 +1479,8 @@ class TrainGNN_TI:
 
                 out_flat = out.view(-1, self.num_classes)
                 y_flat   = batch.y.view(-1, self.num_classes)
+                #y_flat = torch.tensor(batch.y_edge).float().to(self.device)
+
 
                 loss = self.criterion(out_flat, y_flat)
                 loss.backward()
@@ -1475,7 +1490,7 @@ class TrainGNN_TI:
             val_loss = 0
             for batch_val in self.validation_loader:
                 batch_val = batch_val.to(self.device)
-                out_val = self.model(batch_val)
+                out_val = self.model(batch_val).to(self.device)
 
                 out_flat = out_val.view(-1, self.num_classes)
                 y_flat   = batch_val.y.view(-1, self.num_classes)
@@ -1532,6 +1547,7 @@ class TrainGNN_TI:
             out_flat = out_test.view(-1, self.num_classes)
             y_flat = batch_test.y.view(-1, self.num_classes)
 
+
             # Get predicted class by selecting the index of the maximum logit for each sample
             preds = out_flat.argmax(dim=1)
             true_labels = y_flat.argmax(dim=1)
@@ -1574,7 +1590,7 @@ class TrainNN_TI:
         train_loader = DL_NN(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
         val_loader = DL_NN(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-        max_epochs = 500
+        max_epochs = 200
         best_val_loss = float('inf')
         early_stop_counter = 0
         patience = 20
@@ -1636,18 +1652,18 @@ class TrainNN_TI:
             for i in range(self.X_test.shape[0]):
                 X_test_sample = self.X_test[i].unsqueeze(0).to(self.device)
                 y_test_sample = self.y_test[i].unsqueeze(0).to(self.device)
-
-                # Convert to class indices if needed
-                if y_test_sample.ndimension() > 1:
-                    y_test_sample = torch.argmax(y_test_sample, dim=1).long()
-
                 out_test = self.model(X_test_sample)
                 loss = self.criterion(out_test, y_test_sample)
-                total_loss += loss.item()
+
+
+                # Convert to class indices if needed
+                #if y_test_sample.ndimension() > 1:
+                y_test_sample = torch.argmax(y_test_sample, dim=1).long()
 
                 # Get the predicted class (class with max logit)
                 preds = out_test.argmax(dim=1)
                 correct_predictions += (preds == y_test_sample).sum().item()
+                total_loss += loss
                 total_samples += y_test_sample.size(0)
 
         accuracy = correct_predictions / total_samples

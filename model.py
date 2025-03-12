@@ -33,9 +33,11 @@ class TI_SimpleNNEdges(nn.Module):
         print("Input dimension for SimpleNN: ", self.input_dim, "nodes: ", num_nodes, "features: ", num_features, "branches: ", branch_num, "features (branches): ", branch_feature_num)
 
         # Fully connected layers
-        self.fc1 = nn.Linear(self.input_dim, 64)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, num_classes)
+        #self.fc1 = nn.Linear(self.input_dim, 256)
+        self.fc2 = nn.Linear(self.input_dim, 128)
+        self.fc3 = nn.Linear(128, 64)
+        self.fc4 = nn.Linear(64, 32)
+        self.fc5 = nn.Linear(32, num_classes)
         #self.fc4 = nn.Linear(128, 64)
         #self.fc5 = nn.Linear(64, num_classes)
         #self.fc4 = nn.Linear(4, num_classes)
@@ -50,16 +52,16 @@ class TI_SimpleNNEdges(nn.Module):
         #print("In net view: ", x)
 
         # Forward pass through MLP
-        x = F.relu(self.fc1(x))
+        #x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        #x = F.relu(self.fc3(x))
-        #x = F.relu(self.fc4(x))
-        x = self.fc3(x)
+        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc4(x))
+        x = self.fc5(x)
 
         # Output layer (logits)
         #x = self.fc4(x)
 
-        return x  # No softmax, using CrossEntropyLoss
+        return x #F.log_softmax(x, dim=1)  # No softmax, using CrossEntropyLoss
 
 #TODO TI GNN GAT - Only PMU_caseA
 class TI_GATWithEdgeAttrs(torch.nn.Module):
@@ -125,6 +127,90 @@ class TI_GATNoEdgeAttrs(torch.nn.Module):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # Graph Attention layers (without edge features)
+        self.conv1 = GATConv(num_features, 16, heads=heads, concat=True)  # No edge_dim
+        self.conv2 = GATConv(16 * heads, 16, heads=heads, concat=True)  # No edge_dim
+        self.conv3  = GATConv(16 * heads, 16, heads=heads, concat=True) # Third GAT layer
+        self.conv4 = GATConv(16 * heads, 16, heads=heads, concat=True)  # Third GAT layer
+        self.conv5 = GATConv(16 * heads, 16, heads=heads, concat=True)  # Third GAT layer
+        self.conv6 = GATConv(16 * heads, 16, heads=heads, concat=True)  # Third GAT layer
+        self.conv7 = GATConv(16 * heads, 16, heads=heads, concat=True)  # Third GAT layer
+        self.conv8 = GATConv(16 * heads, 16, heads=heads, concat=True)  # Third GAT layer
+        self.conv9 = GATConv(16 * heads, 16, heads=heads, concat=True)  # Third GAT layer
+        self.conv10 = GATConv(16 * heads, 16, heads=heads, concat=True)  # Third GAT layer
+
+        #self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True)
+        #self.conv4 = GATConv(8  * heads, 4, heads=heads, concat=True)
+        #self.conv4 = GATConv(16  * heads, 4, heads=heads, concat=True)
+
+        #self.fc1 = torch.nn.Linear(8*heads, 32)
+        #self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(16 * heads, 32), torch.nn.ReLU(), torch.nn.Linear(32, 1)))
+
+        self.fc1 = torch.nn.Linear(16 * heads, 32)
+        #self.fc2 = torch.nn.Linear(64, 32)
+
+        # Fully connected layer for classification
+        self.fc2 = torch.nn.Linear(32, num_classes)
+
+    def forward(self, data):
+        # If no node features exist, initialize dummy features
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
+
+        x, edge_index, mask, batch = data.x.to(self.device), data.edge_index.to(self.device), data.mask.to(self.device), data.batch.to(self.device)
+
+        #constant_edges = [i for i in range(NUM_BRANCHES) if (i not in [32,33,34,6,10,27])]
+        #print(constant_edges)
+        #edge_index = edge_index[:, constant_edges]
+
+        # First GAT layer
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        #x = self.dropout(x)
+
+        # Second GAT layer
+        x = self.conv2(x, edge_index)
+        x = F.relu(x)
+        #x = self.dropout(x)
+        #x = x.view(1, -1) # [1056, 16]
+        # Global mean pooling
+        #x = global_mean_pool(x, batch)
+        x = self.conv3(x, edge_index)
+        x = F.relu(x)
+
+        x = self.conv4(x, edge_index)
+        x = F.relu(x)
+
+        x = self.conv5(x, edge_index)
+        x = F.relu(x)
+
+        x = self.conv6(x, edge_index)
+        x = F.relu(x)
+
+        x = self.conv7(x, edge_index)
+        x = F.relu(x)
+        x = self.conv8(x, edge_index)
+        x = F.relu(x)
+        x = self.conv9(x, edge_index)
+        x = F.relu(x)
+        x = self.conv10(x, edge_index)
+        x = F.relu(x)
+        #x = self.attn_pool(x, batch)
+        x = global_max_pool(x, batch)
+
+        x = self.fc1(x)
+        x = F.relu(x)
+
+        x = self.fc2(x)
+
+        return x
+
+#TODO TI GNN GAT - PMU_caseB or conventional
+class TI_GATNoEdges_EDGE_Classifier(torch.nn.Module):
+    def __init__(self, num_features, num_classes, heads=4):
+        super(TI_GATNoEdges_EDGE_Classifier, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Graph Attention layers (without edge features)
         self.conv1 = GATConv(num_features, 32, heads=heads, concat=True)  # No edge_dim
         self.conv2 = GATConv(32 * heads, 8, heads=heads, concat=True)  # No edge_dim
         #self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True)
@@ -145,7 +231,11 @@ class TI_GATNoEdgeAttrs(torch.nn.Module):
         if data.x is None:
             data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
 
-        x, edge_index, mask, batch = data.x.to(self.device), data.edge_index.to(self.device), data.mask.to(self.device), data.batch.to(self.device)
+        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
+
+        #constant_edges = [i for i in range(NUM_BRANCHES) if (i not in [32,33,34,6,10,27])]
+        #print(constant_edges)
+        #edge_index = edge_index[:, constant_edges]
 
         # First GAT layer
         x = self.conv1(x, edge_index)
@@ -161,9 +251,62 @@ class TI_GATNoEdgeAttrs(torch.nn.Module):
         #x = global_mean_pool(x, batch)
 
         x = self.attn_pool(x, batch)
+        #x = global_max_pool(x, batch)
 
         x = self.fc1(x)
         x = F.relu(x)
+
+        x = self.fc3(x)
+
+        return x
+
+#TODO TI GNN GCN - PMU_caseB or conventional
+class TI_GCNNoEdgeAttrs(torch.nn.Module):
+    def __init__(self, num_features, num_classes):
+        super(TI_GCNNoEdgeAttrs, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Graph Attention layers (without edge features)
+        self.conv1 = GCNConv(num_features, 64)  # No edge_dim
+        self.conv2 = GCNConv(64, 16)  # No edge_dim
+        #self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True)
+        #self.conv4 = GATConv(8  * heads, 4, heads=heads, concat=True)
+        #self.conv4 = GATConv(16  * heads, 4, heads=heads, concat=True)
+
+        #self.fc1 = torch.nn.Linear(8*heads, 32)
+        #self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(16, 32), torch.nn.ReLU(), torch.nn.Linear(32, 1)))
+
+        self.fc1 = torch.nn.Linear(16, 32)
+        #self.fc2 = torch.nn.Linear(64, 32)
+
+        # Fully connected layer for classification
+        self.fc3 = torch.nn.Linear(32, num_classes)
+
+    def forward(self, data):
+        # If no node features exist, initialize dummy features
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
+
+        x, edge_index, mask, batch = data.x.to(self.device), data.edge_index.to(self.device), data.mask.to(self.device), data.batch.to(self.device)
+
+        # First GAT layer
+        x = self.conv1(x, edge_index)
+        x = F.leaky_relu(x)
+        #x = self.dropout(x)
+
+        # Second GAT layer
+        x = self.conv2(x, edge_index)
+        x = F.leaky_relu(x)
+        #x = self.dropout(x)
+        #x = x.view(1, -1) # [1056, 16]
+        # Global mean pooling
+        #x = global_mean_pool(x, batch)
+
+        #x = self.attn_pool(x, batch)
+        x = global_mean_pool(x, batch)
+
+        x = self.fc1(x)
+        x = F.leaky_relu(x)
 
         x = self.fc3(x)
 

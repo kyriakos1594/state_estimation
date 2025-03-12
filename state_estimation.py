@@ -461,9 +461,9 @@ class DSSE_BuildModel:
         model = Sequential()
 
         # Input Layer (66 inputs)
-        #model.add(Dense(512, input_dim=input_dim, activation='linear'))
-        #model.add(Dense(256, activation='linear'))
-        model.add(Dense(128, input_dim=input_dim, activation='linear'))
+        model.add(Dense(512, input_dim=input_dim, activation='linear'))
+        model.add(Dense(256, activation='linear'))
+        model.add(Dense(128, activation='linear'))
         model.add(Dense(64, activation='linear'))
         model.add(Dense(32, activation='linear'))
 
@@ -598,41 +598,41 @@ class DSSE_TrainModel:
         # Define the EarlyStopping callback
         early_stopping = EarlyStopping(
             monitor='val_loss',  # You can use 'val_accuracy' or any other metric you are monitoring
-            patience=50,  # Number of epochs with no improvement before stopping
+            patience=40,  # Number of epochs with no improvement before stopping
             restore_best_weights=True  # Restore model weights from the epoch with the best metric
         )
 
         # Train the model and save the history
         history = self.model.fit(self.X_train,
                                  self.y_train,
-                                 epochs=100,
+                                 epochs=300,
                                  batch_size=BATCH_SIZE,
                                  callbacks=[early_stopping],
                                  validation_data=(self.X_val, self.y_val), verbose=1)
+        if False:
+            # Plot training & validation accuracy and loss values
+            plt.figure(figsize=(14, 5))
 
-        # Plot training & validation accuracy and loss values
-        plt.figure(figsize=(14, 5))
+            # Accuracy plot
+            plt.subplot(1, 2, 1)
+            plt.plot(history.history['mae'], label='Train Accuracy')
+            plt.plot(history.history['val_mae'], label='Validation Accuracy')
+            plt.title('Model Accuracy')
+            plt.xlabel('Epoch')
+            plt.ylabel('MAE')
+            plt.legend(loc='upper left')
 
-        # Accuracy plot
-        plt.subplot(1, 2, 1)
-        plt.plot(history.history['mae'], label='Train Accuracy')
-        plt.plot(history.history['val_mae'], label='Validation Accuracy')
-        plt.title('Model Accuracy')
-        plt.xlabel('Epoch')
-        plt.ylabel('MAE')
-        plt.legend(loc='upper left')
+            # Loss plot
+            plt.subplot(1, 2, 2)
+            plt.plot(history.history['loss'], label='Train Loss')
+            plt.plot(history.history['val_loss'], label='Validation Loss')
+            plt.title('Model Loss')
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.legend(loc='upper left')
 
-        # Loss plot
-        plt.subplot(1, 2, 2)
-        plt.plot(history.history['loss'], label='Train Loss')
-        plt.plot(history.history['val_loss'], label='Validation Loss')
-        plt.title('Model Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend(loc='upper left')
-
-        # Show plots
-        plt.savefig('DSSE_train_plot.png')
+            # Show plots
+            plt.savefig('DSSE_train_plot.png')
 
         return self.model
 
