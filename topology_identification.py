@@ -34,7 +34,8 @@ from torch_geometric.nn import MLP, EdgeConv # Multi-layer Perceptron
 from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
-from model import TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs, TI_TransformerNoEdges, TI_GCNNoEdgeAttrs, TI_GATNoEdges_EDGE_Classifier
+from model import (TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs, TI_TransformerNoEdges,
+                   TI_GCNNoEdgeAttrs,  TI_GCNNoEdgeAttrs, TI_MultipleGCNNoEdgeAttrs)
 from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
 from IEEE_datasets.IEEE33 import config_dict
 
@@ -908,7 +909,7 @@ class TIPredictorTrainProcess:
                     used_feature_indices.append(i)
 
                     #TODO - Static TI
-                    used_feature_indices = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
+                    #used_feature_indices = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
 
                     print("Chose feature - node: ", i, "Total feature indices: ", used_feature_indices)
                     node_indices = [i for i in used_feature_indices] + \
@@ -987,7 +988,7 @@ class TIPredictorTrainProcess:
                 #print("Chose Ibranch: ", i)
                 used_feature_indices.append(i)
                 #TODO FOr a certain meter only
-                used_feature_indices = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
+                #used_feature_indices = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
 
                 X_train_TI = self.X_train
                 y_train_labels = self.y_train
@@ -1438,13 +1439,14 @@ class TrainGNN_TI:
             #self.model          = GATLinearNN(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
             #self.model           = GATSAGE(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
         elif self.meterType == "conventional":
-            self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=self.num_classes, heads=4).to(self.device)
+            self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=self.num_classes, heads=4,
+                                                    num_gat_layers=8, gat_dim=8).to(self.device)
             #self.model          = TI_GATNoEdges_EDGE_Classifier(num_features=3, num_classes=self.num_classes, heads=5).to(self.device)
             #self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=15,
-            #                                            embedding_dim=4,heads=4,num_encoder_layers=1,
-            #                                            num_decoder_layers=1,GATConv1_dim=16,GATConv2_dim=4,
-            #                                            ff_hid_dim=8).to(self.device)
+            #                                            GATConv_layers=6, GATConv_dim=16, embedding_dim=4, heads=4,
+            #                                            dec_layers=1, ff_hid_dim=24).to(self.device)
             #self.model          = TI_GCNNoEdgeAttrs(num_features=3,num_classes=15).to(self.device)
+            #self.model          = TI_MultipleGCNNoEdgeAttrs(num_features=3, num_classes=self.num_classes).to(self.device)
 
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))

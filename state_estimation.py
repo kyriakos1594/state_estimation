@@ -42,6 +42,7 @@ from model import SE_GATNoEdgeAttrsMask, SE_GATNoEdgeAttrsNoMask, SE_OnlySourceN
     SE_OnlySourceAttentionMaskGATConvModel, SE_FirstSourceNodeAttentionNoMaskGATConvModel, \
     SE_FirstSourceAttentionMaskGATConvModel, SE_GATNoEdgeAttrsSelectiveMask
 from model import GATTransfomerOnlyDecoder, GATConvTransformer, GATTransformerEncoderDecoder
+from IEEE_datasets.IEEE33 import config_dict as topology_dict
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
@@ -461,8 +462,8 @@ class DSSE_BuildModel:
         model = Sequential()
 
         # Input Layer (66 inputs)
-        model.add(Dense(512, input_dim=input_dim, activation='linear'))
-        model.add(Dense(256, activation='linear'))
+        #model.add(Dense(512, input_dim=input_dim, activation='linear'))
+        #model.add(Dense(128, activation='linear'))
         model.add(Dense(128, activation='linear'))
         model.add(Dense(64, activation='linear'))
         model.add(Dense(32, activation='linear'))
@@ -475,7 +476,7 @@ class DSSE_BuildModel:
         model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae'])
 
         # Summary of the model
-        model.summary()
+        #model.summary()
 
         return model
 
@@ -638,11 +639,13 @@ class DSSE_TrainModel:
 
 class DSSE_Estimator_TrainProcess:
 
-    def __init__(self, meterType, model, X_train, y_train, X_val, y_val, X_test, y_test, old_PMUs=[], FS="RF", method="max", iterative_fs=False):
+    def __init__(self, meterType, model, X_train, y_train, train_labels, X_val, y_val, val_labels,
+                 X_test, y_test, test_labels, old_PMUs=[], FS="RF", method="max", iterative_fs=False):
 
         self.meterType = meterType
         self.model = model
         self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test = X_train, y_train, X_val, y_val, X_test, y_test
+        self.train_labels, self.val_labels, self.test_labels = train_labels, val_labels, test_labels
         self.FS = FS
         self.method = method
         self.iterative_fs = iterative_fs
@@ -906,10 +909,13 @@ class DSSE_Estimator_TrainProcess:
                                           selected_edges=self.old_PMUs,
                                           X_train=self.X_train,
                                           y_train=self.y_train,
+                                          train_labels = self.train_labels,
                                           X_val=self.X_val,
                                           y_val=self.y_val,
+                                          val_labels = self.val_labels,
                                           X_test=self.X_test,
-                                          y_test=self.y_test)
+                                          y_test=self.y_test,
+                                          test_labels = self.test_labels)
 
 
         edge_indexes, train_loader, val_loader, test_loader = DSSE_GNN_PP.generate_dataset(output="magnitudes")
@@ -978,7 +984,8 @@ class DSSE_Estimator_TrainProcess:
 
 class DSSE_GNN_Preprocess:
 
-    def __init__(self, meterType, selected_edges, X_train, y_train, X_val, y_val, X_test, y_test):
+    def __init__(self, meterType, selected_edges, X_train, y_train, train_labels, X_val, y_val, val_labels,
+                 X_test, y_test, test_labels):
         self.meterType = meterType
         self.X_train = X_train
         self.y_train = y_train
@@ -986,6 +993,9 @@ class DSSE_GNN_Preprocess:
         self.y_val   = y_val
         self.X_test  = X_test
         self.y_test  = y_test
+        self.train_labels = train_labels
+        self.val_labels = val_labels
+        self.test_labels = test_labels
         self.selected_edges = selected_edges
         if self.meterType == "PMU_caseA":
             self.num_features_per_edge = 2
@@ -1225,7 +1235,11 @@ class DSSE_GNN_Preprocess:
             elif output == "angles":
                 label = torch.tensor(self.y_train[i, NUM_NODES:], dtype=torch.float)
 
-            train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+            topology = f"T"+str(int(np.argmax(self.train_labels[i])+1))
+            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
+            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
+
+            train_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
         self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1238,7 +1252,11 @@ class DSSE_GNN_Preprocess:
             elif output == "angles":
                 label = torch.tensor(self.y_val[i, NUM_NODES:], dtype=torch.float)
 
-            val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+            topology = f"T" + str(int(np.argmax(self.val_labels[i]) + 1))
+            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
+            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
+
+            val_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
         self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1252,7 +1270,11 @@ class DSSE_GNN_Preprocess:
             elif output == "angles":
                 label = torch.tensor(self.y_test[i, NUM_NODES:], dtype=torch.float)
 
-            test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, y=label))
+            topology = f"T" + str(int(np.argmax(self.test_labels[i]) + 1))
+            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
+            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
+
+            test_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
         self.test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1286,7 +1308,7 @@ class Train_GNN_DSSE:
             self.model = SE_GATNoEdgeAttrsNoMask(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
 
             # TODO Vanilla GATConv - Masked Input only on chosen edge source node
-            self.model = SE_GATNoEdgeAttrsMask(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
+            #self.model = SE_GATNoEdgeAttrsMask(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
 
             # TODO Custom GATConv
             self.model = SE_OnlySourceNodeAttentionNoMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
@@ -1310,7 +1332,10 @@ class Train_GNN_DSSE:
                     #                                  heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=24,
                     #                                  ff_hid_dim=24).to(self.device)
         elif self.meterType == "conventional":
-            self.model = SE_GATNoEdgeAttrsNoMask(num_features=3,output_dim=NUM_NODES, heads=8).to(self.device)
+            #self.model = SE_GATNoEdgeAttrsNoMask(num_features=3,output_dim=NUM_NODES, heads=4).to(self.device)
+            self.model = GATTransfomerOnlyDecoder(num_nodes=NUM_NODES,num_features=3,output_dim=NUM_NODES,embedding_dim=4,
+                                                  heads=4, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=16,GATConv2_dim=16,
+                                                  ff_hid_dim=32).to(self.device)
 
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
@@ -1447,7 +1472,7 @@ if __name__ == "__main__":
     elif meterType == "PMU_caseA":
         old_PMUs = [6, 10] #[127, 123]
 
-    model    = "NN"
+    model    = "GNN"
     PP       = "RF"
     subPP    = "rfe"
 
@@ -1467,10 +1492,13 @@ if __name__ == "__main__":
                                           model=model,
                                           X_train=X_train,
                                           y_train=y_train_outputs,
+                                          train_labels = y_train_labels,
                                           X_val=X_val,
                                           y_val=y_val_outputs,
+                                          val_labels = y_val_labels,
                                           X_test=X_test,
                                           y_test=y_test_outputs,
+                                          test_labels = y_test_labels,
                                           old_PMUs=old_PMUs,
                                           FS="RF",
                                           method="rfe")
