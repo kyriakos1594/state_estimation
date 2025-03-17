@@ -1439,12 +1439,12 @@ class TrainGNN_TI:
             #self.model          = GATLinearNN(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
             #self.model           = GATSAGE(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
         elif self.meterType == "conventional":
-            self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=self.num_classes, heads=4,
-                                                    num_gat_layers=8, gat_dim=8).to(self.device)
+            #self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=self.num_classes, heads=4,
+            #                                        num_gat_layers=10, gat_dim=8).to(self.device)
             #self.model          = TI_GATNoEdges_EDGE_Classifier(num_features=3, num_classes=self.num_classes, heads=5).to(self.device)
-            #self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=15,
-            #                                            GATConv_layers=6, GATConv_dim=16, embedding_dim=4, heads=4,
-            #                                            dec_layers=1, ff_hid_dim=24).to(self.device)
+            self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=15,
+                                                        GATConv_layers=3, GATConv_dim=8, embedding_dim=4, heads=4,
+                                                        dec_layers=2, ff_hid_dim=24).to(self.device)
             #self.model          = TI_GCNNoEdgeAttrs(num_features=3,num_classes=15).to(self.device)
             #self.model          = TI_MultipleGCNNoEdgeAttrs(num_features=3, num_classes=self.num_classes).to(self.device)
 

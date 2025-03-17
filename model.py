@@ -35,7 +35,7 @@ class TI_SimpleNNEdges(nn.Module):
         # Fully connected layers
         #self.fc1 = nn.Linear(self.input_dim, 256)
         self.fc2 = nn.Linear(self.input_dim, 64)
-        self.fc3 = nn.Linear(64, 64)
+        #self.fc3 = nn.Linear(64, 64)
         self.fc4 = nn.Linear(64, 32)
         self.fc5 = nn.Linear(32, num_classes)
         #self.fc4 = nn.Linear(128, 64)
@@ -54,7 +54,7 @@ class TI_SimpleNNEdges(nn.Module):
         # Forward pass through MLP
         #x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
+        #x = F.relu(self.fc3(x))
         x = F.relu(self.fc4(x))
         x = self.fc5(x)
 
@@ -372,6 +372,7 @@ class TI_TransformerNoEdges(torch.nn.Module):
         x = x.squeeze(0)
         # Apply global pooling: aggregate node-level features into graph-level features
         x = self.attn_pool(x, batch)
+        #x = global_max_pool(x, batch)
 
         # Final fully connected layer for the output
         x = self.fc(x)
@@ -871,8 +872,8 @@ class SE_GATNoEdgeAttrsSelectiveMask(torch.nn.Module):
 
 #TODO Only Decoder Transformer - only self attention
 class GATTransfomerOnlyDecoder(nn.Module):
-    def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4, num_encoder_layers=1,
-                 num_decoder_layers=1, GATConv1_dim=64, GATConv2_dim=16, ff_hid_dim=32):
+    def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4,
+                 num_decoder_layers=1, gat_layers =4, GATConv_dim=16, ff_hid_dim=64):
         super(GATTransfomerOnlyDecoder, self).__init__()
 
         # Node embedding layer (if needed, otherwise use raw features)
@@ -881,218 +882,56 @@ class GATTransfomerOnlyDecoder(nn.Module):
         # Feature Transformation (if needed)
         self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
 
-        # GAT Layers (Graph Attention)
-        self.conv1 = GATConv(embedding_dim, 16, heads=heads, concat=True)
-        self.conv2 = GATConv(16 * heads, 16, heads=heads, concat=True)
-        self.conv3 = GATConv(16 * heads, 16, heads=heads, concat=True)
-        self.conv4 = GATConv(16 * heads, 16, heads=heads, concat=True)
+        # Input GATConv layer
+        self.input_gat_conv = GATConv(embedding_dim, GATConv_dim, heads=heads, concat=True)
 
-        # Custom Transformer Encoder Layer
-        #self.transformer_encoder = nn.ModuleList([
-        #    TransfromerDecoderLayer1(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_encoder_layers)
-        #])
+        # GATConv stacking for graph feature extraction
+        self.gatconv_layers = nn.ModuleList([
+            GATConv(GATConv_dim * heads, GATConv_dim, heads=heads, concat=True) for _ in range(gat_layers)
+        ])
 
         # Custom Transformer Decoder Layer
         self.transformer_decoder = nn.ModuleList([
-            TransfromerDecoderLayer2(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_decoder_layers)
+            TransfromerDecoderLayer2(d_model=GATConv_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_decoder_layers)
         ])
 
-        # Dropout layer for regularization
-        #self.dropout = nn.Dropout(0.3)
+        self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(GATConv_dim * heads, 2 * GATConv_dim),
+                                                                 torch.nn.ReLU(),
+                                                                 torch.nn.Linear(2 * GATConv_dim, 1)))
 
         # Fully connected layer for output (e.g., classification or regression)
-        self.fc = nn.Linear(GATConv2_dim * heads, output_dim)
+        self.fc = nn.Linear(GATConv_dim * heads, output_dim)
 
     def forward(self, data):
         # Extract node features and graph structure
         x, edge_index, batch = data.x, data.edge_index, data.batch
 
-        # Embedding node features if needed
-        if x is None:
-            x = self.node_embedding(data.batch)
-        elif self.feature_fc is not None:
-            x = self.feature_fc(x)
+        # Embedding node features if needed - input
+        x = self.feature_fc(x)
 
-        # Apply GAT layers to process graph structure and features
-        x = self.conv1(x, edge_index)
-        x = F.leaky_relu(x)
-        #x = self.dropout(x)
+        # Input GATConv
+        x = self.input_gat_conv(x, edge_index)
 
-        x = self.conv2(x, edge_index)
-        x = F.leaky_relu(x)
-        #x = self.dropout(x)
-
-        x = self.conv3(x, edge_index)
-        x = F.leaky_relu(x)
-        #x = self.dropout(x)
-        x = self.conv4(x, edge_index)
-        x = F.leaky_relu(x)
-        #x = self.dropout(x)
-
+        # Local graph feature extraction, using graph attention layers
+        for gat_conv in self.gatconv_layers:
+            x = gat_conv(x, edge_index)
+            x = F.leaky_relu(x)
 
         # Prepare for Transformer by adding a batch dimension (1, batch_size, features)
         x = x.unsqueeze(0)  # Shape: [1, batch_size, feature_dim]
-
-        #TODO Old architecture decode(x, x)
-        #Apply Transformer Encoder
-        #for encoder_layer in self.transformer_encoder:
-        #    x = encoder_layer(x)
-
-        # Apply Transformer Decoder
-        #for decoder_layer in self.transformer_decoder:
-        #    x = decoder_layer(x, x)  # Decoder attends to encoder output
-
-        #TODO Old Transformer
-        #memory = x
-        #for encoder_layer in self.transformer_encoder:
-        #    memory = encoder_layer(memory)
-
-        #for decoder_layer in self.transformer_decoder:
-        #    x = decoder_layer(x, memory)  # Decoder attends to encoder output and decoder's initial signal input
-
-        #TODO Encode and decode input signal with self attention and multi attention
-        #for encoder_layer in self.transformer_encoder:
-        #    x = encoder_layer(x)
-
-        for decoder_layer in self.transformer_decoder:
-            x = decoder_layer(x, x)  # Decoder attends to encoder output only
-
+        # Global attention appliued through transformer
+        for decoder in self.transformer_decoder:
+            x = decoder(x, x)
         # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
         x = x.squeeze(0)
-
         # Apply global pooling: aggregate node-level features into graph-level features
+        #x = self.attn_pool(x)
         x = global_mean_pool(x, batch)
 
         # Final fully connected layer for the output
         x = self.fc(x)
 
         return x
-
-#TODO Transfomer Encoder-Decoder with self and cross-attention
-class GATTransformerEncoderDecoder(nn.Module):
-    def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4, num_encoder_layers=1,
-                 num_decoder_layers=1, GATConv1_dim=64, GATConv2_dim=16, ff_hid_dim=32):
-        super(GATTransformerEncoderDecoder, self).__init__()
-
-        # Node embedding layer (if needed, otherwise use raw features)
-        self.node_embedding = nn.Embedding(num_nodes, embedding_dim)
-
-        # Feature Transformation (if needed)
-        self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
-
-        # GAT Layers (Graph Attention)
-        self.conv1 = GATConv(embedding_dim, GATConv1_dim, heads=heads, concat=True)
-        self.conv2 = GATConv(GATConv1_dim * heads, GATConv2_dim, heads=heads, concat=True)
-
-        # Custom Transformer Encoder Layer
-        self.transformer_encoder = nn.ModuleList([
-            TransformerEncoderLayer(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_encoder_layers)
-        ])
-
-        # Custom Transformer Decoder Layer
-        self.transformer_decoder = nn.ModuleList([
-            TransformerDecoderLayer(d_model=GATConv2_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_decoder_layers)
-        ])
-
-        # Dropout layer for regularization
-        #self.dropout = nn.Dropout(0.3)
-
-        # Fully connected layer for output (e.g., classification or regression)
-        self.fc = nn.Linear(GATConv2_dim * heads, output_dim)
-
-    def forward(self, data):
-        # Extract node features and graph structure
-        x, edge_index, batch = data.x, data.edge_index, data.batch
-
-        # Embedding node features if needed
-        if x is None:
-            x = self.node_embedding(data.batch)
-        elif self.feature_fc is not None:
-            x = self.feature_fc(x)
-
-        # Apply GAT layers to process graph structure and features
-        x = self.conv1(x, edge_index)
-        x = F.leaky_relu(x)
-        #x = self.dropout(x)
-
-        x = self.conv2(x, edge_index)
-        x = F.leaky_relu(x)
-        #x = self.dropout(x)
-
-        # Prepare for Transformer by adding a batch dimension (1, batch_size, features)
-        x = x.unsqueeze(0)  # Shape: [1, batch_size, feature_dim]
-
-        #TODO Old architecture decode(x, x)
-        #Apply Transformer Encoder
-        #for encoder_layer in self.transformer_encoder:
-        #    x = encoder_layer(x)
-
-        # Apply Transformer Decoder
-        #for decoder_layer in self.transformer_decoder:
-        #    x = decoder_layer(x, x)  # Decoder attends to encoder output
-
-        #TODO Old Transformer
-        #memory = x
-        #for encoder_layer in self.transformer_encoder:
-        #    memory = encoder_layer(memory)
-
-        #for decoder_layer in self.transformer_decoder:
-        #    x = decoder_layer(x, memory)  # Decoder attends to encoder output and decoder's initial signal input
-
-        #TODO Encode and decode input signal with self attention and multi attention
-        memory = x
-        for encoder_layer in self.transformer_encoder:
-            memory = encoder_layer(memory)
-
-        for decoder_layer in self.transformer_decoder:
-            x = decoder_layer(x, memory)  # Decoder attends to encoder output only
-
-        # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
-        x = x.squeeze(0)
-
-        # Apply global pooling: aggregate node-level features into graph-level features
-        x = global_mean_pool(x, batch)
-
-        # Final fully connected layer for the output
-        x = self.fc(x)
-
-        return x
-
-# TODO Encoder and decoder layers with GATConv layers
-class GATConvTransformer(nn.Module):
-    def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4, ff_hid_dim=32):
-        super(GATConvTransformer, self).__init__()
-
-        self.node_embedding = nn.Embedding(num_features, embedding_dim)
-        self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
-
-        # Single Encoder & Decoder
-        self.encoder = GATConvTransformerEncoderLayer(d_model=embedding_dim, nhead=heads, num_features=num_features,
-                                                      dim_feedforward=ff_hid_dim)
-        self.decoder = GATConvTransformerDecoderLayer(d_model=embedding_dim, nhead=heads, num_features=num_features,
-                                                      dim_feedforward=ff_hid_dim)
-
-        self.fc = nn.Linear(embedding_dim, output_dim)
-
-    def forward(self, data):
-        x, edge_index, batch = data.x, data.edge_index, data.batch
-
-        # Embedding node features if needed
-        if x is None:
-            x = self.node_embedding(batch)
-        elif self.feature_fc is not None:
-            x = self.feature_fc(x)  # [NUM_NODES, ]
-
-        # Transformer Encoder
-        memory = self.encoder(x, edge_index)
-
-        # Transformer Decoder
-        x = self.decoder(x, memory, x, edge_index)
-
-        # Global pooling & final output
-        x = global_mean_pool(x, batch)
-
-        return self.fc(x)
 
 
 

@@ -40,8 +40,7 @@ from topology_identification import Preprocess
 from config_file import *
 from model import SE_GATNoEdgeAttrsMask, SE_GATNoEdgeAttrsNoMask, SE_OnlySourceNodeAttentionNoMaskGATConvModel, \
     SE_OnlySourceAttentionMaskGATConvModel, SE_FirstSourceNodeAttentionNoMaskGATConvModel, \
-    SE_FirstSourceAttentionMaskGATConvModel, SE_GATNoEdgeAttrsSelectiveMask
-from model import GATTransfomerOnlyDecoder, GATConvTransformer, GATTransformerEncoderDecoder
+    SE_FirstSourceAttentionMaskGATConvModel, SE_GATNoEdgeAttrsSelectiveMask, GATTransfomerOnlyDecoder
 from IEEE_datasets.IEEE33 import config_dict as topology_dict
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -1305,13 +1304,13 @@ class Train_GNN_DSSE:
             print()
 
             #TODO Vanilla GATConv
-            self.model = SE_GATNoEdgeAttrsNoMask(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
+            #self.model = SE_GATNoEdgeAttrsNoMask(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
 
             # TODO Vanilla GATConv - Masked Input only on chosen edge source node
             #self.model = SE_GATNoEdgeAttrsMask(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
 
             # TODO Custom GATConv
-            self.model = SE_OnlySourceNodeAttentionNoMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
+            #self.model = SE_OnlySourceNodeAttentionNoMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
 
             #TODO Custom GatConv - Masked Input only on chosen edge source node
             #self.model = SE_OnlySourceAttentionMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
@@ -1334,8 +1333,8 @@ class Train_GNN_DSSE:
         elif self.meterType == "conventional":
             #self.model = SE_GATNoEdgeAttrsNoMask(num_features=3,output_dim=NUM_NODES, heads=4).to(self.device)
             self.model = GATTransfomerOnlyDecoder(num_nodes=NUM_NODES,num_features=3,output_dim=NUM_NODES,embedding_dim=4,
-                                                  heads=4, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=16,GATConv2_dim=16,
-                                                  ff_hid_dim=32).to(self.device)
+                                                  heads=4, num_decoder_layers=1,gat_layers=6,GATConv_dim=8,
+                                                  ff_hid_dim=24).to(self.device)
 
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
