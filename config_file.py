@@ -17,12 +17,12 @@ BATCH_SIZE = 32
 PROFILES_FILEPATH = f"datasets/weekly_alligned_scaled_profiles.csv"
 
 #TODO Random Forest Variables
-TREE_DEPTH = 40
+TREE_DEPTH = 10
 RF_ESTIMATORS = 50
 
 
-IEEE33_PMU_caseA_TI_features    = [10, 32, 27, 5, 7, 6, 20, 33, 34, 4, 24, 8, 9, 26, 25, 19, 2, 17, 3, 11, 16, 12, 18, 23, 31, 13, 28, 29, 14, 21, 22, 15, 30, 1, 0]
-IEEE33_PMU_caseB_TI_features    = [21, 27, 17, 7, 10, 20, 24, 6, 8, 28, 13, 5, 25, 9, 11, 26, 19, 12, 14, 15, 32, 29, 4, 16, 30, 23, 31, 3, 22, 18, 2, 0, 1]
+IEEE33_PMU_caseA_TI_features    = [6, 33, 27, 10, 32, 5, 4, 20, 8, 24, 7, 25, 19, 26, 9, 34, 17, 3, 2, 11, 12, 16, 18, 31, 23, 13, 15, 14, 22, 21, 29, 30, 28, 1, 0]
+IEEE33_PMU_caseB_TI_features    = [17, 27, 21, 7, 8, 28, 20, 6, 11, 26, 9, 15, 24, 25, 19, 10, 5, 13, 29, 14, 12, 4, 32, 16, 30, 23, 31, 3, 22, 2, 18, 1, 0]
 IEEE33_conventional_TI_features = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10, 5, 19, 23, 4, 22, 3, 2, 18, 1, 0]
 
 

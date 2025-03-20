@@ -35,7 +35,7 @@ from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
 from model import (TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs, TI_TransformerNoEdges,
-                   TI_GCNNoEdgeAttrs,  TI_GCNNoEdgeAttrs, TI_MultipleGCNNoEdgeAttrs)
+                   TI_GCNNoEdgeAttrs,  TI_GCNNoEdgeAttrs, TI_MultipleGCNNoEdgeAttrs, TI_TransformerWithEdges)
 from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
 from IEEE_datasets.IEEE33 import config_dict
 
@@ -877,9 +877,11 @@ class TIPredictorTrainProcess:
             #features = FS.execute()
             if self.meterType == "PMU_caseA":
                 features = IEEE33_PMU_caseA_TI_features
+                #features = features
                 print("TI Feature Selection Order - Branches: ", features)
             elif self.meterType == "PMU_caseB":
                 features = IEEE33_PMU_caseB_TI_features
+                #features = features
                 print("TI Feature Selection Order - Nodes: ", features)
             elif self.meterType == "conventional":
                 features = IEEE33_conventional_TI_features
@@ -975,6 +977,7 @@ class TIPredictorTrainProcess:
                 print("TI Feature Selection Order - Branches: ", Ib_features)
             elif self.meterType == "PMU_caseB":
                 Ib_features = IEEE33_PMU_caseB_TI_features
+                #Ib_features = Ib_features
                 print("TI Feature Selection Order - Nodes: ", Ib_features)
             elif self.meterType == "conventional":
                 Ib_features = IEEE33_conventional_TI_features
@@ -1430,23 +1433,24 @@ class TrainGNN_TI:
         self.num_classes        = NUM_TOPOLOGIES
         self.num_edges          = NUM_BRANCHES
         if self.meterType == "PMU_caseA":
-            self.model          = TI_GATWithEdgeAttrs(num_features=2, num_classes=NUM_TOPOLOGIES, edge_attr_dim=2, heads=6).to(self.device)
+            #self.model          = TI_GATWithEdgeAttrs(num_features=2, num_classes=self.num_classes, edge_attr_dim=2,
+            #                                         gat_layers=7, GAT_dim=8, heads=4).to(self.device)
+            self.model          = TI_TransformerWithEdges(num_features=2, num_classes=self.num_classes,
+                                                          gat_layers=10, GAT_dim=8, edge_attr_dim=2, heads=4,
+                                                          embedding_dim=2, dec_layers=1, ff_hid_dim=32).to(self.device)
         elif self.meterType =="PMU_caseB":
-            self.model          = TI_GATNoEdgeAttrs(num_features=4, num_classes=NUM_TOPOLOGIES, heads=4).to(self.device)
-            #self.model          = SparseGNNNoEdgeAttrsAPPNP(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
-            #self.model          = GINNoEdgeModel(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
-            #self.model          = GCNNoEdge(num_features=4, num_classes=NUM_TOPOLOGIES).to(self.device)
-            #self.model          = GATLinearNN(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
-            #self.model           = GATSAGE(num_features=4, num_classes=NUM_TOPOLOGIES, heads=16).to(self.device)
+            #self.model          = TI_GATNoEdgeAttrs(num_features=4, num_classes=self.num_classes, heads=4,
+            #                                        num_gat_layers=2, gat_dim=16).to(self.device)
+            self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=4,output_dim=15,
+                                                        GATConv_layers=3, GATConv_dim=8, embedding_dim=4, heads=4,
+                                                        dec_layers=1, ff_hid_dim=24).to(self.device)
+
         elif self.meterType == "conventional":
             #self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=self.num_classes, heads=4,
-            #                                        num_gat_layers=10, gat_dim=8).to(self.device)
-            #self.model          = TI_GATNoEdges_EDGE_Classifier(num_features=3, num_classes=self.num_classes, heads=5).to(self.device)
+            #                                        num_gat_layers=2, gat_dim=16).to(self.device)
             self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=15,
                                                         GATConv_layers=3, GATConv_dim=8, embedding_dim=4, heads=4,
                                                         dec_layers=2, ff_hid_dim=24).to(self.device)
-            #self.model          = TI_GCNNoEdgeAttrs(num_features=3,num_classes=15).to(self.device)
-            #self.model          = TI_MultipleGCNNoEdgeAttrs(num_features=3, num_classes=self.num_classes).to(self.device)
 
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
@@ -1676,9 +1680,9 @@ class TrainNN_TI:
 
 if __name__ == "__main__":
 
-    #meterType = "PMU_caseA"
+    meterType = "PMU_caseB"
     #meterType = "PMU_caseB"
-    meterType = "conventional"
+    #meterType = "conventional"
 
     model = "GNN"
     PP    = "RF"
