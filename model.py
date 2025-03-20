@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import MessagePassing, global_mean_pool, GCNConv, GATConv, GATv2Conv, SAGEConv, APPNP, global_max_pool, GlobalAttention
+from torch_geometric.nn import MessagePassing, global_mean_pool, GCNConv, GATConv, GATv2Conv, SAGEConv, \
+    APPNP, global_max_pool, GlobalAttention
 from model_components import *
 from config_file import *
 #TODO To define the Transformer Encoder and Transformer Decoder layers manually without relying
@@ -442,166 +443,94 @@ class TI_TransformerWithEdges(torch.nn.Module):
 
         return x  # F.log_softmax(x, dim=1)
 
+#TODO SE
 
-#TODO Simple GATConv stacking - No Mask
-class SE_GATNoEdgeAttrsNoMask(torch.nn.Module):
-    def __init__(self, num_features, output_dim, mask=False, heads=4):
-        super(SE_GATNoEdgeAttrsNoMask, self).__init__()
+#TODO GATConv - PMU_caseB, conventional
+class SE_GATNoEdgeAttrs(torch.nn.Module):
+    def __init__(self, num_features, output_dim, GAT_dim=16, gat_layers=3, heads=4):
+        super(SE_GATNoEdgeAttrs, self).__init__()
 
-        # Graph Attention layers (GATConv)
+        # Input Graph Attention layer
         # Here, `edge_attr_dim` is the size of the edge features
-        # GAT Layers
-        self.conv1 = GATConv(num_features, 16, heads=heads, concat=True)
-        self.conv2 = GATConv(16 * heads, 16, heads=heads, concat=True)
-        self.conv3 = GATConv(16 * heads, 16, heads=heads, concat=True)
-        self.conv4 = GATConv(16 * heads, 16, heads=heads, concat=True)
-        self.conv5 = GATConv(16 * heads, 16, heads=heads, concat=True)
-        self.conv6 = GATConv(16 * heads, 16, heads=heads, concat=True)
-        self.conv7 = GATConv(16 * heads, 16, heads=heads, concat=True)
-        self.conv8 = GATConv(16 * heads, 16, heads=heads, concat=True)
+        self.input_conv = GATConv(num_features, GAT_dim, heads=heads, concat=True)  # First GAT layer with edge features
 
-
-        # self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Fourth GAT layer
-
-        # Dropout layer
-        #self.dropout = torch.nn.Dropout(0.3)
+        # Hidden Graph Attention Layers
+        # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
+        self.GATConv_layers = nn.ModuleList([
+            GATConv(GAT_dim * heads, GAT_dim, heads=heads, concat=True) for _ in range(gat_layers)
+        ])
 
         # Fully connected layer for classification
-        self.fc = torch.nn.Linear(16 * heads, output_dim)
-
-        self.mask=False
+        self.fc1 = torch.nn.Linear(GAT_dim * heads, output_dim)
+        #self.fc2 = torch.nn.Linear(2 * GAT_dim, output_dim)
 
     def forward(self, data):
-        # If there are no node features, initialize with zeros (dummy features)
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)  # Default node features (1 feature per node)
 
-        if self.mask == False:
-            x, edge_index, batch = data.x, data.edge_index, data.batch
-        else:
-            x, edge_index, batch, edge_mask = data.x, data.edge_index, data.batch, data.edge_mask
+        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
 
-            active_edges = edge_index*edge_mask
-            edge_index = active_edges
-
-        # First GAT layer with edge attributes
-        x = self.conv1(x, edge_index)
-        x = F.relu(x)
-        #x = self.dropout(x)
-
-        # Second GAT layer with edge attributes
-        x = self.conv2(x, edge_index)
-        x = F.relu(x)
-        #x = self.dropout(x)
-
-        # Third GAT layer with edge attributes
-        x = self.conv3(x, edge_index)
-        x = F.relu(x)
-        #x = self.dropout(x)
-
-        # Third GAT layer with edge attributes
-        x = self.conv4(x, edge_index)
-        x = F.relu(x)
-        #x = self.dropout(x)
-
-        x = self.conv5(x, edge_index)
+        x = self.input_conv(x, edge_index=edge_index)
         x = F.relu(x)
 
-        x = self.conv6(x, edge_index)
-        x = F.relu(x)
+        for gat_conv_layer in self.GATConv_layers:
+            x = gat_conv_layer(x, edge_index=edge_index)
+            x - F.relu(x)
 
-        x = self.conv7(x, edge_index)
-        x = F.relu(x)
-
-        x = self.conv8(x, edge_index)
-        x = F.relu(x)
-
-
-        # Fourth GAT layer with edge attributes
-        # x = self.conv4(x, edge_index, edge_attr)
-
-        # Global mean pooling: Aggregate node features into graph-level features
         x = global_mean_pool(x, batch)
 
-        # Fully connected layer: Output the final classes
-        x = self.fc(x)
+        x = self.fc1(x)
+        #x = F.relu(x)
+        #x = self.fc2(x)
 
         return x
 
-#TODO Simple GATConv stacking - Masked
-class SE_GATNoEdgeAttrsMask(torch.nn.Module):
-    def __init__(self, num_features, output_dim, mask=True, heads=4):
-        super(SE_GATNoEdgeAttrsMask, self).__init__()
 
-        # Graph Attention layers (GATConv)
+#TODO GATConv - PMU_caseA
+class SE_GATWithEdgeAttr(torch.nn.Module):
+    def __init__(self, num_features, output_dim, edge_attr_dim, GAT_dim=16, gat_layers=3, heads=4):
+        super(SE_GATWithEdgeAttr, self).__init__()
+
+        # Input Graph Attention layer
         # Here, `edge_attr_dim` is the size of the edge features
-        # GAT Layers
-        self.conv1 = GATConv(num_features, 64, heads=heads, concat=True)
-        self.conv2 = GATConv(64 * heads, 16, heads=heads, concat=True)
-        #self.conv3 = GATConv(16 * heads, 8, heads=heads, concat=True)
-        #self.conv4 = GATConv(8 * heads, 4, heads=heads, concat=True)
-        # self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Fourth GAT layer
+        self.input_conv = GATConv(num_features, GAT_dim, heads=heads, concat=True, edge_dim=edge_attr_dim)  # First GAT layer with edge features
 
-        # Dropout layer
-        #self.dropout = torch.nn.Dropout(0.3)
+        # Hidden Graph Attention Layers
+        # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
+        self.GATConv_layers = nn.ModuleList([
+            GATConv(GAT_dim * heads, GAT_dim, heads=heads, edge_dim=edge_attr_dim, concat=True) for _ in range(gat_layers)
+        ])
 
         # Fully connected layer for classification
-        self.fc = torch.nn.Linear(16 * heads, output_dim)
-
-        self.mask=True
+        self.fc1 = torch.nn.Linear(GAT_dim * heads, 2 * GAT_dim)
+        self.fc2 = torch.nn.Linear(2 * GAT_dim, output_dim)
 
     def forward(self, data):
-        # If there are no node features, initialize with zeros (dummy features)
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)  # Default node features (1 feature per node)
 
-        if self.mask == False:
-            x, edge_index, batch = data.x, data.edge_index, data.batch
-        else:
-            x, edge_index, batch, edge_mask = data.x, data.edge_index, data.batch, data.edge_mask
+        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
 
-            active_edges = edge_index*edge_mask
-            edge_index = active_edges
-
-        # First GAT layer with edge attributes
-        x = self.conv1(x, edge_index)
+        x = self.input_conv(x, edge_index=edge_index, edge_attr=edge_attr)
         x = F.relu(x)
-        #x = self.dropout(x)
 
-        # Second GAT layer with edge attributes
-        x = self.conv2(x, edge_index)
-        x = F.relu(x)
-        #x = self.dropout(x)
+        for gat_conv_layer in self.GATConv_layers:
+            x = gat_conv_layer(x, edge_index=edge_index, edge_attr=edge_attr)
+            x - F.relu(x)
 
-        # Third GAT layer with edge attributes
-        #x = self.conv3(x, edge_index)
-        #x = F.relu(x)
-        #x = self.dropout(x)
-
-        # Third GAT layer with edge attributes
-        #x = self.conv4(x, edge_index)
-        #x = F.relu(x)
-        #x = self.dropout(x)
-
-        # Fourth GAT layer with edge attributes
-        # x = self.conv4(x, edge_index, edge_attr)
-
-        # Global mean pooling: Aggregate node features into graph-level features
         x = global_mean_pool(x, batch)
 
-        # Fully connected layer: Output the final classes
-        x = self.fc(x)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
 
         return x
+
 
 
 #TODO TRANSFORMER-BASED GNNs SE
 
-#TODO Only Decoder Transformer - only self attention
-class GATTransfomerOnlyDecoder(nn.Module):
+#TODO Only Decoder Transformer - No edge attributes
+class GATTransfomerOnlyDecoderNoEdges(nn.Module):
     def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4,
                  num_decoder_layers=1, gat_layers =4, GATConv_dim=16, ff_hid_dim=64):
-        super(GATTransfomerOnlyDecoder, self).__init__()
+        super(GATTransfomerOnlyDecoderNoEdges, self).__init__()
 
         # Node embedding layer (if needed, otherwise use raw features)
         self.node_embedding = nn.Embedding(num_nodes, embedding_dim)
@@ -652,8 +581,8 @@ class GATTransfomerOnlyDecoder(nn.Module):
         # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
         x = x.squeeze(0)
         # Apply global pooling: aggregate node-level features into graph-level features
-        #x = self.attn_pool(x, batch)
-        x = global_mean_pool(x, batch)
+        x = self.attn_pool(x, batch)
+        #x = global_mean_pool(x, batch)
 
         # Final fully connected layer for the output
         x = self.fc(x)

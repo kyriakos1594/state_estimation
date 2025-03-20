@@ -1680,7 +1680,7 @@ class TrainNN_TI:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseB"
+    meterType = "PMU_caseA"
     #meterType = "PMU_caseB"
     #meterType = "conventional"
 

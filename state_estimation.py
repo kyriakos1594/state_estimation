@@ -38,25 +38,14 @@ from torch.nn import Linear, Dropout
 import shap
 from topology_identification import Preprocess
 from config_file import *
-from model import SE_GATNoEdgeAttrsMask, SE_GATNoEdgeAttrsNoMask, SE_OnlySourceNodeAttentionNoMaskGATConvModel, \
-    SE_OnlySourceAttentionMaskGATConvModel, SE_FirstSourceNodeAttentionNoMaskGATConvModel, \
-    SE_FirstSourceAttentionMaskGATConvModel, SE_GATNoEdgeAttrsSelectiveMask, GATTransfomerOnlyDecoder
+from model import *
 from IEEE_datasets.IEEE33 import config_dict as topology_dict
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 
 #GLOBAL_BRANCH_LIST = [2, 1, 0, 34, 32, 60, 47, 59, 44, 46, 45, 40, 65, 64, 63, 62, 61, 130, 129, 128, 127, 126, 125, 124, 123, 122, 121, 119, 117, 116, 115, 114, 113, 112, 111, 110, 120, 109, 118, 108, 107, 106, 105, 103, 102, 101, 100, 99, 98, 97, 96, 95, 104, 94, 92, 91, 90, 89, 88, 87, 86, 85, 84, 83, 68, 67, 66, 43, 42, 93, 58, 57, 56, 54, 53, 52, 51, 50, 49, 48, 82, 69, 70, 41, 81, 80, 79, 78, 77, 71, 72, 31, 74, 73, 29, 76, 75, 33, 25, 37, 36, 35, 23, 30, 9, 39, 38, 55, 22, 28, 27, 26, 21, 24, 20, 17, 16, 14, 19, 18, 13, 15, 4, 12, 3, 10, 6]
-
-#TODO Subclass (or derived class) that extends Animal
-# class Dog(Animal):
-#    def __init__(self, name, breed):
-#        # Call the constructor of the base class
-#        super().__init__(name)
-#        self.breed = breed
-#        # Override the speak method
-#    def speak(self):
-#        print(f"{self.name} barks")
 
 #TODO TIaccuracy was set at 95%, while the DSSEaccuracy was set
 # at 0.15 for phase angle mean absolute error (MAE) and
@@ -78,151 +67,6 @@ class FSPreProc_SE():
         self.y_test             = y_test
         self.old_PMUs           = old_PMUs
 
-    def execute_rf_model_magnitude_angles_max(self):
-
-        # branch importances
-        branch_importance_relevant_dict = {i: None for i in branch_data.keys()}
-
-        # Train Random Forest Classifier
-        rf = RandomForestRegressor(n_estimators=100, random_state=42)
-        rf.fit(self.X_train, self.y_train)
-
-        importances = rf.feature_importances_
-
-        # TODO We need to take into consideration the importance per branch and its nodes
-        # 33 Vm, 33 Va, 35 Im, 35 Ia
-        used_branches = []
-        all_indices = [i for i in range(NUM_BRANCHES) if (i not in self.old_PMUs)]
-        for _ in range(len(all_indices)):
-            importance_pairs = []
-            used_sending_nodes = [branch_data[i]["sending_node"] for i in used_branches]
-            #print("All indices: ", all_indices)
-            #print("Used sending nodes: ", used_sending_nodes)
-            remaining_indices = [branch_index for branch_index in all_indices if (branch_index not in used_branches)]
-            #print("Remaining indices: ", remaining_indices)
-
-            for branch_index in remaining_indices:
-                sending_node_index = branch_data[branch_index]["sending_node"]
-                if sending_node_index not in used_sending_nodes:
-                    importance_pairs.append(max(importances[sending_node_index],
-                                                importances[NUM_NODES + sending_node_index],
-                                                importances[66 + branch_index],
-                                                importances[101 + branch_index]))
-                else:
-                    importance_pairs.append(max(importances[66 + branch_index],
-                                                importances[101 + branch_index]))
-
-            # Return branch index of max current importance combinations
-            max_value = max(importance_pairs)
-            max_importances_index = importance_pairs.index(max_value)
-            #print("Importance pairs: ", importance_pairs)
-            #print("Index of max element in new importance list: ", max_importances_index)
-            best_index = remaining_indices[max_importances_index]
-            #print("Best index: ", best_index)
-            used_branches.append(remaining_indices[importance_pairs.index(max_value)])
-
-        #print(used_branches)
-
-        # return sorted_indices
-        return used_branches
-
-    def execute_rf_model_magnitude_angles_sum(self):
-
-        # branch importances
-        branch_importance_relevant_dict = {i: None for i in branch_data.keys()}
-
-        # Train Random Forest Classifier
-        rf = RandomForestRegressor(n_estimators=100, random_state=42)
-        rf.fit(self.X_train, self.y_train)
-
-        importances = rf.feature_importances_
-
-        # TODO We need to take into consideration the importance per branch and its nodes
-        # 33 Vm, 33 Va, 35 Im, 35 Ia
-        used_branches = []
-        all_indices = [i for i in range(35) if (i not in self.old_PMUs)]
-        for _ in range(len(all_indices)):
-            importance_pairs = []
-            used_sending_nodes = [branch_data[i]["sending_node"] for i in used_branches]
-            #print("All indices: ", all_indices)
-            #print("Used sending nodes: ", used_sending_nodes)
-            remaining_indices = [branch_index for branch_index in all_indices if (branch_index not in used_branches)]
-            #print("Remaining indices: ", remaining_indices)
-
-            for branch_index in remaining_indices:
-                sending_node_index = branch_data[branch_index]["sending_node"]
-                if sending_node_index not in used_sending_nodes:
-                    importance_pairs.append(sum([importances[sending_node_index],
-                                                importances[NUM_NODES + sending_node_index],
-                                                importances[66 + branch_index],
-                                                importances[101 + branch_index]]))
-                else:
-                    importance_pairs.append(sum([importances[66 + branch_index],
-                                                importances[101 + branch_index]]))
-
-            # Return branch index of max current importance combinations
-            max_value = max(importance_pairs)
-            max_importances_index = importance_pairs.index(max_value)
-            #print("Importance pairs: ", importance_pairs)
-            #print("Index of max element in new importance list: ", max_importances_index)
-            best_index = remaining_indices[max_importances_index]
-            #print("Best index: ", best_index)
-            used_branches.append(remaining_indices[importance_pairs.index(max_value)])
-
-        print(used_branches)
-
-        # return sorted_indices
-        return used_branches
-
-    def execute_rfe_rf_themis(self):
-
-        remaining_branches = [i for i in range(35)]
-        feature_group_dict = {b_i: [   0 + branch_data[b_i]["sending_node"],
-                                      NUM_NODES + branch_data[b_i]["sending_node"],
-                                      66 + b_i,
-                                     101 + b_i] for b_i in remaining_branches}
-        used_branches = []
-
-        while len(remaining_branches) > 0:
-
-            used_indices = []
-
-            # Select Features per group to be used on RF training from remaining branches
-            for b_i in remaining_branches:
-                used_indices.extend(feature_group_dict[b_i])
-
-            X_train = self.X_train[:, used_indices]
-            #print("Used indices: ", used_indices)
-
-            # Train Random Forest Classifier
-            rf = RandomForestRegressor(n_estimators=40, max_depth=5, random_state=42)
-            rf.fit(X_train, self.y_train)
-            importances = rf.feature_importances_
-
-            #TODO How to return from list of new indices back to the original ones
-            # Remove from the original list the element of the worst index
-            # Get back as remaining_features[j]
-            group_importance_list = [sum(importances[i:i+4]) for i in range(len(remaining_branches))]
-            #print("Added importances per group: ", group_importance_list)
-            min_importance_branch = group_importance_list.index(min(group_importance_list))
-            #print("Minimum importance for worst group: ", min(group_importance_list))
-            #print("Chose: ", min_importance_branch)
-            #print(remaining_branches, min_importance_branch)
-            real_branch_index = remaining_branches.pop(min_importance_branch)
-            #print("Min importance branch index in remaining list: ", min_importance_branch, "Min real index: ", real_branch_index)
-            used_branches.append(real_branch_index)
-            #print(used_branches)
-
-        used_branches = reversed(used_branches)
-        print("SE Feature Order: ", used_branches)
-        ret = []
-        #TODO Remove used indices
-        for b_i in used_branches:
-            if b_i not in self.old_PMUs:
-                ret.append(b_i)
-
-        # return sorted_indices
-        return ret
     def execute_rfe_rf_PMU_caseA(self):
 
         remaining_branches = [i for i in range(NUM_BRANCHES)]
@@ -234,6 +78,9 @@ class FSPreProc_SE():
         used_branches = []
         num_features = 4
 
+        X_train_init, X_test_init, y_train, y_test = train_test_split(self.X_train, self.y_train, test_size=0.20, random_state=42)
+
+
         while len(remaining_branches) > 0:
 
             used_indices = []
@@ -242,13 +89,20 @@ class FSPreProc_SE():
             for b_i in remaining_branches:
                 used_indices.extend(feature_group_dict[b_i])
 
-            X_train = self.X_train[:, used_indices]
-            #print("Used indices: ", used_indices)
+            X_train = X_train_init[:, used_indices]
+            X_test  = X_test_init[:, used_indices]
 
             # Train Random Forest Classifier
-            rf = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
-            print(X_train.shape, self.y_train.shape)
-            rf.fit(X_train, self.y_train)
+            rf = RandomForestRegressor(n_estimators=RF_ESTIMATORS, max_depth=TREE_DEPTH, random_state=42)
+            rf.fit(X_train, y_train)
+
+            pred = rf.predict(X_test)
+            print(y_test.shape, pred.shape)
+
+            mse = mean_squared_error(y_test, pred)
+
+            print("Test MSE of RF: ", mse)
+
             importances = rf.feature_importances_
 
             #TODO How to return from list of new indices back to the original ones
@@ -286,6 +140,8 @@ class FSPreProc_SE():
         used_nodes = []
         num_features = 4
 
+        X_train_init, X_test_init, y_train, y_test = train_test_split(self.X_train, self.y_train, test_size=0.20, random_state=42)
+
         while len(remaining_nodes) > 0:
 
             used_indices = []
@@ -294,12 +150,19 @@ class FSPreProc_SE():
             for b_i in remaining_nodes:
                 used_indices.extend(feature_group_dict[b_i])
 
-            X_train = self.X_train[:, used_indices]
-            print("Used indices: ", used_indices)
+            X_train = X_train_init[:, used_indices]
+            X_test  = X_test_init[:, used_indices]
 
             # Train Random Forest Classifier
-            rf = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
-            rf.fit(X_train, self.y_train)
+            rf = RandomForestRegressor(n_estimators=RF_ESTIMATORS, max_depth=TREE_DEPTH, random_state=42)
+            rf.fit(X_train, y_train)
+
+            pred = rf.predict(X_test)
+            print(y_test.shape, pred.shape)
+
+            mse = mean_squared_error(y_test, pred)
+
+            print("Test MSE of RF: ", mse)
             importances = rf.feature_importances_
 
             #TODO How to return from list of new indices back to the original ones
@@ -336,6 +199,9 @@ class FSPreProc_SE():
         used_nodes = []
         num_features = 3
 
+        X_train_init, X_test_init, y_train, y_test = train_test_split(self.X_train, self.y_train, test_size=0.20, random_state=42)
+
+
         while len(remaining_nodes) > 0:
 
             used_indices = []
@@ -344,12 +210,19 @@ class FSPreProc_SE():
             for b_i in remaining_nodes:
                 used_indices.extend(feature_group_dict[b_i])
 
-            X_train = self.X_train[:, used_indices]
-            #print("Used indices: ", used_indices)
+            X_train = X_train_init[:, used_indices]
+            X_test  = X_test_init[:, used_indices]
 
             # Train Random Forest Classifier
-            rf = RandomForestRegressor(n_estimators=10, max_depth=5, random_state=42)
-            rf.fit(X_train, self.y_train)
+            rf = RandomForestRegressor(n_estimators=RF_ESTIMATORS, max_depth=TREE_DEPTH, random_state=42)
+            rf.fit(X_train, y_train)
+
+            pred = rf.predict(X_test)
+            print(y_test.shape, pred.shape)
+
+            mse = mean_squared_error(y_test, pred)
+            print("Test MSE of RF: ", mse)
+
             importances = rf.feature_importances_
 
             #TODO How to return from list of new indices back to the original ones
@@ -377,51 +250,6 @@ class FSPreProc_SE():
         # return sorted_indices
         return ret
 
-    def execute_pca_model_magnitude_angles(self):
-
-        # Initialize PCA
-        pca = PCA(n_components=136)  # Keep all components for now
-        X_pca = pca.fit_transform(self.X_train)
-
-        # Explained variance ratio for each component
-        explained_variances = pca.explained_variance_ratio_
-
-        loadings = pca.components_
-
-        used_branches = []
-        all_indices = [i for i in range(35) if i not in self.old_PMUs]
-        for _ in range(len(all_indices)):
-            importance_pairs = []
-            used_sending_nodes = [branch_data[i]["sending_node"] for i in used_branches]
-            #print("All indices: ", all_indices)
-            #print("Used sending nodes: ", used_sending_nodes)
-            remaining_indices = [branch_index for branch_index in all_indices if (branch_index not in used_branches)]
-            #print("Remaining indices: ", remaining_indices)
-
-            for branch_index in remaining_indices:
-                tmp_list = []
-                sending_node_index = branch_data[branch_index]["sending_node"]
-                if sending_node_index not in used_sending_nodes:
-                    for i in [sending_node_index, 33 + sending_node_index, 66 + branch_index, 101 + branch_index]:
-                        tmp_list.append(i)
-                else:
-                    for i in [66 + branch_index, 101 + branch_index]:
-                        tmp_list.append(i)
-
-                # Calculate the weighted sum for branch importance
-                joint_importance = np.sum(np.abs(loadings[:, tmp_list]), axis=1)
-                importance_pairs.append(np.sum(joint_importance))
-
-            # Return branch index of max current importance combinations
-            max_value = max(importance_pairs)
-            max_importances_index = importance_pairs.index(max_value)
-            #print("Importance pairs: ", importance_pairs)
-            #print("Index of max element in new importance list: ", max_importances_index)
-            best_index = remaining_indices[max_importances_index]
-            #print("Best index: ", best_index)
-            used_branches.append(remaining_indices[importance_pairs.index(max_value)])
-
-        return used_branches
 
     def execute(self):
 
@@ -511,56 +339,7 @@ class DSSE_BuildModel:
             elif self.entity == "angles":
                 return self.build_simple_angles_nn(input_dim, output_dim)
 
-class GATWithEdgeAttrs(torch.nn.Module):
-    def __init__(self, num_features, output_dim, edge_attr_dim, heads=4):
-        super(GATWithEdgeAttrs, self).__init__()
 
-        # Graph Attention layers (GATConv)
-        # Here, `edge_attr_dim` is the size of the edge features
-        self.conv1 = GATConv(num_features, 64, heads=heads, concat=True, edge_dim=edge_attr_dim)  # First GAT layer with edge features
-        self.conv2 = GATConv(64 * heads, 32, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Second GAT layer
-        self.conv3 = GATConv(32 * heads, 16, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Third GAT layer
-        # self.conv4 = GATConv(16 * heads, 8, heads=heads, concat=True, edge_dim=edge_attr_dim)  # Fourth GAT layer
-
-        # Dropout layer
-        self.dropout = torch.nn.Dropout(0.3)
-
-        # Fully connected layer for classification
-        self.fc = torch.nn.Linear(16 * heads, output_dim)
-
-    def forward(self, data):
-        # If there are no node features, initialize with zeros (dummy features)
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1),
-                                 dtype=torch.float)  # Default node features (1 feature per node)
-
-        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
-
-        # First GAT layer with edge attributes
-        x = self.conv1(x, edge_index, edge_attr)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Second GAT layer with edge attributes
-        x = self.conv2(x, edge_index, edge_attr)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Third GAT layer with edge attributes
-        x = self.conv3(x, edge_index, edge_attr)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Fourth GAT layer with edge attributes
-        # x = self.conv4(x, edge_index, edge_attr)
-
-        # Global mean pooling: Aggregate node features into graph-level features
-        x = global_mean_pool(x, batch)
-
-        # Fully connected layer: Output the final classes
-        x = self.fc(x)
-
-        return x
 
 
 class SimpleNN(nn.Module):
@@ -895,12 +674,11 @@ class DSSE_Estimator_TrainProcess:
         used_feature_indices = []
         used_branches        = []
         all_indices          = []
+        branches = []
 
         FS = FSPreProc_SE(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test, old_PMUs=self.old_PMUs)
 
-        #TODO branches = FS.execute()
-        # Release
-        branches = []
+        branches = FS.execute()
 
 
         #TODO Train for magnitudes
@@ -1122,6 +900,10 @@ class DSSE_GNN_Preprocess:
             if output=="magnitudes": label = torch.tensor(self.y_train[i, :NUM_NODES], dtype=torch.float)
             elif output=="angles": label = torch.tensor(self.y_train[i, NUM_NODES:], dtype=torch.float)
 
+            #topology = f"T" + str(int(np.argmax(self.train_labels[i]) + 1))
+            #open_branches = topology_dict["IEEE33"][topology]["open_branches"]
+            #edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
+            #edge_mask = torch.tensor([i for i in range(NUM_BRANCHES) if (i in open_branches)])
             train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
 
         self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
@@ -1135,6 +917,10 @@ class DSSE_GNN_Preprocess:
             if output == "magnitudes": label = torch.tensor(self.y_val[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_val[i, NUM_NODES:], dtype=torch.float)
 
+            #topology = f"T" + str(int(np.argmax(self.train_labels[i]) + 1))
+            #open_branches = topology_dict["IEEE33"][topology]["open_branches"]
+            #edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
+            #edge_mask = torch.tensor([i for i in range(NUM_BRANCHES) if (i in open_branches)])
             val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
 
         self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
@@ -1149,6 +935,10 @@ class DSSE_GNN_Preprocess:
             if output == "magnitudes": label = torch.tensor(self.y_test[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_test[i, NUM_NODES:], dtype=torch.float)
 
+            #topology = f"T" + str(int(np.argmax(self.train_labels[i]) + 1))
+            #open_branches = topology_dict["IEEE33"][topology]["open_branches"]
+            #edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
+            #edge_mask = torch.tensor([i for i in range(NUM_BRANCHES) if (i in open_branches)])
             test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
 
         self.test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
@@ -1178,8 +968,12 @@ class DSSE_GNN_Preprocess:
 
             if output == "magnitudes": label = torch.tensor(self.y_train[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_train[i, NUM_NODES:], dtype=torch.float)
-            edge_mask = torch.tensor([1 if i in self.selected_edges else 0 for i in range(NUM_BRANCHES)], dtype=torch.bool)  # 1 means the node is active, 0 means it's masked
-            train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_mask=edge_mask, y=label))
+
+            topology = f"T" + str(int(np.argmax(self.train_labels[i]) + 1))
+            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
+            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
+
+            train_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
         self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1189,8 +983,12 @@ class DSSE_GNN_Preprocess:
 
             if output == "magnitudes": label = torch.tensor(self.y_val[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_val[i, NUM_NODES:], dtype=torch.float)
-            edge_mask = torch.tensor([1 if i in self.selected_edges else 0 for i in range(NUM_BRANCHES)], dtype=torch.bool)  # 1 means the node is active, 0 means it's masked
-            val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_mask=edge_mask, y=label))
+
+            topology = f"T" + str(int(np.argmax(self.train_labels[i]) + 1))
+            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
+            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
+
+            val_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
         self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1201,8 +999,12 @@ class DSSE_GNN_Preprocess:
 
             if output == "magnitudes": label = torch.tensor(self.y_test[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_test[i, NUM_NODES:], dtype=torch.float)
-            edge_mask = torch.tensor([1 if i in self.selected_edges else 0 for i in range(NUM_BRANCHES)], dtype=torch.bool)  # 1 means the node is active, 0 means it's masked
-            test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_mask=edge_mask, y=label))
+
+            topology = f"T" + str(int(np.argmax(self.train_labels[i]) + 1))
+            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
+            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
+
+            test_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
         self.test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -1222,17 +1024,13 @@ class DSSE_GNN_Preprocess:
         val_node_data, val_edge_data        = self.preprocess_data_conventional(self.X_val, self.selected_edges, num_nodes, num_features)
         test_node_data, test_edge_data      = self.preprocess_data_conventional(self.X_test, self.selected_edges, num_nodes, num_features)
 
-        edge_index = self.define_graph()
-
         # Prepare data for PyTorch Geometric with masking
         train_data = []
         for i in range(self.X_train.shape[0]):
             tmp_node_attr = torch.tensor(train_node_data[i].reshape(-1, self.num_features_per_node), dtype=torch.float)
 
-            if output == "magnitudes":
-                label = torch.tensor(self.y_train[i, :NUM_NODES], dtype=torch.float)
-            elif output == "angles":
-                label = torch.tensor(self.y_train[i, NUM_NODES:], dtype=torch.float)
+            if output == "magnitudes": label = torch.tensor(self.y_train[i, :NUM_NODES], dtype=torch.float)
+            elif output == "angles": label = torch.tensor(self.y_train[i, NUM_NODES:], dtype=torch.float)
 
             topology = f"T"+str(int(np.argmax(self.train_labels[i])+1))
             open_branches = topology_dict["IEEE33"][topology]["open_branches"]
@@ -1299,30 +1097,12 @@ class Train_GNN_DSSE:
         self.val_loader   = val_loader
         self.test_loader  = test_loader
         if self.meterType == "PMU_caseA":
-            self.model = GATWithEdgeAttrs(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, heads=8).to(self.device)
+            self.model = SE_GATWithEdgeAttr(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, gat_layers=3, GAT_dim=16, heads=4).to(self.device)
         elif self.meterType == "PMU_caseB":
-            print()
 
             #TODO Vanilla GATConv
-            #self.model = SE_GATNoEdgeAttrsNoMask(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
+            self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=4, gat_layers=7, GAT_dim=16).to(self.device)
 
-            # TODO Vanilla GATConv - Masked Input only on chosen edge source node
-            #self.model = SE_GATNoEdgeAttrsMask(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
-
-            # TODO Custom GATConv
-            #self.model = SE_OnlySourceNodeAttentionNoMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
-
-            #TODO Custom GatConv - Masked Input only on chosen edge source node
-            #self.model = SE_OnlySourceAttentionMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
-
-            # TODO First  GatConv
-            #self.model = SE_FirstSourceNodeAttentionNoMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
-
-            # TODO First  GatConv - Masked Input only on chosen edge source node
-            #self.model = SE_FirstSourceAttentionMaskGATConvModel(num_features=4,output_dim=NUM_NODES, heads=6, mask=True).to(self.device)
-
-            #TODO Selective Mask GAT
-            #self.model = SE_GATNoEdgeAttrsSelectiveMask(num_features=4,output_dim=NUM_NODES, heads=8).to(self.device)
 
             #self.model = GATTransfomerOnlyDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
                     #                                  heads=4, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
@@ -1332,7 +1112,7 @@ class Train_GNN_DSSE:
                     #                                  ff_hid_dim=24).to(self.device)
         elif self.meterType == "conventional":
             #self.model = SE_GATNoEdgeAttrsNoMask(num_features=3,output_dim=NUM_NODES, heads=4).to(self.device)
-            self.model = GATTransfomerOnlyDecoder(num_nodes=NUM_NODES,num_features=3,output_dim=NUM_NODES,embedding_dim=4,
+            self.model = GATTransfomerOnlyDecoderNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=NUM_NODES,embedding_dim=4,
                                                   heads=4, num_decoder_layers=1,gat_layers=6,GATConv_dim=8,
                                                   ff_hid_dim=24).to(self.device)
 
@@ -1462,16 +1242,15 @@ class Train_GNN_DSSE:
 
 if __name__ == "__main__":
 
-    meterType = "conventional"
+    meterType = "PMU_caseA"
     if meterType == "conventional":
-        old_PMUs = [27, 13] #[124, 127, 128]
-        old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
+        old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]
     elif meterType == "PMU_caseB":
-        old_PMUs = [17, 26]
+        old_PMUs = [17, 27]
     elif meterType == "PMU_caseA":
-        old_PMUs = [6, 10] #[127, 123]
+        old_PMUs = [6, 33]
 
-    model    = "GNN"
+    model    = "NN"
     PP       = "RF"
     subPP    = "rfe"
 
