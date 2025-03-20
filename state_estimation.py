@@ -313,10 +313,10 @@ class DSSE_BuildModel:
         model = Sequential()
 
         # Input Layer (66 inputs)
-        model.add(Dense(512, input_dim=input_dim, activation='linear'))
-        model.add(Dense(256, activation='linear'))
-        model.add(Dense(128, activation='linear'))
-        model.add(Dense(64, activation='linear'))
+        model.add(Dense(64, input_dim=input_dim, activation='linear'))
+        #model.add(Dense(256, activation='linear'))
+        #model.add(Dense(128, activation='linear'))
+        #model.add(Dense(64, activation='linear'))
         model.add(Dense(32, activation='linear'))
 
         # Output Layer (assuming 16 outputs, modify according to your use case)
@@ -338,31 +338,6 @@ class DSSE_BuildModel:
                 return self.build_simple_magnitudes_nn(input_dim, output_dim)
             elif self.entity == "angles":
                 return self.build_simple_angles_nn(input_dim, output_dim)
-
-
-
-
-class SimpleNN(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super(SimpleNN, self).__init__()
-
-        # Define the layers
-        #self.fc1 = nn.Linear(input_dim, 512)
-        #self.fc2 = nn.Linear(512, 256)
-        #self.fc3 = nn.Linear(256, 128)
-        self.fc4 = nn.Linear(input_dim, 64)
-        self.fc5 = nn.Linear(64, 32)
-        self.fc6 = nn.Linear(32, output_dim)
-
-    def forward(self, x):
-        # Pass the input through the layers
-        #x = self.fc1(x)
-        #x = self.fc2(x)
-        #x = self.fc3(x)
-        x = torch.nn.relu(self.fc4(x))
-        x = torch.nn.relu(self.fc5(x))
-        x = self.fc6(x)  # Output layer (no activation for regression)
-        return x
 
 class DSSE_TrainModel:
 
@@ -678,7 +653,7 @@ class DSSE_Estimator_TrainProcess:
 
         FS = FSPreProc_SE(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test, old_PMUs=self.old_PMUs)
 
-        branches = FS.execute()
+        #branches = FS.execute()
 
 
         #TODO Train for magnitudes
@@ -686,13 +661,13 @@ class DSSE_Estimator_TrainProcess:
                                           selected_edges=self.old_PMUs,
                                           X_train=self.X_train,
                                           y_train=self.y_train,
-                                          train_labels = self.train_labels,
+                                          train_labels=self.train_labels,
                                           X_val=self.X_val,
                                           y_val=self.y_val,
-                                          val_labels = self.val_labels,
+                                          val_labels=self.val_labels,
                                           X_test=self.X_test,
                                           y_test=self.y_test,
-                                          test_labels = self.test_labels)
+                                          test_labels=self.test_labels)
 
 
         edge_indexes, train_loader, val_loader, test_loader = DSSE_GNN_PP.generate_dataset(output="magnitudes")
@@ -969,10 +944,6 @@ class DSSE_GNN_Preprocess:
             if output == "magnitudes": label = torch.tensor(self.y_train[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_train[i, NUM_NODES:], dtype=torch.float)
 
-            topology = f"T" + str(int(np.argmax(self.train_labels[i]) + 1))
-            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
-            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
-
             train_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
         self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
@@ -983,10 +954,6 @@ class DSSE_GNN_Preprocess:
 
             if output == "magnitudes": label = torch.tensor(self.y_val[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_val[i, NUM_NODES:], dtype=torch.float)
-
-            topology = f"T" + str(int(np.argmax(self.train_labels[i]) + 1))
-            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
-            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
 
             val_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
@@ -1000,10 +967,6 @@ class DSSE_GNN_Preprocess:
             if output == "magnitudes": label = torch.tensor(self.y_test[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_test[i, NUM_NODES:], dtype=torch.float)
 
-            topology = f"T" + str(int(np.argmax(self.train_labels[i]) + 1))
-            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
-            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
-
             test_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
         self.test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
@@ -1014,6 +977,7 @@ class DSSE_GNN_Preprocess:
         num_edges = len(branch_data)
         num_nodes = NUM_NODES
         num_features = 3
+        edge_index = self.define_graph()
 
         print(self.selected_edges)
 
@@ -1032,10 +996,6 @@ class DSSE_GNN_Preprocess:
             if output == "magnitudes": label = torch.tensor(self.y_train[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles": label = torch.tensor(self.y_train[i, NUM_NODES:], dtype=torch.float)
 
-            topology = f"T"+str(int(np.argmax(self.train_labels[i])+1))
-            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
-            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
-
             train_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
         self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
@@ -1048,10 +1008,6 @@ class DSSE_GNN_Preprocess:
                 label = torch.tensor(self.y_val[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles":
                 label = torch.tensor(self.y_val[i, NUM_NODES:], dtype=torch.float)
-
-            topology = f"T" + str(int(np.argmax(self.val_labels[i]) + 1))
-            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
-            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
 
             val_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
@@ -1066,10 +1022,6 @@ class DSSE_GNN_Preprocess:
                 label = torch.tensor(self.y_test[i, :NUM_NODES], dtype=torch.float)
             elif output == "angles":
                 label = torch.tensor(self.y_test[i, NUM_NODES:], dtype=torch.float)
-
-            topology = f"T" + str(int(np.argmax(self.test_labels[i]) + 1))
-            open_branches = topology_dict["IEEE33"][topology]["open_branches"]
-            edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
 
             test_data.append(Data(x=tmp_node_attr, edge_index=edge_index, y=label))
 
@@ -1101,8 +1053,7 @@ class Train_GNN_DSSE:
         elif self.meterType == "PMU_caseB":
 
             #TODO Vanilla GATConv
-            self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=4, gat_layers=7, GAT_dim=16).to(self.device)
-
+            self.model = SE_GATNoEdgeAttrsPMUB(num_features=4,output_dim=NUM_NODES, heads=4, gat_layers=3, GAT_dim=32).to(self.device)
 
             #self.model = GATTransfomerOnlyDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
                     #                                  heads=4, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
@@ -1242,7 +1193,7 @@ class Train_GNN_DSSE:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseA"
+    meterType = "PMU_caseB"
     if meterType == "conventional":
         old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]
     elif meterType == "PMU_caseB":
@@ -1250,7 +1201,7 @@ if __name__ == "__main__":
     elif meterType == "PMU_caseA":
         old_PMUs = [6, 33]
 
-    model    = "NN"
+    model    = "GNN"
     PP       = "RF"
     subPP    = "rfe"
 

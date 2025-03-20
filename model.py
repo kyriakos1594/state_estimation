@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import MessagePassing, global_mean_pool, GCNConv, GATConv, GATv2Conv, SAGEConv, \
-    APPNP, global_max_pool, GlobalAttention
+from torch_geometric.nn import MessagePassing, global_mean_pool, GCNConv, GATConv, GATv2Conv, SAGEConv, APPNP, global_max_pool, GlobalAttention
 from model_components import *
 from config_file import *
 #TODO To define the Transformer Encoder and Transformer Decoder layers manually without relying
@@ -62,6 +61,29 @@ class TI_SimpleNNEdges(nn.Module):
         #x = self.fc4(x)
 
         return x #F.log_softmax(x, dim=1)  # No softmax, using CrossEntropyLoss
+
+#TODO SE NN for all cases
+class SE_SimpleNN(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(SE_SimpleNN, self).__init__()
+
+        # Define the layers
+        #self.fc1 = nn.Linear(input_dim, 512)
+        #self.fc2 = nn.Linear(512, 256)
+        #self.fc3 = nn.Linear(256, 128)
+        self.fc4 = nn.Linear(input_dim, 64)
+        self.fc5 = nn.Linear(64, 32)
+        self.fc6 = nn.Linear(32, output_dim)
+
+    def forward(self, x):
+        # Pass the input through the layers
+        #x = self.fc1(x)
+        #x = self.fc2(x)
+        #x = self.fc3(x)
+        x = torch.nn.relu(self.fc4(x))
+        x = torch.nn.relu(self.fc5(x))
+        x = self.fc6(x)  # Output layer (no activation for regression)
+        return x
 
 #TODO TI GNN GAT - Only PMU_caseA
 class TI_GATWithEdgeAttrs(torch.nn.Module):
@@ -446,13 +468,14 @@ class TI_TransformerWithEdges(torch.nn.Module):
 #TODO SE
 
 #TODO GATConv - PMU_caseB, conventional
-class SE_GATNoEdgeAttrs(torch.nn.Module):
+class SE_GATNoEdgeAttrsPMUB(torch.nn.Module):
     def __init__(self, num_features, output_dim, GAT_dim=16, gat_layers=3, heads=4):
-        super(SE_GATNoEdgeAttrs, self).__init__()
+        super(SE_GATNoEdgeAttrsPMUB, self).__init__()
 
         # Input Graph Attention layer
         # Here, `edge_attr_dim` is the size of the edge features
         self.input_conv = GATConv(num_features, GAT_dim, heads=heads, concat=True)  # First GAT layer with edge features
+
 
         # Hidden Graph Attention Layers
         # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
@@ -461,8 +484,9 @@ class SE_GATNoEdgeAttrs(torch.nn.Module):
         ])
 
         # Fully connected layer for classification
-        self.fc1 = torch.nn.Linear(GAT_dim * heads, output_dim)
-        #self.fc2 = torch.nn.Linear(2 * GAT_dim, output_dim)
+        self.fc1 = torch.nn.Linear(GAT_dim * heads, 2 * GAT_dim)
+        self.fc2 = torch.nn.Linear(2 * GAT_dim, output_dim)
+
 
     def forward(self, data):
 
@@ -478,8 +502,8 @@ class SE_GATNoEdgeAttrs(torch.nn.Module):
         x = global_mean_pool(x, batch)
 
         x = self.fc1(x)
-        #x = F.relu(x)
-        #x = self.fc2(x)
+        x = F.relu(x)
+        x = self.fc2(x)
 
         return x
 
