@@ -468,7 +468,15 @@ class DSSE_Estimator_TrainProcess:
             FS = FSPreProc_SE(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test, self.old_PMUs)
 
             #features = FS.execute()
-            features =  [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
+            features =  []
+            if self.meterType == "PMU_caseA":
+                features = IEEE33_PMU_caseA_SE_features
+            elif self.meterType == "PMU_caseB":
+                features = IEEE33_PMU_caseB_SE_features
+            elif self.meterType == "conventional":
+                features = IEEE33_conventional_SE_features
+
+
             print(features)
             print("SE Feature Selection Order: ", features)
 
@@ -654,6 +662,13 @@ class DSSE_Estimator_TrainProcess:
         FS = FSPreProc_SE(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test, old_PMUs=self.old_PMUs)
 
         #branches = FS.execute()
+        branches = []
+        if self.meterType == "PMU_caseA":
+            branches = IEEE33_PMU_caseA_SE_features
+        elif self.meterType == "PMU_caseB":
+            branches = IEEE33_PMU_caseB_SE_features
+        elif self.meterType == "conventional":
+            branches = IEEE33_conventional_SE_features
 
 
         #TODO Train for magnitudes
