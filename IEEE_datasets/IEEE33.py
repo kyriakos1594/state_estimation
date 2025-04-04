@@ -53,5 +53,32 @@ config_dict = {
         },
         "T2": {
             "open_branches": []
-        },},
+        },
+    },
+    "95UKGD": {
+        "T1": {
+            "open_branches": [20, 53, 91]
+        },
+        "T2": {
+            "open_branches": [20, 53, 96]
+        },
+        "T3": {
+            "open_branches": [20, 95, 91]
+        },
+        "T4": {
+            "open_branches": [20, 95, 96]
+        },
+        "T5": {
+            "open_branches": [94, 53, 91]
+        },
+        "T6": {
+            "open_branches": [94, 53, 96]
+        },
+        "T7": {
+            "open_branches": [94, 95, 91]
+        },
+        "T8": {
+            "open_branches": [94, 95, 96]
+        },
+    }
 }

@@ -58,8 +58,6 @@ class AllignDataProfiles:
                 df["Timestamp"] = df["Timestamp"].apply(lambda x: self.read_solar_timestamps(x))
                 header = "PV_profile " + file.split(".")[0][-1]
                 df.columns = ["Timestamp", header]
-                print(file, df.shape[0])
-                print(df["Timestamp"].min(), df["Timestamp"].max())
                 df_list.append(df)
 
         target_df = df_list[0]
@@ -94,7 +92,6 @@ class AllignDataProfiles:
         for root, dir, files in os.walk(self.MV_demand_folder):
             for file in files:
                 if ("R210" in file) and ("loc" not in file):
-                    print(file)
                     gen_df = pd.DataFrame()
                     df = pd.read_excel(self.MV_demand_folder+file)
                     df = df.loc[1:, :]
@@ -345,6 +342,9 @@ class LoadPowerFlow:
         elif self.dataset == "MESOGEIA":
             open_branches = config_dict[self.dataset][self.topology]["open_branches"]
             net.line["in_service"] = pd.Series(False if (i in open_branches) else True for i in range(net.line.shape[0]))
+        elif self.dataset == "95UKGD":
+            open_branches = config_dict[self.dataset][self.topology]["open_branches"]
+            net.line["in_service"] = pd.Series(False if (i in open_branches) else True for i in range(net.line.shape[0]))
 
     def randomize_loads(self, net):
         #self.net.load["LOAD_CHANGE_FLAG"] = np.random.choice([0, 1], size=len(self.net.load))
@@ -407,17 +407,17 @@ class LoadPowerFlow:
         df_profiles = pd.read_csv("datasets/weekly_alligned_scaled_profiles.csv")
         df_profiles = df_profiles[df_profiles["Timestamp"] == self.datetime_str]
 
-        if dataset == "IEEE33":
-            bus_config_dict = bus_types
-            # Iterate over the buses and print index along with bus details
-            for index, row in net.bus.iterrows():
+        bus_config_dict = bus_types
+        # Iterate over the buses and print index along with bus details
+        for index, row in net.bus.iterrows():
 
-                # Slack bus
-                if index in bus_types["slack"]:
-                    net.bus.loc[index, ["type", "name"]] = ["ref", f"Slack Bus {str(index)}"]
+            # Slack bus
+            if index in bus_types["slack"]:
+                net.bus.loc[index, ["type", "name"]] = ["ref", f"Slack Bus {str(index)}"]
 
-                elif index in bus_types["PV_wind"]:
-                    net.bus.loc[index, ["type", "name"]] = ["b", f"PV bus {str(index)} - WIND - {self.profile_dict[index]}"]
+            elif index in bus_types["PV_wind"]:
+                net.bus.loc[index, ["type", "name"]] = ["b", f"PV bus {str(index)} - WIND - {self.profile_dict[index]}"]
+                if index in net.sgen["bus"].values.tolist():
                     P_gen   = net.sgen[net.sgen["bus"] == index]["p_mw"].values.tolist()[0]
                     profile = df_profiles[self.profile_dict[index]]
                     P_bus = P_gen * profile
@@ -425,9 +425,18 @@ class LoadPowerFlow:
                     net.sgen[net.sgen["bus"] == index]["vm_pu"]  = 1
                     net.sgen[net.sgen["bus"] == index]["q_mvar"] = 0.0  # Set Q to 0 (variable)
                     net.sgen[net.sgen["bus"] == index]["controllable"] = True  # Make them controllable
+                elif index in net.gen["bus"].values.tolist():
+                    P_gen = net.gen[net.gen["bus"] == index]["p_mw"].values.tolist()[0]
+                    profile = df_profiles[self.profile_dict[index]]
+                    P_bus = P_gen * profile
+                    net.gen[net.gen["bus"] == index]["p_mw"] = P_bus
+                    net.gen[net.gen["bus"] == index]["vm_pu"] = 1
+                    net.gen[net.gen["bus"] == index]["q_mvar"] = 0.0  # Set Q to 0 (variable)
+                    net.gen[net.gen["bus"] == index]["controllable"] = True  # Make them controllable
 
-                elif index in bus_types["PV_solar"]:
-                    net.bus.loc[index, ["type", "name"]] = ["b", f"PV bus {str(index)} - SOLAR - {self.profile_dict[index]}"]
+            elif index in bus_types["PV_solar"]:
+                net.bus.loc[index, ["type", "name"]] = ["b", f"PV bus {str(index)} - SOLAR - {self.profile_dict[index]}"]
+                if index in net.sgen["bus"].values.tolist():
                     P_gen   = net.sgen[net.sgen["bus"] == index]["p_mw"].values.tolist()[0]
                     profile = df_profiles[self.profile_dict[index]]
                     P_bus = P_gen * profile
@@ -435,37 +444,61 @@ class LoadPowerFlow:
                     net.sgen[net.sgen["bus"] == index]["vm_pu"]  = 1
                     net.sgen[net.sgen["bus"] == index]["q_mvar"] = 0.0  # Set Q to 0 (variable)
                     net.sgen[net.sgen["bus"] == index]["controllable"] = True  # Make them controllable
-
-                elif index in bus_types["PQ_MV"]:
-                    net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - MV - {self.profile_dict[index]}"]
-                    P_load  = net.load[net.load["bus"] == index]["p_mw"].values.tolist()[0]
+                elif index in net.gen["bus"].values.tolist():
+                    P_gen = net.gen[net.gen["bus"] == index]["p_mw"].values.tolist()[0]
                     profile = df_profiles[self.profile_dict[index]]
-                    P_bus   = P_load * profile
-                    Q_load  = net.load[net.load["bus"] == index]["q_mvar"].values.tolist()[0]
-                    cos_phi = P_load / np.sqrt(P_load ** 2 + Q_load ** 2)
-                    net.load[net.load["bus"] == index]["p_mw"]   = P_bus
-                    net.load[net.load["bus"] == index]["q_mvar"] = P_bus * np.sqrt(1 - cos_phi**2) / cos_phi
+                    P_bus = P_gen * profile
+                    net.gen[net.gen["bus"] == index]["p_mw"] = P_bus
+                    net.gen[net.gen["bus"] == index]["vm_pu"] = 1
+                    net.gen[net.gen["bus"] == index]["q_mvar"] = 0.0  # Set Q to 0 (variable)
+                    net.gen[net.gen["bus"] == index]["controllable"] = True  # Make them controllable
 
-                elif index in bus_types["PQ_LV"]:
-                    net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - LV - {self.profile_dict[index]}"]
-                    net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - MV - {self.profile_dict[index]}"]
+            elif index in bus_types["PQ_MV"]:
+                net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - MV - {self.profile_dict[index]}"]
+                P_load  = net.load[net.load["bus"] == index]["p_mw"].values.tolist()[0]
+                profile = df_profiles[self.profile_dict[index]]
+                P_bus   = P_load * profile
+                Q_load  = net.load[net.load["bus"] == index]["q_mvar"].values.tolist()[0]
+                cos_phi = P_load / np.sqrt(P_load ** 2 + Q_load ** 2)
+                net.load[net.load["bus"] == index]["p_mw"]   = P_bus
+                net.load[net.load["bus"] == index]["q_mvar"] = P_bus * np.sqrt(1 - cos_phi**2) / cos_phi
+
+            elif index in bus_types["PQ_LV"]:
+                net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - LV - {self.profile_dict[index]}"]
+                #net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - MV - {self.profile_dict[index]}"]
+                if not net.load[net.load["bus"] == index]["p_mw"].empty :
                     P_load  = net.load[net.load["bus"] == index]["p_mw"].values.tolist()[0]
                     profile = df_profiles[self.profile_dict[index]]
                     P_bus   = P_load * profile
                     Q_load  = net.load[net.load["bus"] == index]["q_mvar"].values.tolist()[0]
                     #cos_phi = P_load / np.sqrt(P_load ** 2 + Q_load ** 2)
                     cos_phi = 0.95
-                    print(cos_phi)
                     net.load[net.load["bus"] == index]["p_mw"]   = P_bus
                     net.load[net.load["bus"] == index]["q_mvar"] = P_bus * np.sqrt(1 - cos_phi**2) / cos_phi
+
+            else:
+                if self.dataset=="MESOGEIA":
+                    net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - LV - Random {str(index)}"]
+                    #net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - MV - {self.profile_dict[index]}"]
+                    if not net.load[net.load["bus"] == index]["p_mw"].empty :
+                        P_load  = net.load[net.load["bus"] == index]["p_mw"].values.tolist()[0]
+                        profile = df_profiles[self.profile_dict[index]]
+                        P_bus   = P_load * profile
+                        Q_load  = net.load[net.load["bus"] == index]["q_mvar"].values.tolist()[0]
+                        #cos_phi = P_load / np.sqrt(P_load ** 2 + Q_load ** 2)
+                        cos_phi = 0.95
+                        net.load[net.load["bus"] == index]["p_mw"]   = P_bus
+                        net.load[net.load["bus"] == index]["q_mvar"] = P_bus * np.sqrt(1 - cos_phi**2) / cos_phi
+
 
         return net
 
     def initialize_net(self):
+
         # Load the MATPOWER case into a Pandapower network
         self.net = pp.converter.from_mpc(self.filepath, f_hz=50, casename_mpc_file='mpc', validate_conversion=False)
-
         self.change_topology(self.net)
+
 
         # Retrieve the system base power (Sbase)
         self.S_base = self.net.sn_mva
@@ -487,6 +520,8 @@ class LoadPowerFlow:
     def run_powerflow(self):
         # Run power flow
         pp.runpp(self.net)
+
+
     # Compute I branch magnitudes and angles
     # To compute I from per unit -> If_pu = Vpu (from node) / Spu (from node)
     def compute_Ibranch(self):
@@ -501,6 +536,7 @@ class LoadPowerFlow:
         branch_currents = []
 
         for line_idx, line in self.net.line.iterrows():
+
             from_bus = line['from_bus']  # From bus index
             to_bus = line['to_bus']  # To bus index
             length_km = line['length_km']  # Length of the line (in km)
@@ -535,12 +571,16 @@ class LoadPowerFlow:
 
         self.net.res_line["Im_pu"] = pd.DataFrame([record[1] for record in branch_currents])
         self.net.res_line["Ia_pu"] = pd.DataFrame([record[2] for record in branch_currents])
+
+
     # Just devide with Sbase
     def compute_PQ_pu(self):
         # System base power in MVA
         S_base = self.net.sn_mva
         self.net.res_bus["P_pu"] = self.net.res_bus["p_mw"] / S_base
         self.net.res_bus["Q_pu"] = self.net.res_bus["q_mvar"] / S_base
+
+
     # Compute Ybus matrix to get injection currents
     def compute_Inj_currents(self):
         # Voltage magnitudes and angles (in per unit)
@@ -579,7 +619,6 @@ class LoadPowerFlow:
 
         # Insert noise
         df_V, df_I = self.insert_noise(df_V, df_I)
-
 
         #self.net.res_bus.to_csv("bus.csv")
         #self.net.res_line.to_csv("lines.csv")
@@ -626,12 +665,14 @@ class GenerateDataset:
     def generate_dataset(self):
 
         datetime_list, profile_dict = self.process_profiles()
-
+        #print(datetime_list, profile_dict)
+        #print(self.dataset)
         concat_frame = pd.DataFrame()
-
+        print(len(datetime_list))
         for i in range(self.N_topologies):
             n_sample=0
             #for j in range(self.N_samples):
+            #    datetime_str = "2021-11-01 00:00:00"
             for datetime_str in datetime_list:
                 topology = i+1
                 n_sample = n_sample+1
@@ -643,7 +684,7 @@ class GenerateDataset:
                                     profile_dict=profile_dict)
                 df_results = LPF.get_powerflow_results()
                 df_results["TopNo"] = pd.DataFrame([topology for k in range(df_results.shape[0])])
-                df_results["Simulation"] = pd.DataFrame([n_sample+1 for k in range(df_results.shape[0])])
+                df_results["Simulation"] = pd.DataFrame([n_sample for k in range(df_results.shape[0])])
                 concat_frame = pd.concat([concat_frame, df_results], axis=0)
 
         concat_frame.to_csv(f"datasets/{self.dataset}.csv")
@@ -654,14 +695,15 @@ if __name__ == "__main__":
     #PFS = LoadPowerFlow()
     #PFS.get_powerflow_results()
     #filename = "IEEE33aveg.mat"
-    #lpf = LoadPowerFlow(filename, "IEEE33", "T2", date, profile_dict)
+    #profile_dict = None
+    #lpf = LoadPowerFlow(mat_file, "IEEE33", "T1", "2021-11-01", )
     #lpf.initialize_net()
     #lpf.run_powerflow()
     #lpf.compute_Ibranch()
     #lpf.compute_PQ_pu()
     #lpf.compute_Inj_currents()
     #lpf.get_results()
-    GD = GenerateDataset(filepath="IEEE33aveg.mat",N_topologies=NUM_TOPOLOGIES,N_samples=NUM_SIMULATIONS,dataset="IEEE33")
+    GD = GenerateDataset(filepath=mat_file,N_topologies=NUM_TOPOLOGIES,N_samples=NUM_SIMULATIONS,dataset=dataset)
     GD.generate_dataset()
 
     #ADP = AllignDataProfiles()

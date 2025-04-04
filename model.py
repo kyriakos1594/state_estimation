@@ -33,9 +33,9 @@ class TI_SimpleNNEdges(nn.Module):
 
         # Fully connected layers
         #self.fc1 = nn.Linear(self.input_dim, 256)
-        self.fc2 = nn.Linear(self.input_dim, 32)
-        #self.fc3 = nn.Linear(64, 64)
-        self.fc4 = nn.Linear(32, 32)
+        self.fc2 = nn.Linear(self.input_dim, 128)
+        self.fc3 = nn.Linear(128, 64)
+        self.fc4 = nn.Linear(64, 32)
         self.fc5 = nn.Linear(32, num_classes)
         #self.fc4 = nn.Linear(128, 64)
         #self.fc5 = nn.Linear(64, num_classes)
@@ -53,7 +53,7 @@ class TI_SimpleNNEdges(nn.Module):
         # Forward pass through MLP
         #x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        #x = F.relu(self.fc3(x))
+        x = F.relu(self.fc3(x))
         x = F.relu(self.fc4(x))
         x = self.fc5(x)
 

@@ -70,7 +70,8 @@ class FSPreProc_SE():
     def execute_rfe_rf_PMU_caseA(self):
 
         remaining_branches = [i for i in range(NUM_BRANCHES)]
-        #remaining_branches = BRANCH_PICK_LIST
+        if dataset == "MESOGEIA":
+            remaining_branches = BRANCH_PICK_LIST
         feature_group_dict = {b_i: [  0*NUM_NODES + branch_data[b_i]["sending_node"],
                                       1*NUM_NODES + branch_data[b_i]["sending_node"],
                                       2*NUM_NODES + b_i,
@@ -132,7 +133,8 @@ class FSPreProc_SE():
     def execute_rfe_rf_PMU_caseB(self):
 
         remaining_nodes = [i for i in range(NUM_NODES)]
-        #remaining_nodes = NODE_PICK_LIST
+        if dataset == "MESOGEIA":
+            remaining_nodes = NODE_PICK_LIST
         feature_group_dict = {b_i: [   0*NUM_NODES + b_i,
                                        1*NUM_NODES + b_i,
                                        2*NUM_NODES + b_i,
@@ -192,7 +194,8 @@ class FSPreProc_SE():
     def execute_rfe_rf_conventional(self):
 
         remaining_nodes = [i for i in range(NUM_NODES)]
-        #remaining_nodes = NODE_PICK_LIST
+        if dataset == "MESOGEIA":
+            remaining_nodes = NODE_PICK_LIST
         feature_group_dict = {b_i: [   0*NUM_NODES + b_i,
                                        1*NUM_NODES + b_i,
                                        2*NUM_NODES + b_i] for b_i in remaining_nodes}
@@ -468,13 +471,18 @@ class DSSE_Estimator_TrainProcess:
             FS = FSPreProc_SE(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test, self.old_PMUs)
 
             #features = FS.execute()
-            features =  []
+            #features =  []
             if self.meterType == "PMU_caseA":
-                features = IEEE33_PMU_caseA_SE_features
+                #features = IEEE33_PMU_caseA_SE_features
+                #features = features
+                features = []
             elif self.meterType == "PMU_caseB":
-                features = IEEE33_PMU_caseB_SE_features
+                #features = IEEE33_PMU_caseB_SE_features
+                features = MESOGEIA_PMU_caseB_SE_features
             elif self.meterType == "conventional":
-                features = IEEE33_conventional_SE_features
+                #features = IEEE33_conventional_SE_features
+                features = MESOGEIA_conventional_SE_features
+
 
 
             print(features)
@@ -648,7 +656,7 @@ class DSSE_Estimator_TrainProcess:
                         print(f"""Branch {feature} already in TI PMU set""")
                         mape_magnitudes, mae_angles = 1000, 1000
 
-                    if (mape_magnitudes <= 0.30) and (mae_angles <= 0.15): break
+                    if (mape_magnitudes <= MAPE_v_threshold) and (mae_angles <= MAE_a_threshold): break
 
             return used_feature_indices
 
@@ -1208,15 +1216,21 @@ class Train_GNN_DSSE:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseB"
+    meterType = "conventional"
     if meterType == "conventional":
         old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]
+        if dataset == "MESOGEIA":
+            old_PMUs = [94]
     elif meterType == "PMU_caseB":
         old_PMUs = [17, 27]
+        if dataset == "MESOGEIA":
+            old_PMUs = [127, 128, 124] #, 123, 127]
     elif meterType == "PMU_caseA":
         old_PMUs = [6, 33]
+        if dataset == "MESOGEIA":
+            old_PMUs = [130]
 
-    model    = "GNN"
+    model    = "NN"
     PP       = "RF"
     subPP    = "rfe"
 

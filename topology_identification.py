@@ -76,12 +76,14 @@ class Preprocess:
                 # data.append([If_real, topology])
 
         for [x, y, z] in data:
-            inputs.append(np.array(x))
-            if len(x) != 2*NUM_NODES+2*NUM_BRANCHES: print("Issue on sample: ", x, y)
-            y = np.array(y)
-            z = np.array([z])
-            label = np.concatenate([y, z])
-            labels.append(label)
+            if len(x) != 2*NUM_NODES+2*NUM_BRANCHES:
+                print("Issue on sample: ", x, y)
+            else:
+                inputs.append(np.array(x))
+                y = np.array(y)
+                z = np.array([z])
+                label = np.concatenate([y, z])
+                labels.append(label)
 
         print(f"Saving input into {PMU_caseA_input}")
         np.save(f"{PMU_caseA_input}", inputs)
@@ -117,12 +119,14 @@ class Preprocess:
                 # data.append([If_real, topology])
 
         for [x, y, z] in data:
-            inputs.append(np.array(x))
-            if len(x) != 4*NUM_NODES: print("Issue on sample: ", x, y)
-            y = np.array(y)
-            z = np.array([z])
-            label = np.concatenate([y, z])
-            labels.append(label)
+            if len(x) != 4*NUM_NODES:
+                print("Issue on sample: ", x, y)
+            else:
+                inputs.append(np.array(x))
+                y = np.array(y)
+                z = np.array([z])
+                label = np.concatenate([y, z])
+                labels.append(label)
 
         print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
         print("Dataset Size", len(labels))
@@ -159,7 +163,7 @@ class Preprocess:
                 Q_pu *= (1 + (error / 3) * np.random.randn(len(Q_pu)))
                 Q_pu = list(Q_pu)
 
-                print(f"Inserted {100*error}% noise to conventional meters")
+                print(f"Inserted {110*error}% noise to conventional meters")
 
                 # TODO Output
                 Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
@@ -172,12 +176,14 @@ class Preprocess:
                 # data.append([If_real, topology])
 
         for [x, y, z] in data:
-            inputs.append(np.array(x))
-            if len(x) != 3*NUM_NODES: print("Issue on sample: ", x, y)
-            y = np.array(y)
-            z = np.array([z])
-            label = np.concatenate([y, z])
-            labels.append(label)
+            if len(x) != 3 * NUM_NODES:
+                print("Issue on sample: ", x, y)
+            else:
+                inputs.append(np.array(x))
+                y = np.array(y)
+                z = np.array([z])
+                label = np.concatenate([y, z])
+                labels.append(label)
 
         print("Dataset Size", len(inputs), "Input Size: ", len(inputs[0]))
         print("Dataset Size", len(labels))
@@ -536,7 +542,8 @@ class PreProcFS:
     def execute_rfe_rf_PMU_caseA(self):
 
         remaining_branches = [i for i in range(NUM_BRANCHES)]
-        #remaining_branches = BRANCH_PICK_LIST
+        if dataset == "MESOGEIA":
+            remaining_branches = BRANCH_PICK_LIST
 
         EXISTING_METER_BRANCHES = []
 
@@ -550,26 +557,23 @@ class PreProcFS:
         remaining_branches = [i for i in remaining_branches if i not in EXISTING_METER_BRANCHES]
 
         num_features = 4
+        X_train_init, X_test_init, y_train, y_test = train_test_split(self.X_train, self.y_train, test_size=0.20, random_state=42)
 
         #TODO - Remember for original meters
         used_branches = []
-        if False:
+        if EXISTING_METER_BRANCHES!=[]:
             # TODO Train RF initially with EXISTING NODES to find the residual
             # print(self.X_train[0], self.y_train[0])
             y_labels = np.argmax(self.y_train, axis=1).reshape(-1)
             existing_meter_indices = []
             for branch in EXISTING_METER_BRANCHES:
                 existing_meter_indices.extend((feature_group_dict[branch]))
-            X_train = self.X_train[:, existing_meter_indices]
+            X_train = X_train_init[:, existing_meter_indices]
             print(X_train[0], X_train.shape)
             rf = RandomForestClassifier(n_estimators=RF_ESTIMATORS, max_depth=TREE_DEPTH, random_state=42)
             rf.fit(X_train, y_labels)
             y_pred = rf.predict(X_train)
             misclassified = (y_pred != y_labels)
-            print(y_pred.shape)
-            print(misclassified)
-
-        X_train_init, X_test_init, y_train, y_test = train_test_split(self.X_train, self.y_train, test_size=0.20, random_state=42)
 
         while len(remaining_branches) > 0:
 
@@ -620,7 +624,8 @@ class PreProcFS:
     def execute_rfe_rf_PMU_caseB(self):
 
         remaining_nodes = [i for i in range(NUM_NODES)]
-        #remaining_nodes = NODE_PICK_LIST
+        if dataset == "MESOGEIA":
+            remaining_nodes = NODE_PICK_LIST
 
         #TODO Exclude existing nodes
         #remaining_nodes = [i for i in remaining_nodes if i not in EXISTING_METER_NODES]
@@ -684,7 +689,8 @@ class PreProcFS:
     def execute_rfe_rf_conventional(self):
 
         remaining_nodes = [i for i in range(NUM_NODES)]
-
+        if dataset == "MESOGEIA":
+            remaining_nodes = NODE_PICK_LIST
         #TODO Exclude existing nodes
         #remaining_nodes = [i for i in remaining_nodes if i not in EXISTING_METER_NODES]
 
@@ -874,17 +880,18 @@ class TIPredictorTrainProcess:
         if not self.iterative_fs:
             print(self.X_train.shape)
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
-            #features = FS.execute()
+            features = FS.execute()
             if self.meterType == "PMU_caseA":
-                features = IEEE33_PMU_caseA_TI_features
-                #features = features
+                #features = IEEE33_PMU_caseA_TI_features
+                features = features
                 print("TI Feature Selection Order - Branches: ", features)
             elif self.meterType == "PMU_caseB":
-                features = IEEE33_PMU_caseB_TI_features
-                #features = features
+                #features = IEEE33_PMU_caseB_TI_features
+                features = features
                 print("TI Feature Selection Order - Nodes: ", features)
             elif self.meterType == "conventional":
-                features = IEEE33_conventional_TI_features
+                #features = IEEE33_conventional_TI_features
+                features = features
                 print("TI Feature Selection Order - Nodes: ", features)
 
             #TODO For every Currenct branch input feature add the magnitude and its angle
@@ -1680,11 +1687,11 @@ class TrainNN_TI:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseA"
-    #meterType = "PMU_caseB"
+    #meterType = "PMU_caseA"
+    meterType = "PMU_caseB"
     #meterType = "conventional"
 
-    model = "GNN"
+    model = "NN"
     PP    = "RF"
     subPP = "rfe"
     threshold = 0.95

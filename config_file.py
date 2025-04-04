@@ -1,13 +1,13 @@
 import sys
 
 #TODO Basic configurations
-dataset = "IEEE33"
+dataset = "95UKGD"
 #meterType = "PMU_caseA" # PMU_caseA, PMU_caseB, conventional
-meterType = "PMU_caseB"
+#meterType = "PMU_caseB"
 #meterType = "conventional"
-GLOBAL_BRANCH_LIST = [6]
-NUM_TOPOLOGIES = 1 #15
-NUM_SIMULATIONS = 7787
+#GLOBAL_BRANCH_LIST = [6]
+#NUM_TOPOLOGIES = 1 #15
+#NUM_SIMULATIONS = 7787
 EXISTING_METER_BRANCHES = []
 EXISTING_METER_NODES    = []
 RAW_FILENAME    = f"datasets/{dataset}.csv"
@@ -21,21 +21,28 @@ TREE_DEPTH = 10
 RF_ESTIMATORS = 50
 
 
-IEEE33_PMU_caseA_TI_features    = [6, 33, 27, 10, 32, 5, 4, 20, 8, 24, 7, 25, 19, 26, 9, 34, 17, 3, 2, 11, 12, 16, 18, 31, 23, 13, 15, 14, 22, 21, 29, 30, 28, 1, 0]
-IEEE33_PMU_caseB_TI_features    = [17, 27, 21, 7, 8, 28, 20, 6, 11, 26, 9, 15, 24, 25, 19, 10, 5, 13, 29, 14, 12, 4, 32, 16, 30, 23, 31, 3, 22, 2, 18, 1, 0]
-IEEE33_conventional_TI_features = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10, 5, 19, 23, 4, 22, 3, 2, 18, 1, 0]
+#IEEE33_PMU_caseA_TI_features    = [6, 33, 27, 10, 32, 5, 4, 20, 8, 24, 7, 25, 19, 26, 9, 34, 17, 3, 2, 11, 12, 16, 18, 31, 23, 13, 15, 14, 22, 21, 29, 30, 28, 1, 0]
+#IEEE33_PMU_caseB_TI_features    = [17, 27, 21, 7, 8, 28, 20, 6, 11, 26, 9, 15, 24, 25, 19, 10, 5, 13, 29, 14, 12, 4, 32, 16, 30, 23, 31, 3, 22, 2, 18, 1, 0]
+#IEEE33_conventional_TI_features = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10, 5, 19, 23, 4, 22, 3, 2, 18, 1, 0]
 
-IEEE33_PMU_caseA_SE_features    = [27, 7, 4, 11, 19, 15, 10, 33, 28, 12, 14, 8, 18, 26, 30, 3, 13, 29, 25, 9, 32, 2, 31, 24, 21, 5, 20, 16, 6, 34, 22, 17, 23, 1, 0]
-IEEE33_PMU_caseB_SE_features    = [27, 7, 11, 8, 14, 10, 15, 29, 12, 28, 30, 20, 26, 13, 9, 5, 2, 21, 32, 25, 31, 4, 17, 24, 22, 16, 6, 23, 19, 3, 0, 1, 18]
-IEEE33_conventional_SE_features = [24, 27, 11, 15, 28, 10, 13, 7, 32, 16, 9, 29, 20, 17, 31, 21, 14, 8, 30, 12, 6, 26, 25, 5, 23, 4, 19, 3, 2, 1, 22, 18, 0]
+#MESOGEIA_PMU_caseA_TI_features    = []
+#MESOGEIA_PMU_caseB_TI_features    = []
+#MESOGEIA_conventional_TI_features = []
 
+#IEEE33_PMU_caseA_SE_features    = [27, 7, 4, 11, 19, 15, 10, 33, 28, 12, 14, 8, 18, 26, 30, 3, 13, 29, 25, 9, 32, 2, 31, 24, 21, 5, 20, 16, 6, 34, 22, 17, 23, 1, 0]
+#IEEE33_PMU_caseB_SE_features    = [27, 7, 11, 8, 14, 10, 15, 29, 12, 28, 30, 20, 26, 13, 9, 5, 2, 21, 32, 25, 31, 4, 17, 24, 22, 16, 6, 23, 19, 3, 0, 1, 18]
+#IEEE33_conventional_SE_features = [24, 27, 11, 15, 28, 10, 13, 7, 32, 16, 9, 29, 20, 17, 31, 21, 14, 8, 30, 12, 6, 26, 25, 5, 23, 4, 19, 3, 2, 1, 22, 18, 0]
+
+#MESOGEIA_PMU_caseA_SE_features    = [18, 16, 11, 22, 12, 23, 9, 64, 7, 39, 28, 52, 66, 5, 31, 51, 27, 42, 114, 36, 29, 122, 131, 93, 83, 98, 47, 85, 77, 116, 128, 41, 2, 72, 99, 124, 46, 123, 132, 44, 119, 126, 129, 110, 109, 59, 97, 111, 80, 130, 69, 102, 48, 115, 90, 103, 82, 121, 112, 104, 107, 89, 113, 92, 1, 75, 108, 88, 78, 106, 91, 100, 105, 84, 117, 86, 79, 61, 125, 50, 73, 63, 49, 67, 118, 76, 71, 65, 62, 87, 0, 101, 57, 95, 68, 96, 56, 37, 40, 25, 35, 120, 74, 14, 70, 15, 32, 10, 58, 8, 45, 81, 24, 21, 94, 17, 26, 13, 54, 38, 55, 4, 33, 30, 43, 34, 20, 6, 53, 19, 3, 60]
+#MESOGEIA_PMU_caseB_SE_features    = [68, 57, 80, 67, 46, 59, 58, 76, 102, 97, 50, 52, 53, 121, 36, 79, 41, 43, 98, 56, 49, 42, 61, 64, 93, 63, 30, 48, 91, 60, 39, 37, 116, 65, 105, 73, 81, 74, 72, 101, 8, 100, 122, 70, 23, 35, 108, 45, 112, 83, 28, 84, 103, 87, 124, 95, 118, 128, 32, 130, 126, 99, 125, 85, 69, 51, 75, 113, 96, 110, 94, 88, 34, 104, 129, 117, 107, 86, 71, 106, 38, 115, 111, 109, 24, 21, 89, 114, 78, 92, 29, 62, 66, 119, 90, 54, 0, 47, 33, 15, 10, 40, 77, 12, 22, 82, 55, 13, 18, 9, 27, 19, 25, 44, 11, 31, 5, 26, 3, 6, 2, 16, 20, 14, 4, 17, 7, 1]
+#MESOGEIA_conventional_SE_features = [93, 100, 87, 57, 74, 75, 120, 99, 104, 117, 116, 78, 127, 118, 69, 88, 82, 103, 106, 73, 107, 80, 109, 64, 70, 128, 102, 81, 111, 123, 58, 122, 129, 66, 90, 115, 119, 89, 79, 76, 59, 92, 71, 49, 98, 68, 113, 83, 97, 85, 105, 63, 114, 124, 112, 95, 126, 39, 94, 67, 125, 121, 52, 96, 46, 86, 130, 50, 110, 60, 48, 53, 72, 108, 51, 91, 56, 42, 101, 43, 84, 36, 61, 33, 45, 41, 37, 34, 62, 40, 22, 47, 65, 55, 31, 25, 30, 15, 29, 77, 32, 54, 14, 21, 26, 24, 38, 35, 28, 4, 7, 9, 27, 18, 44, 17, 16, 23, 20, 10, 13, 8, 11, 1, 19, 2, 6, 12, 3, 5, 0]
 
 if dataset == "MESOGEIA":
     # MESOGEIA
     NUM_NODES = 131
     NUM_BRANCHES = 133
     NUM_TOPOLOGIES = 2
-    NUM_SAMPLES = 5000
+    NUM_SAMPLES = 7500
     branch_data = {
     0: {"sending_node": 1, "receiving_node": 0},
     1: {"sending_node": 1, "receiving_node": 2},
@@ -177,12 +184,160 @@ if dataset == "MESOGEIA":
     BRANCH_PICK_LIST = [key for key in branch_data.keys() if (
                 (branch_data[key]["receiving_node"] in NODE_PICK_LIST) or (
                     branch_data[key]["sending_node"] in NODE_PICK_LIST))]
+
     print(BRANCH_PICK_LIST)
+
+    bus_types = {
+        "slack": [0],
+        "PV_wind": [],
+        "PV_solar": [61, 65],
+        "PQ_MV": [],
+        "PQ_LV": [i for i in range(NUM_NODES) if i not in [0, 61, 65]],
+    }
+
+    profile_titles = {
+        "PV": ["PV_profile 1", "PV_profile 2", "PV_profile 3", "PV_profile 4", "PV_profile 5", "PV_profile 6", "PV_profile 7"],
+        "WD": ["WD 1"],
+        "MV": ["R210 Load","X84_1 MV Load_x","X84_1 MV Load_y"],
+        "LV": ["R1", "R2", "R3", "R4", "R5", "R6"]
+    }
+
+elif dataset == "95UKGD":
+    mat_file = "95UKGDaveg.mat"
+    NUM_NODES = 95
+    NUM_BRANCHES = 97
+    NUM_TOPOLOGIES = 8
+    NUM_SAMPLES = 7787
+    NUM_SIMULATIONS = NUM_SAMPLES
+    branch_data = {
+        0: {"sending_node": 0, "receiving_node": 1},
+        1: {"sending_node": 0, "receiving_node": 84},
+        2: {"sending_node": 1, "receiving_node": 3},
+        3: {"sending_node": 2, "receiving_node": 3},
+        4: {"sending_node": 3, "receiving_node": 5},
+        5: {"sending_node": 4, "receiving_node": 5},
+        6: {"sending_node": 5, "receiving_node": 7},
+        7: {"sending_node": 6, "receiving_node": 7},
+        8: {"sending_node": 7, "receiving_node": 9},
+        9: {"sending_node": 8, "receiving_node": 9},
+        10: {"sending_node": 8, "receiving_node": 27},
+        11: {"sending_node": 8, "receiving_node": 28},
+        12: {"sending_node": 9, "receiving_node": 10},
+        13: {"sending_node": 10, "receiving_node": 12},
+        14: {"sending_node": 11, "receiving_node": 12},
+        15: {"sending_node": 12, "receiving_node": 14},
+        16: {"sending_node": 13, "receiving_node": 14},
+        17: {"sending_node": 14, "receiving_node": 16},
+        18: {"sending_node": 15, "receiving_node": 16},
+        19: {"sending_node": 16, "receiving_node": 24},
+        20: {"sending_node": 17, "receiving_node": 18},
+        21: {"sending_node": 18, "receiving_node": 20},
+        22: {"sending_node": 19, "receiving_node": 20},
+        23: {"sending_node": 20, "receiving_node": 21},
+        24: {"sending_node": 21, "receiving_node": 22},
+        25: {"sending_node": 22, "receiving_node": 23},
+        26: {"sending_node": 23, "receiving_node": 24},
+        27: {"sending_node": 24, "receiving_node": 26},
+        28: {"sending_node": 25, "receiving_node": 26},
+        29: {"sending_node": 28, "receiving_node": 29},
+        30: {"sending_node": 28, "receiving_node": 30},
+        31: {"sending_node": 29, "receiving_node": 31},
+        32: {"sending_node": 29, "receiving_node": 33},
+        33: {"sending_node": 31, "receiving_node": 32},
+        34: {"sending_node": 33, "receiving_node": 34},
+        35: {"sending_node": 34, "receiving_node": 35},
+        36: {"sending_node": 34, "receiving_node": 38},
+        37: {"sending_node": 35, "receiving_node": 36},
+        38: {"sending_node": 36, "receiving_node": 37},
+        39: {"sending_node": 38, "receiving_node": 39},
+        40: {"sending_node": 39, "receiving_node": 40},
+        41: {"sending_node": 39, "receiving_node": 52},
+        42: {"sending_node": 40, "receiving_node": 41},
+        43: {"sending_node": 40, "receiving_node": 42},
+        44: {"sending_node": 42, "receiving_node": 43},
+        45: {"sending_node": 43, "receiving_node": 44},
+        46: {"sending_node": 44, "receiving_node": 45},
+        47: {"sending_node": 45, "receiving_node": 46},
+        48: {"sending_node": 45, "receiving_node": 47},
+        49: {"sending_node": 47, "receiving_node": 48},
+        50: {"sending_node": 47, "receiving_node": 49},
+        51: {"sending_node": 49, "receiving_node": 50},
+        52: {"sending_node": 49, "receiving_node": 51},
+        53: {"sending_node": 52, "receiving_node": 53},
+        54: {"sending_node": 52, "receiving_node": 54},
+        55: {"sending_node": 53, "receiving_node": 58},
+        56: {"sending_node": 53, "receiving_node": 74},
+        57: {"sending_node": 54, "receiving_node": 55},
+        58: {"sending_node": 54, "receiving_node": 56},
+        59: {"sending_node": 56, "receiving_node": 57},
+        60: {"sending_node": 58, "receiving_node": 59},
+        61: {"sending_node": 58, "receiving_node": 61},
+        62: {"sending_node": 59, "receiving_node": 60},
+        63: {"sending_node": 61, "receiving_node": 62},
+        64: {"sending_node": 62, "receiving_node": 63},
+        65: {"sending_node": 62, "receiving_node": 64},
+        66: {"sending_node": 64, "receiving_node": 65},
+        67: {"sending_node": 65, "receiving_node": 66},
+        68: {"sending_node": 66, "receiving_node": 67},
+        69: {"sending_node": 66, "receiving_node": 68},
+        70: {"sending_node": 68, "receiving_node": 69},
+        71: {"sending_node": 69, "receiving_node": 70},
+        72: {"sending_node": 70, "receiving_node": 71},
+        73: {"sending_node": 71, "receiving_node": 72},
+        74: {"sending_node": 71, "receiving_node": 73},
+        75: {"sending_node": 74, "receiving_node": 75},
+        76: {"sending_node": 75, "receiving_node": 76},
+        77: {"sending_node": 75, "receiving_node": 79},
+        78: {"sending_node": 76, "receiving_node": 77},
+        79: {"sending_node": 77, "receiving_node": 78},
+        80: {"sending_node": 79, "receiving_node": 82},
+        81: {"sending_node": 79, "receiving_node": 85},
+        82: {"sending_node": 80, "receiving_node": 81},
+        83: {"sending_node": 80, "receiving_node": 93},
+        84: {"sending_node": 81, "receiving_node": 94},
+        85: {"sending_node": 83, "receiving_node": 84},
+        86: {"sending_node": 85, "receiving_node": 86},
+        87: {"sending_node": 85, "receiving_node": 89},
+        88: {"sending_node": 86, "receiving_node": 87},
+        89: {"sending_node": 87, "receiving_node": 88},
+        90: {"sending_node": 89, "receiving_node": 90},
+        91: {"sending_node": 90, "receiving_node": 91},
+        92: {"sending_node": 91, "receiving_node": 92},
+        93: {"sending_node": 92, "receiving_node": 93},
+        94: {"sending_node": 17, "receiving_node": 34},
+        95: {"sending_node": 57, "receiving_node": 82},
+        96: {"sending_node": 91, "receiving_node": 73}
+    }
+    NODE_PICK_LIST = []
+    BRANCH_PICK_LIST = [key for key in branch_data.keys() if (
+            (branch_data[key]["receiving_node"] in NODE_PICK_LIST) or (
+            branch_data[key]["sending_node"] in NODE_PICK_LIST))]
+
+    print(BRANCH_PICK_LIST)
+
+    bus_types = {
+        "slack": [0],
+        "PV_wind": [17],
+        "PV_solar": [94],
+        "PQ_MV": [83, 91, 18, 86, 88, 73, 93],
+        "PQ_LV": [i for i in range(NUM_NODES) if i not in [0, 17, 94, 83, 91, 18, 86, 88, 73, 93]],
+    }
+
+    profile_titles = {
+        "PV": ["PV_profile 1", "PV_profile 2", "PV_profile 3", "PV_profile 4", "PV_profile 5",
+               "PV_profile 6", "PV_profile 7"],
+        "WD": ["WD 1"],
+        "MV": ["R210 Load", "X84_1 MV Load_x", "X84_1 MV Load_y"],
+        "LV": ["R1", "R2", "R3", "R4", "R5", "R6"]
+    }
+
 elif dataset == "IEEE33":
+    mat_file = "IEEE33aveg.mat"
     NUM_NODES = 33  # 131 #33
     NUM_BRANCHES = 35  # 133 #35
     NUM_TOPOLOGIES = 15
     NUM_SAMPLES = 1000
+    NUM_SIMULATIONS = NUM_SAMPLES
     branch_data = {
         0: {'sending_node': 0, 'receiving_node': 1},
         1: {'sending_node': 1, 'receiving_node': 2},
