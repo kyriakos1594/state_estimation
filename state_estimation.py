@@ -20,6 +20,8 @@ from sklearn.decomposition import PCA
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.preprocessing import StandardScaler
 import torch
+torch.cuda.empty_cache()
+
 import torch.nn as nn
 import torch
 import torch.nn as nn
@@ -292,11 +294,11 @@ class DSSE_BuildModel:
         model = Sequential()
 
         # Input Layer (66 inputs)
-        #model.add(Dense(512, input_dim=input_dim, activation='linear'))
+        model.add(Dense(32, input_dim=input_dim, activation='linear'))
         #model.add(Dense(128, activation='linear'))
-        model.add(Dense(128, activation='linear'))
-        model.add(Dense(64, activation='linear'))
-        model.add(Dense(32, activation='linear'))
+        #model.add(Dense(128, activation='linear'))
+        #model.add(Dense(64, activation='linear'))
+        model.add(Dense(16, activation='linear'))
 
         # Output Layer (assuming 16 outputs, modify according to your use case)
         # For regression, we use 'linear' or no activation in the output layer
@@ -316,11 +318,11 @@ class DSSE_BuildModel:
         model = Sequential()
 
         # Input Layer (66 inputs)
-        model.add(Dense(64, input_dim=input_dim, activation='linear'))
-        #model.add(Dense(256, activation='linear'))
+        model.add(Dense(32, input_dim=input_dim, activation='linear'))
+        #model.add(Dense(128, activation='linear'))
         #model.add(Dense(128, activation='linear'))
         #model.add(Dense(64, activation='linear'))
-        model.add(Dense(32, activation='linear'))
+        model.add(Dense(16, activation='linear'))
 
         # Output Layer (assuming 16 outputs, modify according to your use case)
         # For regression, we use 'linear' or no activation in the output layer
@@ -1072,11 +1074,21 @@ class Train_GNN_DSSE:
         self.val_loader   = val_loader
         self.test_loader  = test_loader
         if self.meterType == "PMU_caseA":
-            self.model = SE_GATWithEdgeAttr(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, gat_layers=3, GAT_dim=16, heads=4).to(self.device)
-        elif self.meterType == "PMU_caseB":
 
+            #TODO Vanilla GATCONV
+            self.model = SE_GATWithEdgeAttr(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, gat_layers=7,
+                                            GAT_dim=8, heads=4).to(self.device)
+
+            #TODO Transformer based
+            self.model = SE_GATTransfomerOnlyDecoderWithEdges(num_nodes=NUM_NODES, num_features=2,output_dim=NUM_NODES,
+                                                              embedding_dim=4, heads=4, num_decoder_layers=1,
+                                                              edge_attr_dim=2, gat_layers=7, GATConv_dim=8,
+                                                              ff_hid_dim=24).to(self.device)
+
+
+        elif self.meterType == "PMU_caseB":
             #TODO Vanilla GATConv
-            self.model = SE_GATNoEdgeAttrsPMUB(num_features=4,output_dim=NUM_NODES, heads=4, gat_layers=3, GAT_dim=32).to(self.device)
+            self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=4, gat_layers=3, GAT_dim=32).to(self.device)
 
             #self.model = GATTransfomerOnlyDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
                     #                                  heads=4, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
@@ -1086,7 +1098,7 @@ class Train_GNN_DSSE:
                     #                                  ff_hid_dim=24).to(self.device)
         elif self.meterType == "conventional":
             #self.model = SE_GATNoEdgeAttrsNoMask(num_features=3,output_dim=NUM_NODES, heads=4).to(self.device)
-            self.model = GATTransfomerOnlyDecoderNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=NUM_NODES,embedding_dim=4,
+            self.model = SE_GATTransfomerOnlyDecoderNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=NUM_NODES,embedding_dim=4,
                                                   heads=4, num_decoder_layers=1,gat_layers=6,GATConv_dim=8,
                                                   ff_hid_dim=24).to(self.device)
 
@@ -1103,7 +1115,7 @@ class Train_GNN_DSSE:
     def _train(self):
 
         # Early stopping parameters
-        patience = 80  # Number of epochs to wait for improvement
+        patience = 40  # Number of epochs to wait for improvement
         min_delta = 0.00000001  # Minimum change in validation loss to qualify as an improvement
         best_val_loss = float('inf')
         early_stop_counter = 0
@@ -1216,7 +1228,7 @@ class Train_GNN_DSSE:
 
 if __name__ == "__main__":
 
-    meterType = "conventional"
+    meterType = "PMU_caseA"
     if meterType == "conventional":
         old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]
         if dataset == "MESOGEIA":

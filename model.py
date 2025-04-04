@@ -465,12 +465,13 @@ class TI_TransformerWithEdges(torch.nn.Module):
 
         return x  # F.log_softmax(x, dim=1)
 
+
 #TODO SE
 
 #TODO GATConv - PMU_caseB, conventional
-class SE_GATNoEdgeAttrsPMUB(torch.nn.Module):
+class SE_GATNoEdgeAttrs(torch.nn.Module):
     def __init__(self, num_features, output_dim, GAT_dim=16, gat_layers=3, heads=4):
-        super(SE_GATNoEdgeAttrsPMUB, self).__init__()
+        super(SE_GATNoEdgeAttrs, self).__init__()
 
         # Input Graph Attention layer
         # Here, `edge_attr_dim` is the size of the edge features
@@ -550,11 +551,11 @@ class SE_GATWithEdgeAttr(torch.nn.Module):
 
 #TODO TRANSFORMER-BASED GNNs SE
 
-#TODO Only Decoder Transformer - No edge attributes
-class GATTransfomerOnlyDecoderNoEdges(nn.Module):
+#TODO Only Decoder Transformer - PMU_caseB and conventional
+class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
     def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4,
                  num_decoder_layers=1, gat_layers =4, GATConv_dim=16, ff_hid_dim=64):
-        super(GATTransfomerOnlyDecoderNoEdges, self).__init__()
+        super(SE_GATTransfomerOnlyDecoderNoEdges, self).__init__()
 
         # Node embedding layer (if needed, otherwise use raw features)
         self.node_embedding = nn.Embedding(num_nodes, embedding_dim)
@@ -595,6 +596,69 @@ class GATTransfomerOnlyDecoderNoEdges(nn.Module):
         # Local graph feature extraction, using graph attention layers
         for gat_conv in self.gatconv_layers:
             x = gat_conv(x, edge_index)
+            x = F.leaky_relu(x)
+
+        # Prepare for Transformer by adding a batch dimension (1, batch_size, features)
+        x = x.unsqueeze(0)  # Shape: [1, batch_size, feature_dim]
+        # Global attention appliued through transformer
+        for decoder in self.transformer_decoder:
+            x = decoder(x, x)
+        # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
+        x = x.squeeze(0)
+        # Apply global pooling: aggregate node-level features into graph-level features
+        x = self.attn_pool(x, batch)
+        #x = global_mean_pool(x, batch)
+
+        # Final fully connected layer for the output
+        x = self.fc(x)
+
+        return x
+
+class SE_GATTransfomerOnlyDecoderWithEdges(nn.Module):
+    def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4,
+                 num_decoder_layers=1, edge_attr_dim=2, gat_layers=4, GATConv_dim=16, ff_hid_dim=64):
+        super(SE_GATTransfomerOnlyDecoderWithEdges, self).__init__()
+
+        # Node embedding layer (if needed, otherwise use raw features)
+        self.node_embedding = nn.Embedding(num_nodes, embedding_dim)
+
+        # Feature Transformation (if needed)
+        self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
+
+        # Input GATConv layer
+        self.input_gat_conv = GATConv(embedding_dim, GATConv_dim, edge_attr_dim=edge_attr_dim, heads=heads, concat=True)
+
+        # GATConv stacking for graph feature extraction
+        self.gatconv_layers = nn.ModuleList([
+            GATConv(GATConv_dim * heads, GATConv_dim, edge_attr_dim=edge_attr_dim, heads=heads, concat=True)
+            for _ in range(gat_layers)
+        ])
+
+        # Custom Transformer Decoder Layer
+        self.transformer_decoder = nn.ModuleList([
+            TransfromerDecoderLayer2(d_model=GATConv_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_decoder_layers)
+        ])
+
+        self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(GATConv_dim * heads, 2 * GATConv_dim),
+                                                                 torch.nn.ReLU(),
+                                                                 torch.nn.Linear(2 * GATConv_dim, 1)))
+
+        # Fully connected layer for output (e.g., classification or regression)
+        self.fc = nn.Linear(GATConv_dim * heads, output_dim)
+
+    def forward(self, data):
+        # Extract node features and graph structure
+        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
+
+        # Embedding node features if needed - input
+        x = self.feature_fc(x)
+
+        # Input GATConv
+        x = self.input_gat_conv(x, edge_index=edge_index, edge_attr=edge_attr)
+
+        # Local graph feature extraction, using graph attention layers
+        for gat_conv in self.gatconv_layers:
+            x = gat_conv(x, edge_index=edge_index, edge_attr=edge_attr)
             x = F.leaky_relu(x)
 
         # Prepare for Transformer by adding a batch dimension (1, batch_size, features)
