@@ -179,97 +179,6 @@ class TI_GATNoEdgeAttrs(torch.nn.Module):
 
         return x
 
-class TI_MultipleGCNNoEdgeAttrs(torch.nn.Module):
-    def __init__(self, num_features, num_classes, heads=4):
-        super(TI_MultipleGCNNoEdgeAttrs, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        # Graph Attention layers (without edge features)
-        self.conv1 = GCNConv(num_features, 32)
-        self.conv2 = GCNConv(32, 32)
-        self.conv3  = GCNConv(32, 32)
-        self.conv4 = GCNConv(32, 32)
-        self.conv5 = GCNConv(32, 32)
-        self.conv6 = GCNConv(32, 32)
-        self.conv7 = GCNConv(32, 32)
-        self.conv8 = GCNConv(32, 32)
-        #self.conv9 = GCNConv(32, 32)
-        #self.conv10 = GCNConv(32, 32)
-        #self.conv11 = GCNConv(8 * heads, 8)
-        #self.conv12 = GCNConv(8 * heads, 8)
-        #self.conv13 = GCNConv(8 * heads, 8)
-        #self.conv14 = GCNConv(8 * heads, 8)
-
-        #self.fc1 = torch.nn.Linear(8*heads, 32)
-        #self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(16 * heads, 32), torch.nn.ReLU(), torch.nn.Linear(32, 1)))
-
-        self.fc1 = torch.nn.Linear(32, 32)
-        #self.fc2 = torch.nn.Linear(64, 32)
-
-        # Fully connected layer for classification
-        self.fc2 = torch.nn.Linear(32, num_classes)
-
-    def forward(self, data):
-        # If no node features exist, initialize dummy features
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
-
-        x, edge_index, mask, batch = data.x.to(self.device), data.edge_index.to(self.device), data.mask.to(self.device), data.batch.to(self.device)
-
-        #constant_edges = [i for i in range(NUM_BRANCHES) if (i not in [32,33,34,6,10,27])]
-        #print(constant_edges)
-        #edge_index = edge_index[:, constant_edges]
-
-        # First GAT layer
-        x = self.conv1(x, edge_index)
-        x = F.relu(x)
-        #x = self.dropout(x)
-
-        # Second GAT layer
-        x = self.conv2(x, edge_index)
-        x = F.relu(x)
-        #x = self.dropout(x)
-        #x = x.view(1, -1) # [1056, 16]
-        # Global mean pooling
-        #x = global_mean_pool(x, batch)
-        x = self.conv3(x, edge_index)
-        x = F.relu(x)
-
-        x = self.conv4(x, edge_index)
-        x = F.relu(x)
-
-        x = self.conv5(x, edge_index)
-        x = F.relu(x)
-
-        x = self.conv6(x, edge_index)
-        x = F.relu(x)
-
-        x = self.conv7(x, edge_index)
-        x = F.relu(x)
-        x = self.conv8(x, edge_index)
-        x = F.relu(x)
-        #x = self.conv9(x, edge_index)
-        #x = F.relu(x)
-        #x = self.conv10(x, edge_index)
-        #x = F.relu(x)
-        #x = self.conv11(x, edge_index)
-        #x = F.relu(x)
-        #x = self.conv12(x, edge_index)
-        #x = F.relu(x)
-        #x = self.conv13(x, edge_index)
-        #x = F.relu(x)
-        #x = self.conv14(x, edge_index)
-        #x = F.relu(x)
-        #x = self.attn_pool(x, batch)
-        x = global_max_pool(x, batch)
-
-        x = self.fc1(x)
-        x = F.relu(x)
-
-        x = self.fc2(x)
-
-        return x
-
 #TODO TI GNN GCN - PMU_caseB or conventional
 class TI_GCNNoEdgeAttrs(torch.nn.Module):
     def __init__(self, num_features, num_classes):
@@ -300,12 +209,12 @@ class TI_GCNNoEdgeAttrs(torch.nn.Module):
         x, edge_index, mask, batch = data.x.to(self.device), data.edge_index.to(self.device), data.mask.to(self.device), data.batch.to(self.device)
 
         # First GAT layer
-        x = self.conv1(x, edge_index)
+        x = self.conv1(x, edge_index=edge_index)
         x = F.leaky_relu(x)
         #x = self.dropout(x)
 
         # Second GAT layer
-        x = self.conv2(x, edge_index)
+        x = self.conv2(x, edge_index=edge_index)
         x = F.leaky_relu(x)
         #x = self.dropout(x)
         #x = x.view(1, -1) # [1056, 16]
@@ -329,7 +238,7 @@ class TI_TransformerNoEdges(torch.nn.Module):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # Node embedding layer (if needed, otherwise use raw features)
-        self.node_embedding = nn.Embedding(num_nodes, embedding_dim)
+        self.node_embedding = nn.Embedding(num_features, embedding_dim)
         # Feature Transformation (if needed)
         self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
 
@@ -368,12 +277,12 @@ class TI_TransformerNoEdges(torch.nn.Module):
             x = self.feature_fc(x)
 
         # Apply GAT layers to process graph structure and features
-        x = self.input_conv_layer(x, edge_index)
+        x = self.input_conv_layer(x, edge_index=edge_index)
         x = F.relu(x)
         # x = self.dropout(x)
 
         for gat_conv_layer in self.GATConv_layers:
-            x = gat_conv_layer(x, edge_index)
+            x = gat_conv_layer(x, edge_index=edge_index)
             x = F.relu(x)
 
         # Prepare for Transformer by adding a batch dimension (1, batch_size, features)
@@ -591,11 +500,11 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
         x = self.feature_fc(x)
 
         # Input GATConv
-        x = self.input_gat_conv(x, edge_index)
+        x = self.input_gat_conv(x, edge_index=edge_index)
 
         # Local graph feature extraction, using graph attention layers
         for gat_conv in self.gatconv_layers:
-            x = gat_conv(x, edge_index)
+            x = gat_conv(x, edge_index=edge_index)
             x = F.leaky_relu(x)
 
         # Prepare for Transformer by adding a batch dimension (1, batch_size, features)
