@@ -35,7 +35,7 @@ from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
 from model import (TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs, TI_TransformerNoEdges,
-                   TI_GCNNoEdgeAttrs,  TI_GCNNoEdgeAttrs, TI_MultipleGCNNoEdgeAttrs, TI_TransformerWithEdges)
+                   TI_GCNNoEdgeAttrs,  TI_GCNNoEdgeAttrs, TI_TransformerWithEdges)
 from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
 from IEEE_datasets.IEEE33 import config_dict
 

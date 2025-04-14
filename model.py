@@ -96,7 +96,7 @@ class TI_GATWithEdgeAttrs(torch.nn.Module):
 
         # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
         self.GATConv_layers = nn.ModuleList([
-            GATConv(GAT_dim * heads, GAT_dim, heads=heads, edge_dim=edge_attr_dim, concat=True) for _ in range(gat_layers)
+            GATConv(GAT_dim * heads, GAT_dim, heads=heads, edge_dim=edge_attr_dim, concat=True) for _ in range(gat_layers-1)
         ])
 
         self.fc1 = torch.nn.Linear(GAT_dim * heads, 2 * GAT_dim)
@@ -145,7 +145,7 @@ class TI_GATNoEdgeAttrs(torch.nn.Module):
 
         # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
         self.GATConv_layers = nn.ModuleList([
-            GATConv(gat_dim * heads, gat_dim, heads=heads, concat=True) for _ in range(num_gat_layers)
+            GATConv(gat_dim * heads, gat_dim, heads=heads, concat=True) for _ in range(num_gat_layers-1)
         ])
 
         self.fc1 = torch.nn.Linear(gat_dim * heads, 2 * gat_dim)
@@ -169,7 +169,6 @@ class TI_GATNoEdgeAttrs(torch.nn.Module):
             x = gatconv_layer(x, edge_index=edge_index)
             x = F.relu(x)
 
-        #x = self.attn_pool(x, batch)
         x = global_max_pool(x, batch)
 
         x = self.fc1(x)
@@ -179,57 +178,6 @@ class TI_GATNoEdgeAttrs(torch.nn.Module):
 
         return x
 
-#TODO TI GNN GCN - PMU_caseB or conventional
-class TI_GCNNoEdgeAttrs(torch.nn.Module):
-    def __init__(self, num_features, num_classes):
-        super(TI_GCNNoEdgeAttrs, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        # Graph Attention layers (without edge features)
-        self.conv1 = GCNConv(num_features, 64)  # No edge_dim
-        self.conv2 = GCNConv(64, 16)  # No edge_dim
-        #self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True)
-        #self.conv4 = GATConv(8  * heads, 4, heads=heads, concat=True)
-        #self.conv4 = GATConv(16  * heads, 4, heads=heads, concat=True)
-
-        #self.fc1 = torch.nn.Linear(8*heads, 32)
-        #self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(16, 32), torch.nn.ReLU(), torch.nn.Linear(32, 1)))
-
-        self.fc1 = torch.nn.Linear(16, 32)
-        #self.fc2 = torch.nn.Linear(64, 32)
-
-        # Fully connected layer for classification
-        self.fc3 = torch.nn.Linear(32, num_classes)
-
-    def forward(self, data):
-        # If no node features exist, initialize dummy features
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
-
-        x, edge_index, mask, batch = data.x.to(self.device), data.edge_index.to(self.device), data.mask.to(self.device), data.batch.to(self.device)
-
-        # First GAT layer
-        x = self.conv1(x, edge_index=edge_index)
-        x = F.leaky_relu(x)
-        #x = self.dropout(x)
-
-        # Second GAT layer
-        x = self.conv2(x, edge_index=edge_index)
-        x = F.leaky_relu(x)
-        #x = self.dropout(x)
-        #x = x.view(1, -1) # [1056, 16]
-        # Global mean pooling
-        #x = global_mean_pool(x, batch)
-
-        #x = self.attn_pool(x, batch)
-        x = global_mean_pool(x, batch)
-
-        x = self.fc1(x)
-        x = F.leaky_relu(x)
-
-        x = self.fc3(x)
-
-        return x
 
 #TODO TI Transformer based - PMU_caseB or conventional
 class TI_TransformerNoEdges(torch.nn.Module):
@@ -264,7 +212,8 @@ class TI_TransformerNoEdges(torch.nn.Module):
 
         # Fully connected layer for output (e.g., classification or regression)
         # Final output layer
-        self.fc = nn.Linear(GATConv_dim * heads, output_dim)
+        self.fc1 = nn.Linear(GATConv_dim * heads, 2*GATConv_dim)
+        self.fc2 = nn.Linear(2*GATConv_dim, output_dim)
 
     def forward(self, data):
         # Extract node features and graph structure
@@ -294,12 +243,14 @@ class TI_TransformerNoEdges(torch.nn.Module):
         # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
         x = x.squeeze(0)
         # Apply global pooling: aggregate node-level features into graph-level features
-        x = self.attn_pool(x, batch)
+        #x = self.attn_pool(x, batch)
         #x = global_max_pool(x)
-        #x = global_max_pool(x, batch)
+        x = global_max_pool(x, batch)
 
         # Final fully connected layer for the output
-        x = self.fc(x)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
 
         return x
 
@@ -312,14 +263,14 @@ class TI_TransformerWithEdges(torch.nn.Module):
         # Feature Transformation - Fully Connected Layer
         self.feature_fc = nn.Linear(num_features, embedding_dim)
 
-        # Graph Attention layers (without edge features) - Input
+        # Graph Attention (without edge features) - Input
         self.input_conv = GATConv(embedding_dim, GAT_dim, heads=heads, edge_dim=edge_attr_dim,
                                   concat=True)  # No edge_dim
 
         # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
         self.GATConv_layers = nn.ModuleList([
             GATConv(GAT_dim * heads, GAT_dim, heads=heads, edge_dim=edge_attr_dim, concat=True) for _ in
-            range(gat_layers)
+            range(gat_layers-1)
         ])
 
         # Decoder layers
@@ -328,10 +279,10 @@ class TI_TransformerWithEdges(torch.nn.Module):
             range(dec_layers)
         ])
 
-        # Global attention
-        self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(GAT_dim * heads, ff_hid_dim),
-                                                                 torch.nn.ReLU(),
-                                                                 torch.nn.Linear(ff_hid_dim, 1)))
+        #TODO - Functions better for SE (classification prefers max pooling - simpler problem)
+        # self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(GAT_dim * heads, ff_hid_dim),
+        #                                                         torch.nn.ReLU(),
+        #                                                         torch.nn.Linear(ff_hid_dim, 1)))
 
         self.fc1 = torch.nn.Linear(GAT_dim * heads, 2 * GAT_dim)
 
@@ -364,8 +315,8 @@ class TI_TransformerWithEdges(torch.nn.Module):
         # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
         x = x.squeeze(0)
 
-        x = self.attn_pool(x, batch)
-        #x = global_max_pool(x, batch)
+        #x = self.attn_pool(x, batch)
+        x = global_max_pool(x, batch)
 
         # Fully connected layer: Output the final classes
         x = self.fc1(x)
@@ -390,7 +341,7 @@ class SE_GATNoEdgeAttrs(torch.nn.Module):
         # Hidden Graph Attention Layers
         # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
         self.GATConv_layers = nn.ModuleList([
-            GATConv(GAT_dim * heads, GAT_dim, heads=heads, concat=True) for _ in range(gat_layers)
+            GATConv(GAT_dim * heads, GAT_dim, heads=heads, concat=True) for _ in range(gat_layers-1)
         ])
 
         # Fully connected layer for classification
@@ -430,7 +381,7 @@ class SE_GATWithEdgeAttr(torch.nn.Module):
         # Hidden Graph Attention Layers
         # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
         self.GATConv_layers = nn.ModuleList([
-            GATConv(GAT_dim * heads, GAT_dim, heads=heads, edge_dim=edge_attr_dim, concat=True) for _ in range(gat_layers)
+            GATConv(GAT_dim * heads, GAT_dim, heads=heads, edge_dim=edge_attr_dim, concat=True) for _ in range(gat_layers-1)
         ])
 
         # Fully connected layer for classification
@@ -477,7 +428,7 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
 
         # GATConv stacking for graph feature extraction
         self.gatconv_layers = nn.ModuleList([
-            GATConv(GATConv_dim * heads, GATConv_dim, heads=heads, concat=True) for _ in range(gat_layers)
+            GATConv(GATConv_dim * heads, GATConv_dim, heads=heads, concat=True) for _ in range(gat_layers-1)
         ])
 
         # Custom Transformer Decoder Layer
@@ -485,6 +436,7 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
             TransfromerDecoderLayer2(d_model=GATConv_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_decoder_layers)
         ])
 
+        #TODO - Functions better for SE (classification prefers max pooling - simpler problem)
         self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(GATConv_dim * heads, 2 * GATConv_dim),
                                                                  torch.nn.ReLU(),
                                                                  torch.nn.Linear(2 * GATConv_dim, 1)))
@@ -516,7 +468,7 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
         x = x.squeeze(0)
         # Apply global pooling: aggregate node-level features into graph-level features
         x = self.attn_pool(x, batch)
-        #x = global_mean_pool(x, batch)
+        #x = global_max_pool(x, batch)
 
         # Final fully connected layer for the output
         x = self.fc(x)
@@ -540,7 +492,7 @@ class SE_GATTransfomerOnlyDecoderWithEdges(nn.Module):
         # GATConv stacking for graph feature extraction
         self.gatconv_layers = nn.ModuleList([
             GATConv(GATConv_dim * heads, GATConv_dim, edge_attr_dim=edge_attr_dim, heads=heads, concat=True)
-            for _ in range(gat_layers)
+            for _ in range(gat_layers-1)
         ])
 
         # Custom Transformer Decoder Layer
@@ -586,6 +538,62 @@ class SE_GATTransfomerOnlyDecoderWithEdges(nn.Module):
 
         return x
 
+
+#TODO Not used
+
+
+# TODO TI GNN GCN - PMU_caseB or conventional
+class TI_GCNNoEdgeAttrs(torch.nn.Module):
+    def __init__(self, num_features, num_classes):
+        super(TI_GCNNoEdgeAttrs, self).__init__()
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Graph Attention layers (without edge features)
+        self.conv1 = GCNConv(num_features, 64)  # No edge_dim
+        self.conv2 = GCNConv(64, 16)  # No edge_dim
+        # self.conv3 = GATConv(32 * heads, 8, heads=heads, concat=True)
+        # self.conv4 = GATConv(8  * heads, 4, heads=heads, concat=True)
+        # self.conv4 = GATConv(16  * heads, 4, heads=heads, concat=True)
+
+        # self.fc1 = torch.nn.Linear(8*heads, 32)
+        # self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(16, 32), torch.nn.ReLU(), torch.nn.Linear(32, 1)))
+
+        self.fc1 = torch.nn.Linear(16, 32)
+        # self.fc2 = torch.nn.Linear(64, 32)
+
+        # Fully connected layer for classification
+        self.fc3 = torch.nn.Linear(32, num_classes)
+
+    def forward(self, data):
+        # If no node features exist, initialize dummy features
+        if data.x is None:
+            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
+
+        x, edge_index, mask, batch = data.x.to(self.device), data.edge_index.to(self.device), data.mask.to(
+            self.device), data.batch.to(self.device)
+
+        # First GAT layer
+        x = self.conv1(x=x, edge_index=edge_index)
+        x = F.leaky_relu(x)
+        # x = self.dropout(x)
+
+        # Second GAT layer
+        x = self.conv2(x=x, edge_index=edge_index)
+        x = F.leaky_relu(x)
+        # x = self.dropout(x)
+        # x = x.view(1, -1) # [1056, 16]
+        # Global mean pooling
+        # x = global_mean_pool(x, batch)
+
+        # x = self.attn_pool(x, batch)
+        x = global_mean_pool(x, batch)
+
+        x = self.fc1(x)
+        x = F.leaky_relu(x)
+
+        x = self.fc3(x)
+
+        return x
 
 
 

@@ -1228,19 +1228,28 @@ class Train_GNN_DSSE:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseA"
+    meterType = "PMU_caseB"
     if meterType == "conventional":
-        old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]
-        if dataset == "MESOGEIA":
+        if dataset == "IEEE33":
+            old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]
+        elif dataset == "MESOGEIA":
             old_PMUs = [94]
+        elif dataset == "95UKGD":
+            old_PMUs = [57, 73, 17]
     elif meterType == "PMU_caseB":
-        old_PMUs = [17, 27]
-        if dataset == "MESOGEIA":
+        if dataset == "IEEE33":
+            old_PMUs = [17, 27]
+        elif dataset == "MESOGEIA":
             old_PMUs = [127, 128, 124] #, 123, 127]
+        elif dataset == "95UKGD":
+            old_PMUs = [79]
     elif meterType == "PMU_caseA":
-        old_PMUs = [6, 33]
-        if dataset == "MESOGEIA":
+        if dataset == "IEEE33":
+            old_PMUs = [6, 33]
+        elif dataset == "MESOGEIA":
             old_PMUs = [130]
+        elif dataset == "95UKGD":
+            old_PMUs = [75]
 
     model    = "NN"
     PP       = "RF"
