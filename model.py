@@ -449,12 +449,17 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
         ])
 
         #TODO - Functions better for SE (classification prefers max pooling - simpler problem)
-        self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(2 * GATConv_dim * heads, 2 * GATConv_dim),
+        self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(2 * GATConv_dim * heads, 2 * GATConv_dim * heads // 2),
                                                                  torch.nn.ReLU(),
-                                                                 torch.nn.Linear(2 * GATConv_dim, 1)))
+                                                                 torch.nn.Linear(2 * GATConv_dim * heads // 2, 1)))
+
+        #TODO - Per node attention pooling
+        self.per_node_attn = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(num_nodes, num_nodes // 2),
+                                                                 torch.nn.ReLU(),
+                                                                 torch.nn.Linear(num_nodes // 2, 1)))
 
         # Fully connected layer for output (e.g., classification or regression)
-        self.fc = nn.Linear(2 * GATConv_dim * heads, output_dim)
+        self.fc = nn.Linear(2 * 2 * GATConv_dim * heads, output_dim)
 
     def forward(self, data):
         # Extract node features and graph structure
@@ -462,36 +467,59 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
 
         # Embedding node features if needed - input
         x = self.feature_fc(x)
+        print(f"X shape after feature FC: ", x.shape)
 
         # Input GATConv
         x = self.input_gat_conv(x, edge_index=edge_index)
-        #print("Shape after input conv: ", x.shape)
+        x = F.leaky_relu(x)
+        print("Shape after input conv: ", x.shape)
         # Local graph feature extraction, using graph attention layers
 
         layers=0
         for gat_conv in self.gatconv_layers:
             x = gat_conv(x, edge_index=edge_index)
             layers+=1
-            #print(f"Shape after input conv {str(layers)}: ", x.shape)
+            print(f"Shape after input conv {str(layers)}: ", x.shape)
             x = F.leaky_relu(x)
 
         # Projection layer
         x = self.projection_conv(x, edge_index=edge_index)
-        #print(f"Shape after projection conv: ", x.shape)
+        x = F.leaky_relu(x)
+
+        print(f"Shape after projection conv: ", x.shape)
 
         # Prepare for Transformer by adding a batch dimension (1, batch_size, features)
         x = x.unsqueeze(0)  # Shape: [1, batch_size, feature_dim]
+        print(f"X shape after unsqueeze: ", x.shape)
+
+
         # Global attention appliued through transformer
         for decoder in self.transformer_decoder:
             x = decoder(x, x)
+            print(f"X shape after decoder: ", x.shape)
+
         # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
         x = x.squeeze(0)
+        print(f"X shape after squeeze: ", x.shape)
+
         # Apply global pooling: aggregate node-level features into graph-level features
-        x = self.attn_pool(x, batch)
+        x1 = self.attn_pool(x, batch)
+        print(f"X shape after global attention pooling FC: ", x.shape)
+
+        x2 = self.per_node_attn(x, batch)
+        print(f"X shape after node attention pooling FC: ", x.shape)
+
+        x = torch.cat((x1, x2), dim=0)
+        print(f"Shape after global + node attention ")
+
         #x = global_mean_pool(x, batch)
 
         # Final fully connected layer for the output
         x = self.fc(x)
+        print(f"X shape output: ", x.shape)
+
+        import time
+        time.sleep(300)
 
         return x
 
