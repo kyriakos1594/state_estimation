@@ -294,11 +294,9 @@ class DSSE_BuildModel:
         model = Sequential()
 
         # Input Layer (66 inputs)
-        model.add(Dense(32, input_dim=input_dim, activation='linear'))
+        model.add(Dense(64, input_dim=input_dim, activation='linear'))
         #model.add(Dense(128, activation='linear'))
-        #model.add(Dense(128, activation='linear'))
-        #model.add(Dense(64, activation='linear'))
-        model.add(Dense(16, activation='linear'))
+        model.add(Dense(32, activation='linear'))
 
         # Output Layer (assuming 16 outputs, modify according to your use case)
         # For regression, we use 'linear' or no activation in the output layer
@@ -318,11 +316,10 @@ class DSSE_BuildModel:
         model = Sequential()
 
         # Input Layer (66 inputs)
-        model.add(Dense(32, input_dim=input_dim, activation='linear'))
+        model.add(Dense(64, input_dim=input_dim, activation='linear'))
         #model.add(Dense(128, activation='linear'))
-        #model.add(Dense(128, activation='linear'))
-        #model.add(Dense(64, activation='linear'))
-        model.add(Dense(16, activation='linear'))
+        model.add(Dense(32, activation='linear'))
+
 
         # Output Layer (assuming 16 outputs, modify according to your use case)
         # For regression, we use 'linear' or no activation in the output layer
@@ -476,15 +473,16 @@ class DSSE_Estimator_TrainProcess:
             #features =  []
             if self.meterType == "PMU_caseA":
                 #features = IEEE33_PMU_caseA_SE_features
-                #features = features
-                features = []
+                #features  = MESOGEIA
+                features  = UKGD95_PMU_caseA_SE_features
             elif self.meterType == "PMU_caseB":
                 #features = IEEE33_PMU_caseB_SE_features
-                features = MESOGEIA_PMU_caseB_SE_features
+                #features = MESOGEIA_PMU_caseB_SE_features
+                features  = UKGD95_PMU_caseB_SE_features
             elif self.meterType == "conventional":
                 #features = IEEE33_conventional_SE_features
-                features = MESOGEIA_conventional_SE_features
-
+                #features = MESOGEIA_conventional_SE_features
+                features  = UKGD95_conventional_SE_features
 
 
             print(features)
@@ -674,12 +672,14 @@ class DSSE_Estimator_TrainProcess:
         #branches = FS.execute()
         branches = []
         if self.meterType == "PMU_caseA":
-            branches = IEEE33_PMU_caseA_SE_features
+            #branches = IEEE33_PMU_caseA_SE_features
+            branches  = UKGD95_PMU_caseA_SE_features
         elif self.meterType == "PMU_caseB":
-            branches = IEEE33_PMU_caseB_SE_features
+            #branches = IEEE33_PMU_caseB_SE_features
+            branches  = UKGD95_PMU_caseB_SE_features
         elif self.meterType == "conventional":
-            branches = IEEE33_conventional_SE_features
-
+            #branches = IEEE33_conventional_SE_features
+            branches  = UKGD95_conventional_SE_features
 
         #TODO Train for magnitudes
         DSSE_GNN_PP = DSSE_GNN_Preprocess(meterType=self.meterType,
@@ -1076,31 +1076,28 @@ class Train_GNN_DSSE:
         if self.meterType == "PMU_caseA":
 
             #TODO Vanilla GATCONV
-            self.model = SE_GATWithEdgeAttr(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, gat_layers=7,
-                                            GAT_dim=8, heads=4).to(self.device)
+            #self.model = SE_GATWithEdgeAttr(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, gat_layers=4,
+            #                                GAT_dim=12, heads=6).to(self.device)
 
             #TODO Transformer based
             self.model = SE_GATTransfomerOnlyDecoderWithEdges(num_nodes=NUM_NODES, num_features=2,output_dim=NUM_NODES,
                                                               embedding_dim=4, heads=4, num_decoder_layers=1,
-                                                              edge_attr_dim=2, gat_layers=7, GATConv_dim=8,
-                                                              ff_hid_dim=24).to(self.device)
+                                                              edge_attr_dim=2, gat_layers=5, GATConv_dim=12,
+                                                              ff_hid_dim=48).to(self.device)
 
 
         elif self.meterType == "PMU_caseB":
             #TODO Vanilla GATConv
-            self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=4, gat_layers=3, GAT_dim=32).to(self.device)
+            self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=4, gat_layers=2, GAT_dim=8).to(self.device)
 
-            #self.model = GATTransfomerOnlyDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
-                    #                                  heads=4, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=16,
-                    #                                 ff_hid_dim=32).to(self.device)
-                    #self.model = GATTransformerEncoderDecoder(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
-                    #                                  heads=6, num_encoder_layers=1,num_decoder_layers=1,GATConv1_dim=64,GATConv2_dim=24,
-                    #                                  ff_hid_dim=24).to(self.device)
+            #self.model = SE_GATTransfomerOnlyDecoderNoEdges(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
+            #                                      heads=4, num_decoder_layers=1,gat_layers=5,GATConv_dim=12,
+            #                                      ff_hid_dim=48).to(self.device)
         elif self.meterType == "conventional":
-            #self.model = SE_GATNoEdgeAttrsNoMask(num_features=3,output_dim=NUM_NODES, heads=4).to(self.device)
+            #self.model = SE_GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=1, gat_layers=6, GAT_dim=2).to(self.device)
             self.model = SE_GATTransfomerOnlyDecoderNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=NUM_NODES,embedding_dim=4,
-                                                  heads=4, num_decoder_layers=1,gat_layers=6,GATConv_dim=8,
-                                                  ff_hid_dim=24).to(self.device)
+                                                  heads=2, num_decoder_layers=1,gat_layers=2,GATConv_dim=12,
+                                                  ff_hid_dim=64).to(self.device)
 
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
@@ -1228,7 +1225,7 @@ class Train_GNN_DSSE:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseB"
+    meterType = "conventional"
     if meterType == "conventional":
         if dataset == "IEEE33":
             old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]
@@ -1251,7 +1248,7 @@ if __name__ == "__main__":
         elif dataset == "95UKGD":
             old_PMUs = [75]
 
-    model    = "NN"
+    model    = "GNN"
     PP       = "RF"
     subPP    = "rfe"
 
