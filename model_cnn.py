@@ -344,8 +344,8 @@ class SE_GATNoEdgeAttrs(torch.nn.Module):
         ])
 
         # Fully connected layer for classification
-        self.fc1 = torch.nn.Linear(GAT_dim * heads, output_dim) #GAT_dim * heads, 10 * GAT_dim)
-        #self.fc2 = torch.nn.Linear(10 * GAT_dim, output_dim)
+        self.fc1 = torch.nn.Linear(GAT_dim * heads, 10 * GAT_dim) #GAT_dim * heads, 10 * GAT_dim)
+        self.fc2 = torch.nn.Linear(10 * GAT_dim, output_dim)
 
 
     def forward(self, data):
@@ -371,9 +371,9 @@ class SE_GATNoEdgeAttrs(torch.nn.Module):
 
         #x = x.flatten()
         #print("flatten", x.shape)
-        #x = self.fc1(x)
-        #x = F.relu(x)
         x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
 
         return x
 
@@ -442,15 +442,23 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
 
         # Custom Transformer Decoder Layer
         self.transformer_decoder = nn.ModuleList([
-            TransfromerDecoderLayer2(d_model=GATConv_dim * heads, nhead=heads//2, dim_feedforward=ff_hid_dim) for _ in range(num_decoder_layers)
+            TransfromerDecoderLayer2(d_model=GATConv_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(num_decoder_layers)
         ])
 
         #TODO - Functions better for SE (classification prefers max pooling - simpler problem)
-        #self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(GATConv_dim * heads, GATConv_dim * heads // 2),
-        #                                                         torch.nn.ReLU(),
-        #                                                         torch.nn.Linear(GATConv_dim * heads // 2, 1)))
-        self.fc = nn.Linear(GATConv_dim * heads, output_dim)
-        #self.output_fc = nn.Linear(output_dim, output_dim)
+        self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(GATConv_dim * heads, GATConv_dim * heads // 2),
+                                                                 torch.nn.ReLU(),
+                                                                 torch.nn.Linear(GATConv_dim * heads // 2, 1)))
+        self.per_node_cnn = None
+        self.per_node_cnn = nn.Conv1d(in_channels=GATConv_dim * heads, out_channels=1, kernel_size=1)
+
+        # Fully connected layer for output (e.g., classification or regression)
+        if self.per_node_cnn is None:
+            self.fc = nn.Linear(GATConv_dim * heads, output_dim)
+        else:
+            self.fc = nn.Linear(GATConv_dim * heads + num_nodes, output_dim)
+
+        self.output_fc = nn.Linear(output_dim, output_dim)
 
     def forward(self, data):
         # Extract node features and graph structure
@@ -467,6 +475,7 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
         x = self.input_gat_conv(x, edge_index=edge_index)
         x = F.leaky_relu(x)
         #print("Shape after input conv: ", x.shape)
+        # Local graph feature extraction, using graph attention layers
 
         layers=0
         for gat_conv in self.gatconv_layers:
@@ -485,20 +494,41 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
             #print("After transformer decoder: ", x.shape)
 
         # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
-        x = x.reshape(batch_size * self.num_nodes, -1)
+        x = x.reshape(1, self.num_nodes * batch_size, -1)
         #print(f"X shape after reshape 2: ", x.shape)
 
         # Apply global pooling: aggregate node-level features into graph-level features
-        #x_global = self.attn_pool(x, batch)
         x_global = global_mean_pool(x, batch)
-        #print(f"X shape input into FC: ", x_global.shape)
+        #print(x_global.shape)
+        #x_global = self.attn_pool(x, batch)
+        #print(x_global.shape)
+        #x_global = x_global.squeeze()
+        #print(x_global.shape)
+        #x_global = x_global.reshape(-1, 1)
+        print(f"After mean pooling: ", x_global.shape)
+        #print(f"X shape after global attention pooling FC: ", x_global.shape)
 
-        x = self.fc(x_global)
-        #x = F.leaky_relu(x)
+        # 🔄 Per-node 1D CNN-based reduction
+        print(f"Shape before CNN layer: ", x.shape)
+        x = x.permute(0, 2, 1)
+        print(f"Shape before first permutation: ", x.shape)
+        x_cnn = self.per_node_cnn(x)
+        print(f"Shape after CNN layer: ", x_cnn.shape)
+        x_cnn = x_cnn.permute(0, 2, 1)
+        x_cnn = x_cnn.reshape(-1, batch_size, self.num_nodes)
+        print(f"Shape after permute and reshaping: ", x_cnn.shape)
+        x_cnn = F.relu(x_cnn)
+        print(f"Shape after CNN: ", x_cnn.shape)
+
+        # Concatenate both representations
+        x = torch.cat((x_global, x_cnn), dim=-1)
+        print(f"X shape input into FC: ", x.shape)
+
+        x = self.fc(x)
+        x = F.leaky_relu(x)
         #import time
         #time.sleep(300)
-        #x = self.output_fc(x)
-        #print("output shape: ", x.shape)
+        x = self.output_fc(x)
         return x
 
 class SE_GATTransfomerOnlyDecoderWithEdges(nn.Module):
