@@ -185,35 +185,32 @@ class TI_TransformerNoEdges(torch.nn.Module):
         super(TI_TransformerNoEdges, self).__init__()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+        self.num_nodes = num_nodes
+
         # Node embedding layer (if needed, otherwise use raw features)
         self.node_embedding = nn.Embedding(num_features, embedding_dim)
         # Feature Transformation (if needed)
         self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
 
         # GAT Convolution Layers (Graph Attention) - Input
-        self.input_conv_layer = GATConv(embedding_dim, GATConv_dim, heads=heads, concat=True)
+        self.input_gat_conv = GATConv(embedding_dim, GATConv_dim, heads=heads, concat=True)
 
         # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
-        self.GATConv_layers = nn.ModuleList([
+        self.gatconv_layers = nn.ModuleList([
             GATConv(GATConv_dim * heads, GATConv_dim, heads=heads, concat=True) for _ in range(GATConv_layers)
         ])
 
         # Custom Transformer Decoder Layer
+        # Custom Transformer Decoder Layer
         self.transformer_decoder = nn.ModuleList([
-            TransfromerDecoderLayer2(d_model=GATConv_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim) for _ in range(dec_layers)
+            TransfromerDecoderLayer2(d_model=GATConv_dim * heads, nhead=heads//2, dim_feedforward=ff_hid_dim) for _ in range(dec_layers)
         ])
-
-        # Global attention mechanism, instead of max or mean pooling
-        #self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(GATConv_dim * heads, ff_hid_dim),
-        #                                                         torch.nn.ReLU(),
-        #                                                         torch.nn.Linear(ff_hid_dim, 1)))
 
         #self.attn_pool = GlobalAttention(in_channels)
 
         # Fully connected layer for output (e.g., classification or regression)
         # Final output layer
         self.fc = nn.Linear(GATConv_dim * heads, output_dim)
-        #self.fc2 = nn.Linear(2*GATConv_dim, output_dim)
 
     def forward(self, data):
         # Extract node features and graph structure
