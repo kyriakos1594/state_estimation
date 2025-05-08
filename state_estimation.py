@@ -1094,10 +1094,11 @@ class Train_GNN_DSSE:
             #                                      heads=4, num_decoder_layers=1,gat_layers=5,GATConv_dim=12,
             #                                      ff_hid_dim=48).to(self.device)
         elif self.meterType == "conventional":
-            self.model = SE_GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=4, gat_layers=4, GAT_dim=12).to(self.device)
-            #self.model = SE_GATTransfomerOnlyDecoderNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=NUM_NODES,embedding_dim=3,
-            #                                      heads=4, num_decoder_layers=1,gat_layers=4,GATConv_dim=12,
-            #                                     ff_hid_dim=48).to(self.device)
+            #self.model = SE_GATNoEdgeAttrs(num_features=3,output_dim=NUM_NODES, heads=4, gat_layers=4, GAT_dim=12).to(self.device)
+            self.model = SE_GATTransfomerOnlyDecoderNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=NUM_NODES,embedding_dim=3,
+                                                  heads=4, num_decoder_layers=1,gat_layers=2,GATConv_dim=12,
+                                                 ff_hid_dim=48).to(self.device)
+            torch.save(self.model.state_dict(), "T-based_GNN.h5")
 
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))

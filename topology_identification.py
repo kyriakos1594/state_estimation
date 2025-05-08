@@ -983,11 +983,11 @@ class TIPredictorTrainProcess:
                 Ib_features = IEEE33_PMU_caseA_TI_features
                 print("TI Feature Selection Order - Branches: ", Ib_features)
             elif self.meterType == "PMU_caseB":
-                Ib_features = IEEE33_PMU_caseB_TI_features
+                Ib_features = UKGD95_PMU_caseB_TI_features #IEEE33_PMU_caseB_TI_features
                 #Ib_features = Ib_features
                 print("TI Feature Selection Order - Nodes: ", Ib_features)
             elif self.meterType == "conventional":
-                Ib_features = IEEE33_conventional_TI_features
+                Ib_features = UKGD95_conventional_TI_features #IEEE33_conventional_TI_features
                 print("TI Feature Selection Order - Nodes: ", Ib_features)
             print("TI Feature Selection Order: ", Ib_features)
 
@@ -1448,16 +1448,16 @@ class TrainGNN_TI:
         elif self.meterType =="PMU_caseB":
             #self.model          = TI_GATNoEdgeAttrs(num_features=4, num_classes=self.num_classes, heads=4,
             #                                        num_gat_layers=2, gat_dim=16).to(self.device)
-            self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=4,output_dim=15,
+            self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=4,output_dim=8,
                                                         GATConv_layers=3, GATConv_dim=8, embedding_dim=4, heads=4,
                                                         dec_layers=1, ff_hid_dim=24).to(self.device)
 
         elif self.meterType == "conventional":
             #self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=self.num_classes, heads=4,
             #                                        num_gat_layers=2, gat_dim=16).to(self.device)
-            self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=15,
-                                                        GATConv_layers=3, GATConv_dim=8, embedding_dim=4, heads=4,
-                                                        dec_layers=2, ff_hid_dim=24).to(self.device)
+            self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=8,
+                                                        GATConv_layers=2, GATConv_dim=12, embedding_dim=4, heads=4,
+                                                        dec_layers=1, ff_hid_dim=24).to(self.device)
 
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
@@ -1688,10 +1688,10 @@ class TrainNN_TI:
 if __name__ == "__main__":
 
     #meterType = "PMU_caseA"
-    meterType = "PMU_caseB"
-    #meterType = "conventional"
+    #meterType = "PMU_caseB"
+    meterType = "conventional"
 
-    model = "NN"
+    model = "GNN"
     PP    = "RF"
     subPP = "rfe"
     threshold = 0.95

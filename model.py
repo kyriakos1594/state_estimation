@@ -197,7 +197,7 @@ class TI_TransformerNoEdges(torch.nn.Module):
 
         # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
         self.gatconv_layers = nn.ModuleList([
-            GATConv(GATConv_dim * heads, GATConv_dim, heads=heads, concat=True) for _ in range(GATConv_layers)
+            GATConv(GATConv_dim * heads, GATConv_dim, heads=heads, concat=True) for _ in range(GATConv_layers-1)
         ])
 
         # Custom Transformer Decoder Layer
