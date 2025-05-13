@@ -38,6 +38,7 @@ from model import (TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs, TI_
                    TI_GCNNoEdgeAttrs,  TI_GCNNoEdgeAttrs, TI_TransformerWithEdges)
 from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
 from IEEE_datasets.IEEE33 import config_dict
+from outlier_classes import OutlierInjector, IF_OutlierDetection, KNNImputerMeasurements
 
 # Set the device globally
 np.set_printoptions(threshold=np.inf)
@@ -217,14 +218,10 @@ class Preprocess:
         inputs = np.load(PMU_caseA_input)
         outputs = np.load(PMU_caseA_output)
 
-        #print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
-        #print("Label size: ", len(labels))
-
         # Reshape the labels to a 2D array
         outputs, labels = outputs[:, :-1], outputs[:, -1]
 
         labels_reshaped = list(labels)
-
 
         ohe_labels = self.custom_one_hot_encode(labels_reshaped)
 
@@ -248,14 +245,10 @@ class Preprocess:
         inputs = np.load(PMU_caseB_input)
         outputs = np.load(PMU_caseB_output)
 
-        #print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
-        #print("Label size: ", len(labels))
-
         # Reshape the labels to a 2D array
         outputs, labels = outputs[:, :-1], outputs[:, -1]
 
         labels_reshaped = list(labels)
-
 
         ohe_labels = self.custom_one_hot_encode(labels_reshaped)
 
@@ -278,9 +271,6 @@ class Preprocess:
 
         inputs = np.load(conventional_input)
         outputs = np.load(conventional_output)
-
-        #print("Input size: ", len(inputs), "Sample size: ", len(inputs[0]))
-        #print("Label size: ", len(labels))
 
         # Reshape the labels to a 2D array
         outputs, labels = outputs[:, :-1], outputs[:, -1]
@@ -341,17 +331,57 @@ class Preprocess:
         # Second split: train and validation
         X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.20, random_state=42)  # 0.25 x 0.8 = 0.2
 
-        scaler   = StandardScaler()
-        X_train  = scaler.fit_transform(X_train)
-        X_val    = scaler.transform(X_val)
-        X_test   = scaler.transform(X_test)
+        meter = 75
 
-        np.save(X_train_file, X_train)
-        np.save(y_train_file, y_train)
-        np.save(X_val_file, X_val)
-        np.save(y_val_file, y_val)
-        np.save(X_test_file, X_test)
-        np.save(y_test_file, y_test)
+        if type == "PMU_caseA":
+
+            #TODO Inject outliers per meter type in X_train, X_val, X_test
+            # Outlier injection into the datasets
+            X_test_out_inj = OutlierInjector(X_test)
+            X_test_outlier, X_train_outlier_index_dict = X_test_out_inj.inject_outliers_PMUcaseA(X_test, meter)
+
+            iso_detector = IF_OutlierDetection(X_test_outlier, X_train_outlier_index_dict, meter)
+            iso_detector.train_and_evaluate_isolation_forest_PMU_caseA(X_test_outlier, X_test_outlier)
+            per_edge_outliers = iso_detector.predict_outliers_PMU_caseA(X_test_outlier)
+
+            # KNN imputer on imputer values
+            knn_imp = KNNImputerMeasurements(X_test_outlier, per_edge_outliers, meter)
+            knn_imp.train_KNNImputers_PMU_caseA(X_test_outlier)
+            X_test_imputed = knn_imp.impute_valeus_PMU_caseA(compare_np=X_test)
+
+
+            #TODO Identify outliers per meter type
+
+            #TODO Impute values with KNNImputer
+
+            #TODO Divide below code into 2 separate
+            scaler          = StandardScaler()
+            X_train         = scaler.fit_transform(X_train)
+            X_val           = scaler.transform(X_val)
+            X_test          = scaler.transform(X_test)
+            X_test_outlier  = scaler.transform(X_test_outlier)
+            X_test_imputed  = scaler.transform(X_test_imputed)
+
+            np.save(X_train_file, X_train)
+            np.save(y_train_file, y_train)
+            np.save(X_val_file, X_val)
+            np.save(y_val_file, y_val)
+            np.save(X_test_file, X_test)
+            np.save(X_test_PMU_caseA_outliers, X_test_outlier)
+            np.save(X_test_PMU_caseA_imputed, X_test_imputed)
+
+        else:
+            scaler   = StandardScaler()
+            X_train  = scaler.fit_transform(X_train)
+            X_val    = scaler.transform(X_val)
+            X_test   = scaler.transform(X_test)
+
+            np.save(X_train_file, X_train)
+            np.save(y_train_file, y_train)
+            np.save(X_val_file, X_val)
+            np.save(y_val_file, y_val)
+            np.save(X_test_file, X_test)
+            np.save(y_test_file, y_test)
 
     def preprocess_data(self, type):
 
@@ -404,7 +434,7 @@ class Preprocess:
 
         if type == "PMU_caseA":
             # TODO Case A - Store then read for each measurement Vm, Va, Im, Ia
-            #self.store_data_PMU_caseA()
+            self.store_data_PMU_caseA()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseA")
         elif type == "PMU_caseB":
             # TODO Case B - Store then read for each measurement Vm, Va, Iinjm, Iinja
@@ -1689,7 +1719,7 @@ if __name__ == "__main__":
 
     #meterType = "PMU_caseA"
     #meterType = "PMU_caseB"
-    meterType = "conventional"
+    meterType = "PMU_caseA"
 
     model = "GNN"
     PP    = "RF"
