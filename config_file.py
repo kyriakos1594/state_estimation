@@ -7,7 +7,7 @@ dataset = "95UKGD"
 #meterType = "conventional"
 #GLOBAL_BRANCH_LIST = [6]
 #NUM_TOPOLOGIES = 1 #15
-#NUM_SIMULATIONS = 7787
+NUM_SIMULATIONS = 7787
 EXISTING_METER_BRANCHES = []
 EXISTING_METER_NODES    = []
 RAW_FILENAME    = f"datasets/{dataset}.csv"
@@ -405,15 +405,18 @@ else:
     sys.exit(0)
 
 #TODO Data files for PMU case A
-PMU_caseA_dataset = f"datasets/{dataset}PMU_caseA_dataset.csv"
-PMU_caseA_input   = f"datasets/{dataset}PMU_caseA_input.npy"
-PMU_caseA_output  = f"datasets/{dataset}PMU_caseA_output.npy"
-X_train_PMU_caseA = f"datasets/{dataset}_PMU_caseA_X_train.npy"
-y_train_PMU_caseA = f"datasets/{dataset}_PMU_caseA_y_train.npy"
-X_val_PMU_caseA   = f"datasets/{dataset}_PMU_caseA_X_val.npy"
-y_val_PMU_caseA   = f"datasets/{dataset}_PMU_caseA_y_val.npy"
-X_test_PMU_caseA  = f"datasets/{dataset}_PMU_caseA_X_test.npy"
-y_test_PMU_caseA  = f"datasets/{dataset}_PMU_caseA_y_test.npy"
+PMU_caseA_dataset           = f"datasets/{dataset}PMU_caseA_dataset.csv"
+PMU_caseA_input             = f"datasets/{dataset}PMU_caseA_input.npy"
+PMU_caseA_output            = f"datasets/{dataset}PMU_caseA_output.npy"
+X_train_PMU_caseA           = f"datasets/{dataset}_PMU_caseA_X_train.npy"
+y_train_PMU_caseA           = f"datasets/{dataset}_PMU_caseA_y_train.npy"
+X_val_PMU_caseA             = f"datasets/{dataset}_PMU_caseA_X_val.npy"
+y_val_PMU_caseA             = f"datasets/{dataset}_PMU_caseA_y_val.npy"
+X_test_PMU_caseA            = f"datasets/{dataset}_PMU_caseA_X_test.npy"
+X_test_PMU_caseA_outliers   = f"datasets/{dataset}_PMU_caseA_X_test_outliers.npy"
+X_test_PMU_caseA_imputed    = f"datasets/{dataset}_PMU_caseA_X_test_imputed.npy"
+y_test_PMU_caseA            = f"datasets/{dataset}_PMU_caseA_y_test.npy"
+y_test_PMU_caseA_imputed    = f"datasets/{dataset}_PMU_caseA_y_test_imputed.npy"
 
 #TODO Data files for PMU case B
 PMU_caseB_dataset = f"datasets/{dataset}PMU_caseB_dataset.csv"

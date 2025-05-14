@@ -62,6 +62,7 @@ class Preprocess:
         labels = []
         for topology in range(1, self.topologies + 1):
             for simulation in range(1, self.simulations + 1):
+                print("Topology: ", topology, "Simulation: ", simulation)
                 # TODO Input
                 Vm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
                 Va_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
@@ -337,22 +338,26 @@ class Preprocess:
 
             #TODO Inject outliers per meter type in X_train, X_val, X_test
             # Outlier injection into the datasets
+            X_train_out_inj = OutlierInjector(X_train)
+            X_train_outlier, X_train_outlier_index_dict = X_train_out_inj.inject_outliers_PMUcaseA([meter], prob_m=0.4,prob_a=0.4)
             X_test_out_inj = OutlierInjector(X_test)
-            X_test_outlier, X_train_outlier_index_dict = X_test_out_inj.inject_outliers_PMUcaseA(X_test, meter)
+            X_test_outlier, X_test_outlier_index_dict = X_test_out_inj.inject_outliers_PMUcaseA([meter], prob_m=0.4, prob_a=0.4)
 
-            iso_detector = IF_OutlierDetection(X_test_outlier, X_train_outlier_index_dict, meter)
-            iso_detector.train_and_evaluate_isolation_forest_PMU_caseA(X_test_outlier, X_test_outlier)
-            per_edge_outliers = iso_detector.predict_outliers_PMU_caseA(X_test_outlier)
-
-            # KNN imputer on imputer values
-            knn_imp = KNNImputerMeasurements(X_test_outlier, per_edge_outliers, meter)
-            knn_imp.train_KNNImputers_PMU_caseA(X_test_outlier)
-            X_test_imputed = knn_imp.impute_valeus_PMU_caseA(compare_np=X_test)
-
+            X_old = X_test.copy()
 
             #TODO Identify outliers per meter type
+            iso_detector = IF_OutlierDetection(meter)
+            iso_detector.train_isolation_forest_PMU_caseA(X_train_outlier)
+            per_edge_outliers = iso_detector.predict_outliers_PMU_caseA(X_test_outlier, X_test_outlier_index_dict)
 
             #TODO Impute values with KNNImputer
+            knn_imp = KNNImputerMeasurements(meter)
+            knn_imp.train_KNNImputers_PMU_caseA(X_train_outlier, X_train_outlier_index_dict)
+            X_test_imputed = knn_imp.impute_values_PMU_caseA(X_test_outlier, X_test_outlier_index_dict, compare_np=X_old)
+
+            #TODO From X_imputed and t_test, we need to remove the indices of all PMU measurements wrong
+            X_test_imputed = X_test_imputed[~np.isin(np.arange(len(X_test_imputed)), per_edge_outliers["ALL"])]
+            y_test_imputed = y_test[~np.isin(np.arange(len(y_test)), per_edge_outliers["ALL"])]
 
             #TODO Divide below code into 2 separate
             scaler          = StandardScaler()
@@ -369,6 +374,9 @@ class Preprocess:
             np.save(X_test_file, X_test)
             np.save(X_test_PMU_caseA_outliers, X_test_outlier)
             np.save(X_test_PMU_caseA_imputed, X_test_imputed)
+            np.save(y_test_file, y_test_imputed)
+
+            print(X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test_outlier.shape, X_test_imputed.shape, y_test_imputed.shape)
 
         else:
             scaler   = StandardScaler()
