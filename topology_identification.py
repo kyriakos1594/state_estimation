@@ -397,12 +397,15 @@ class Preprocess:
 
             X_train = np.load(X_train_PMU_caseA)
             y_train = np.load(y_train_PMU_caseA)
-
             X_val = np.load(X_val_PMU_caseA)
             y_val = np.load(y_val_PMU_caseA)
-
             X_test = np.load(X_test_PMU_caseA)
             y_test = np.load(y_test_PMU_caseA)
+
+            #TODO Read outlier datasets
+            X_test_outliers = np.load(X_test_PMU_caseA_outliers)
+            X_test_imputed  = np.load(X_test_PMU_caseA_imputed)
+            y_test_imputed  = np.load(y_test_PMU_caseA_imputed)
 
         elif type == "PMU_caseB":
             X_train = np.load(X_train_PMU_caseB)
@@ -424,7 +427,6 @@ class Preprocess:
             print("Please enter known meter Type")
             sys.exit(0)
 
-
         #TODO Divide SE/TI output
         y_train_outputs = y_train[:, :2 * NUM_NODES]
         y_train_labels = y_train[:, 2 * NUM_NODES:]
@@ -435,7 +437,17 @@ class Preprocess:
         y_test_outputs = y_test[:, :2 * NUM_NODES]
         y_test_labels = y_test[:, 2 * NUM_NODES:]
 
-        return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels
+        if meterType == "PMU_caseA":
+            y_test_imputed_outputs = y_test_imputed[:, :2 * NUM_NODES]
+            y_test_imputed_labels = y_test_imputed[:, 2 * NUM_NODES:]
+
+
+        if meterType == "PMU_caseA":
+            return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs,\
+                y_test_labels, X_test_outliers, y_test_imputed_outputs, y_test_imputed_labels
+        else:
+            return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
+                y_test_labels
 
 
     def preprocess_meter_type(self, type):
@@ -443,7 +455,8 @@ class Preprocess:
         if type == "PMU_caseA":
             # TODO Case A - Store then read for each measurement Vm, Va, Im, Ia
             self.store_data_PMU_caseA()
-            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseA")
+            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
+                y_test_labels, X_test_outliers, y_test_imputed_outputs, y_test_imputed_labels = self.preprocess_data("PMU_caseA")
         elif type == "PMU_caseB":
             # TODO Case B - Store then read for each measurement Vm, Va, Iinjm, Iinja
             #self.store_data_PMU_caseB()
@@ -455,8 +468,12 @@ class Preprocess:
         else:
             print("Please enter known meter type")
             sys.exit(0)
-
-        return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels
+        if type == "PMU_caseA":
+            return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
+                y_test_labels, X_test_outliers, y_test_imputed_outputs, y_test_imputed_labels
+        else:
+            return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
+                y_test_labels, None, None, None
 
 class BuildModel:
 
@@ -524,10 +541,10 @@ class BuildModel:
 
 class TrainModel:
 
-    def __init__(self, model, X_train, y_train, X_val, y_val, X_test, y_test):
+    def __init__(self, model, X_train, y_train, X_val, y_val):
 
         self.model = model
-        self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test = X_train, y_train, X_val, y_val, X_test, y_test
+        self.X_train, self.y_train, self.X_val, self.y_val, = X_train, y_train, X_val, y_val
 
     def train_model(self):
 
@@ -565,17 +582,13 @@ class TrainModel:
 
 class PreProcFS:
 
-    def __init__(self, meterType, Preproc_model, submethod, X_train, y_train, X_val, y_val, X_test, y_test):
+    def __init__(self, meterType, Preproc_model, submethod, X_train, y_train):
 
         self.meterType          = meterType
         self.Preproc_model      = Preproc_model
         self.submethod  = submethod
         self.X_train    = X_train
         self.y_train    = y_train
-        self.X_val      = X_val
-        self.y_val      = y_val
-        self.X_test     = X_test
-        self.y_test     = y_test
 
     def execute_rfe_rf_PMU_caseA(self):
 
@@ -872,12 +885,14 @@ class PreProcFS:
 
 class TIPredictorTrainProcess:
 
-    def __init__(self, meterType, threshold, model, X_train, y_train, X_val, y_val, X_test, y_test, FS="RF", method="sum", iterative_fs=False):
+    def __init__(self, meterType, threshold, model, X_train, y_train, X_val, y_val, X_test, y_test, FS="RF",
+                 method="sum", iterative_fs=False, X_test_outliers=None, X_test_imputed=None, y_test_imputed=None):
 
         self.meterType = meterType
         self.threshold = threshold
         self.model = model
         self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test = X_train, y_train, X_val, y_val, X_test, y_test
+        self.X_test_outliers, self.X_test_imputed, self.y_test_imputed = X_test_outliers, X_test_imputed, y_test_imputed
         if self.meterType == "PMU_caseA":
             self.num_features = 2
         elif self.meterType == "PMU_caseB":
@@ -917,18 +932,18 @@ class TIPredictorTrainProcess:
 
         if not self.iterative_fs:
             print(self.X_train.shape)
-            FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
-            features = FS.execute()
+            FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train)
+            #features = FS.execute()
             if self.meterType == "PMU_caseA":
-                #features = IEEE33_PMU_caseA_TI_features
+                features = IEEE33_PMU_caseA_TI_features
                 features = features
                 print("TI Feature Selection Order - Branches: ", features)
             elif self.meterType == "PMU_caseB":
-                #features = IEEE33_PMU_caseB_TI_features
+                features = IEEE33_PMU_caseB_TI_features
                 features = features
                 print("TI Feature Selection Order - Nodes: ", features)
             elif self.meterType == "conventional":
-                #features = IEEE33_conventional_TI_features
+                features = IEEE33_conventional_TI_features
                 features = features
                 print("TI Feature Selection Order - Nodes: ", features)
 
@@ -975,7 +990,7 @@ class TIPredictorTrainProcess:
                     input_dim = len(all_indices)
                     self.model = buildModel.build_model(input_dim)
                     print(X_train.shape, self.y_train.shape)
-                    trainModel = TrainModel(self.model, X_train, self.y_train, X_val, self.y_val, X_test, self.y_test)
+                    trainModel = TrainModel(self.model, X_train, self.y_train, X_val, self.y_val)
                     trainModel.train_model()
                     # Evaluate the model on the test data
                     test_loss, test_accuracy = self.model.evaluate(X_test, self.y_test, verbose=0)
@@ -1013,7 +1028,7 @@ class TIPredictorTrainProcess:
     def execute_GNN(self):
 
         if not self.iterative_fs:
-            FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test)
+            FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train)
             #Ib_features = FS.execute()
             #Ib_features = GLOBAL_BRANCH_LIST
             Ib_features = []
@@ -1047,22 +1062,31 @@ class TIPredictorTrainProcess:
                 X_test_TI = self.X_test
                 y_test_labels = self.y_test
 
+                X_test_outliers = self.X_test_outliers
+                X_test_imputed  = self.X_test_imputed
+                y_test_imputed  = self.y_test_imputed
+
+
                 print("EDGE Indices: ", used_feature_indices)
-                GTIP = GraphTIPreprocess_IV(self.meterType, used_feature_indices, X_train_TI, y_train_labels, X_val_TI, y_val_labels, X_test_TI, y_test_labels)
+                GTIP = GraphTIPreprocess_IV(self.meterType, used_feature_indices, X_train_TI, y_train_labels, X_val_TI,
+                                            y_val_labels, X_test_TI, y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed)
 
                 if self.meterType == "PMU_caseA":
-                    edges, train_loader, validation_loader, test_loader = GTIP.generate_dataset_TI_GNN_PMU_caseA()
+                    edges, train_loader, validation_loader, test_loader, test_outliers_loader, \
+                        test_imputed_loader = GTIP.generate_dataset_TI_GNN_PMU_caseA()
                     print(train_loader)
-                    Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader, validation_loader, test_loader)
+                    Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader,
+                                               validation_loader, test_loader, test_outliers_loader, test_imputed_loader)
                     acc = Train_GNN_TI.evaluate()
                 elif self.meterType == "PMU_caseB":
                     edges, train_loader, validation_loader, test_loader = GTIP.generate_dataset_TI_GNN_PMU_caseB()
-                    Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader, validation_loader, test_loader)
+                    Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader,
+                                               validation_loader, test_loader, None, None)
                     acc = Train_GNN_TI.evaluate()
                 elif self.meterType == "conventional":
                     edges, train_loader, validation_loader, test_loader = GTIP.generate_dataset_TI_GNN_conventional()
                     Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader,
-                                               validation_loader, test_loader)
+                                               validation_loader, test_loader, None, None)
                     acc = Train_GNN_TI.evaluate()
 
                 filename = "results/" + "TI___MODEL___GNN_simple___" + "PREPROCESSING_" + str(FS.Preproc_model) + "___SUBMETHOD___" + str(FS.submethod) + "_results.txt"
@@ -1086,61 +1110,10 @@ class TIPredictorTrainProcess:
             # Return branch index list (i)
             return self.execute_GNN()
 
-class GCNNoEdge(torch.nn.Module):
-    def __init__(self, num_features, num_classes):
-        super(GCNNoEdge, self).__init__()
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        # Graph Convolution layers
-        self.conv1 = GCNConv(num_features, 128)
-        self.conv2 = GCNConv(128, 64)
-        self.conv3 = GCNConv(64, 32)
-        self.conv4 = GCNConv(32, 16)
-
-        # Dropout for regularization
-        self.dropout = torch.nn.Dropout(0.3)
-
-        # Fully connected layer for classification
-        self.fc = Linear(16, num_classes)
-
-    def forward(self, data):
-        # If no node features exist, initialize dummy features
-        if data.x is None:
-            data.x = torch.zeros((data.num_nodes, 1), dtype=torch.float)
-
-        x, edge_index, batch = data.x.to(self.device), data.edge_index.to(self.device), data.batch.to(self.device)
-
-        # First GCN layer
-        x = self.conv1(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Second GCN layer
-        x = self.conv2(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Third GCN layer
-        x = self.conv3(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Fourth GCN layer
-        x = self.conv4(x, edge_index)
-        x = F.relu(x)
-        x = self.dropout(x)
-
-        # Global mean pooling
-        x = global_mean_pool(x, batch)
-
-        # Fully connected layer for classification
-        x = self.fc(x)
-
-        return F.log_softmax(x, dim=1)
-
 class GraphTIPreprocess_IV:
 
-    def __init__(self, meterType, selected_edges, X_train, y_train, X_val, y_val, X_test, y_test):
+    def __init__(self, meterType, selected_edges, X_train, y_train, X_val, y_val, X_test, y_test,
+                 X_test_outliers=None, X_test_imputed=None, y_test_imputed=None):
 
         self.meterType             = meterType
         self.branch_data           = branch_data
@@ -1152,6 +1125,9 @@ class GraphTIPreprocess_IV:
         self.y_val                 = y_val
         self.X_test                = X_test
         self.y_test                = y_test
+        self.X_test_outliers       = X_test_outliers
+        self.X_test_imputed        = X_test_imputed
+        self.y_test_imputed        = y_test_imputed
 
     def define_graph(self):
         # Complete edge_index for all branches (35 edges in total)
@@ -1291,6 +1267,9 @@ class GraphTIPreprocess_IV:
         train_edge_data, train_edge_mask, train_node_data, train_node_mask = self.preprocess_data_PMU_caseA(self.X_train, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
         val_edge_data, val_edge_mask, val_node_data, val_node_mask   = self.preprocess_data_PMU_caseA(self.X_val, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
         test_edge_data, test_edge_mask, test_node_data, test_node_mask  = self.preprocess_data_PMU_caseA(self.X_test, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
+        test_edge_outlier_data, test_edge_outlier_mask, test_node_outlier_data, test_node_outlier_mask  = self.preprocess_data_PMU_caseA(self.X_test_outliers, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
+        test_edge_imputed_data, test_edge_imputed_mask, test_node_imputed_data, test_node_imputed_mask  = self.preprocess_data_PMU_caseA(self.X_test_imputed, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
+
 
         #print("X train shape: ", self.X_train.shape)
         #print("X val shape: ", self.X_val.shape)
@@ -1342,7 +1321,36 @@ class GraphTIPreprocess_IV:
 
         self.test_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
-        return [edge_index, self.train_loader, self.val_loader, self.test_loader]
+        test_outlier_data = []
+        for i in range(self.X_test.shape[0]):
+            tmp_edge_attr = torch.tensor(test_edge_outlier_data[i].reshape(-1, num_features_edge), dtype=torch.float)
+            tmp_edge_mask = torch.tensor(test_edge_outlier_mask[i].reshape(-1, num_features_edge), dtype=torch.float)
+
+            tmp_node_attr = torch.tensor(test_node_outlier_data[i].reshape(-1, num_features_node), dtype=torch.float)
+            tmp_node_mask = torch.tensor(test_node_outlier_mask[i].reshape(-1, num_features_node), dtype=torch.float)
+
+            label = torch.tensor(self.y_test[i, :], dtype=torch.float)
+            # print(edge_index, edge_attr, mask, label)
+            test_outlier_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
+
+        self.test_outlier_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
+
+        test_imputed_data = []
+        for i in range(self.X_test.shape[0]):
+            tmp_edge_attr = torch.tensor(test_edge_imputed_data[i].reshape(-1, num_features_edge), dtype=torch.float)
+            tmp_edge_mask = torch.tensor(test_edge_imputed_mask[i].reshape(-1, num_features_edge), dtype=torch.float)
+
+            tmp_node_attr = torch.tensor(test_node_imputed_data[i].reshape(-1, num_features_node), dtype=torch.float)
+            tmp_node_mask = torch.tensor(test_node_imputed_mask[i].reshape(-1, num_features_node), dtype=torch.float)
+
+            label = torch.tensor(self.y_test[i, :], dtype=torch.float)
+            # print(edge_index, edge_attr, mask, label)
+            test_imputed_data.append(
+                Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
+
+        self.test_imputed_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
+
+        return [edge_index, self.train_loader, self.val_loader, self.test_loader, self.test_outlier_loader, self.test_imputed_loader]
 
     def generate_dataset_TI_GNN_PMU_caseB(self):
 
@@ -1399,7 +1407,7 @@ class GraphTIPreprocess_IV:
 
         self.test_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
-        return [edge_index, self.train_loader, self.val_loader, self.test_loader]
+        return [edge_index, self.train_loader, self.val_loader, self.test_loader, None, None]
 
     def generate_dataset_TI_GNN_conventional(self):
 
@@ -1466,11 +1474,12 @@ class GraphTIPreprocess_IV:
 
         self.test_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
-        return [edge_index, self.train_loader, self.val_loader, self.test_loader]
+        return [edge_index, self.train_loader, self.val_loader, self.test_loader, None, None]
 
 class TrainGNN_TI:
 
-    def __init__(self, meterType, model, used_branches, train_loader, validation_loader, test_loader):
+    def __init__(self, meterType, model, used_branches, train_loader, validation_loader, test_loader,
+                 test_outlier_loader=None, test_imputed_loader=None):
         self.meterType          = meterType
         self.model              = model
         self.used_branches      = used_branches
@@ -1500,11 +1509,13 @@ class TrainGNN_TI:
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
 
-        self.optimizer          = optim.Adam(self.model.parameters(), lr=0.001)
-        self.criterion          = nn.CrossEntropyLoss()
-        self.train_loader       = train_loader
-        self.validation_loader  = validation_loader
-        self.test_loader        = test_loader
+        self.optimizer           = optim.Adam(self.model.parameters(), lr=0.001)
+        self.criterion           = nn.CrossEntropyLoss()
+        self.train_loader        = train_loader
+        self.validation_loader   = validation_loader
+        self.test_loader         = test_loader
+        self.test_outlier_loader = test_outlier_loader
+        self.test_imputed_loader = test_imputed_loader
 
         # Initialize the learning rate scheduler
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', patience=20, factor=0.5, verbose=True)
@@ -1610,6 +1621,56 @@ class TrainGNN_TI:
         # Calculate accuracy as the proportion of correct predictions
         accuracy = correct_predictions / total_samples
         print(f"Test Accuracy: {accuracy:.4f}")
+
+        if self.test_outlier_loader is not None:
+            correct_predictions = 0
+            total_samples = 0
+            for batch_test in self.test_outlier_loader:
+                batch_test = batch_test.to(self.device)
+
+                # Forward pass
+                out_test = self.model(batch_test)
+
+                # Flatten outputs and true labels
+                out_flat = out_test.view(-1, self.num_classes)
+                y_flat = batch_test.y.view(-1, self.num_classes)
+
+                # Get predicted class by selecting the index of the maximum logit for each sample
+                preds = out_flat.argmax(dim=1)
+                true_labels = y_flat.argmax(dim=1)
+
+                # Calculate the number of correct predictions
+                correct_predictions += (preds == true_labels).sum().item()
+                total_samples += y_flat.size(0)
+
+            # Calculate accuracy as the proportion of correct predictions
+            accuracy = correct_predictions / total_samples
+            print(f"Test Accuracy: {accuracy:.4f}")
+
+        if self.test_imputed_loader is not None:
+            correct_predictions = 0
+            total_samples = 0
+            for batch_test in self.test_imputed_loader:
+                batch_test = batch_test.to(self.device)
+
+                # Forward pass
+                out_test = self.model(batch_test)
+
+                # Flatten outputs and true labels
+                out_flat = out_test.view(-1, self.num_classes)
+                y_flat = batch_test.y.view(-1, self.num_classes)
+
+                # Get predicted class by selecting the index of the maximum logit for each sample
+                preds = out_flat.argmax(dim=1)
+                true_labels = y_flat.argmax(dim=1)
+
+                # Calculate the number of correct predictions
+                correct_predictions += (preds == true_labels).sum().item()
+                total_samples += y_flat.size(0)
+
+            # Calculate accuracy as the proportion of correct predictions
+            accuracy = correct_predictions / total_samples
+            print(f"Test Accuracy: {accuracy:.4f}")
 
         return accuracy
 
@@ -1736,7 +1797,9 @@ if __name__ == "__main__":
 
     PreProc = Preprocess()
     X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = PreProc.preprocess_meter_type(meterType)
-    TI_PTP = TIPredictorTrainProcess(meterType, threshold, model, X_train, y_train_labels, X_val, y_val_labels, X_test, y_test_labels, PP, subPP)
+    TI_PTP = TIPredictorTrainProcess(meterType, threshold, model, X_train, y_train_labels,
+                                     X_val, y_val_labels, X_test, y_test_labels, PP, subPP,
+                                     )
     TI_PTP.execute()
 
 
