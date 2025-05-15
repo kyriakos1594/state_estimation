@@ -460,19 +460,19 @@ class Preprocess:
 
         if meterType == "PMU_caseA":
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs,\
-                y_test_labels, X_test_outliers, y_test_imputed_outputs, y_test_imputed_labels
+                y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels
         else:
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
-                y_test_labels
+                y_test_labels, None, None, None, None
 
 
     def preprocess_meter_type(self, type):
 
         if type == "PMU_caseA":
             # TODO Case A - Store then read for each measurement Vm, Va, Im, Ia
-            self.store_data_PMU_caseA()
+            #self.store_data_PMU_caseA()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
-                y_test_labels, X_test_outliers, y_test_imputed_outputs, y_test_imputed_labels = self.preprocess_data("PMU_caseA")
+                y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels = self.preprocess_data("PMU_caseA")
         elif type == "PMU_caseB":
             # TODO Case B - Store then read for each measurement Vm, Va, Iinjm, Iinja
             #self.store_data_PMU_caseB()
@@ -484,12 +484,13 @@ class Preprocess:
         else:
             print("Please enter known meter type")
             sys.exit(0)
+
         if type == "PMU_caseA":
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
-                y_test_labels, X_test_outliers, y_test_imputed_outputs, y_test_imputed_labels
+                y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels
         else:
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
-                y_test_labels, None, None, None
+                y_test_labels, None, None, None, None
 
 class BuildModel:
 
@@ -1049,7 +1050,7 @@ class TIPredictorTrainProcess:
             #Ib_features = GLOBAL_BRANCH_LIST
             Ib_features = []
             if self.meterType == "PMU_caseA":
-                Ib_features = IEEE33_PMU_caseA_TI_features
+                Ib_features = UKGD95_PMU_caseA_TI_features
                 print("TI Feature Selection Order - Branches: ", Ib_features)
             elif self.meterType == "PMU_caseB":
                 Ib_features = UKGD95_PMU_caseB_TI_features #IEEE33_PMU_caseB_TI_features
@@ -1279,7 +1280,9 @@ class GraphTIPreprocess_IV:
         num_features_edge     = 2
 
         #self.selected_edges = [6, 32, 9]
-
+        print(self.X_test_outliers.shape)
+        print(self.X_test_imputed.shape)
+        print(self.y_test_imputed.shape)
         train_edge_data, train_edge_mask, train_node_data, train_node_mask = self.preprocess_data_PMU_caseA(self.X_train, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
         val_edge_data, val_edge_mask, val_node_data, val_node_mask   = self.preprocess_data_PMU_caseA(self.X_val, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
         test_edge_data, test_edge_mask, test_node_data, test_node_mask  = self.preprocess_data_PMU_caseA(self.X_test, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
@@ -1338,7 +1341,7 @@ class GraphTIPreprocess_IV:
         self.test_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
         test_outlier_data = []
-        for i in range(self.X_test.shape[0]):
+        for i in range(self.X_test_outliers.shape[0]):
             tmp_edge_attr = torch.tensor(test_edge_outlier_data[i].reshape(-1, num_features_edge), dtype=torch.float)
             tmp_edge_mask = torch.tensor(test_edge_outlier_mask[i].reshape(-1, num_features_edge), dtype=torch.float)
 
@@ -1352,7 +1355,7 @@ class GraphTIPreprocess_IV:
         self.test_outlier_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
         test_imputed_data = []
-        for i in range(self.X_test.shape[0]):
+        for i in range(self.X_test_imputed.shape[0]):
             tmp_edge_attr = torch.tensor(test_edge_imputed_data[i].reshape(-1, num_features_edge), dtype=torch.float)
             tmp_edge_mask = torch.tensor(test_edge_imputed_mask[i].reshape(-1, num_features_edge), dtype=torch.float)
 
@@ -1506,8 +1509,8 @@ class TrainGNN_TI:
             #self.model          = TI_GATWithEdgeAttrs(num_features=2, num_classes=self.num_classes, edge_attr_dim=2,
             #                                         gat_layers=7, GAT_dim=8, heads=4).to(self.device)
             self.model          = TI_TransformerWithEdges(num_features=2, num_classes=self.num_classes,
-                                                          gat_layers=10, GAT_dim=8, edge_attr_dim=2, heads=4,
-                                                          embedding_dim=2, dec_layers=1, ff_hid_dim=32).to(self.device)
+                                                          gat_layers=4, GAT_dim=12, edge_attr_dim=2, heads=4,
+                                                          embedding_dim=2, dec_layers=1, ff_hid_dim=48).to(self.device)
         elif self.meterType =="PMU_caseB":
             #self.model          = TI_GATNoEdgeAttrs(num_features=4, num_classes=self.num_classes, heads=4,
             #                                        num_gat_layers=2, gat_dim=16).to(self.device)
@@ -1812,10 +1815,13 @@ if __name__ == "__main__":
     threshold = 0.95
 
     PreProc = Preprocess()
-    X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = PreProc.preprocess_meter_type(meterType)
+    (X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs,
+     y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs,
+     y_test_imputed_labels) = PreProc.preprocess_meter_type(meterType)
     TI_PTP = TIPredictorTrainProcess(meterType, threshold, model, X_train, y_train_labels,
                                      X_val, y_val_labels, X_test, y_test_labels, PP, subPP,
-                                     )
+                                     X_test_outliers=X_test_outliers, X_test_imputed=X_test_imputed,
+                                     y_test_imputed=y_test_imputed_labels)
     TI_PTP.execute()
 
 
