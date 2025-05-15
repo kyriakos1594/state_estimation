@@ -60,14 +60,28 @@ class Preprocess:
         data = []
         inputs = []
         labels = []
+
+        additional_error = 0.002
+
         for topology in range(1, self.topologies + 1):
             for simulation in range(1, self.simulations + 1):
                 print("Topology: ", topology, "Simulation: ", simulation)
                 # TODO Input
                 Vm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
+                Vm_m *= (1 + (additional_error / 3) * np.random.randn(len(Vm_m)))
+                Vm_m = list(Vm_m)
+
                 Va_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
+                Va_m *= (1 + (additional_error / 3) * np.random.randn(len(Va_m)))
+                Va_m = list(Va_m)
+
                 Ifm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Im_pu"].values.tolist()
+                Ifm_m *= (1 + (additional_error / 3) * np.random.randn(len(Ifm_m)))
+                Ifm_m = list(Ifm_m)
+
                 Ifa_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Ia_pu"].values.tolist()
+                Ifa_m *= (1 + (additional_error / 3) * np.random.randn(len(Ifa_m)))
+                Ifa_m = list(Ifa_m)
 
                 # TODO Output
                 Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
@@ -104,6 +118,7 @@ class Preprocess:
         data = []
         inputs = []
         labels = []
+
         for topology in range(1, self.topologies + 1):
             for simulation in range(1, self.simulations + 1):
                 # TODO Input
@@ -154,16 +169,17 @@ class Preprocess:
         labels = []
         for topology in range(1, self.topologies + 1):
             for simulation in range(1, self.simulations + 1):
-                # TODO Input
                 Vm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
-                Vm_m *= (1 + ((error/2) / 3) * np.random.randn(len(Vm_m)))
+                Vm_m *= (1 + ((error / 2) / 3) * np.random.randn(len(Vm_m)))
                 Vm_m = list(Vm_m)
                 P_pu = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["P_pu"].values.tolist()[:-2]
                 P_pu *= (1 + (error / 3) * np.random.randn(len(P_pu)))
-                P_pu =list(P_pu)
+                P_pu = list(P_pu)
                 Q_pu = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Q_pu"].values.tolist()[:-2]
                 Q_pu *= (1 + (error / 3) * np.random.randn(len(Q_pu)))
                 Q_pu = list(Q_pu)
+                # TODO Input
+
 
                 print(f"Inserted {110*error}% noise to conventional meters")
 
