@@ -352,28 +352,45 @@ class Preprocess:
 
         if type == "PMU_caseA":
 
-            #TODO Inject outliers per meter type in X_train, X_val, X_test
-            # Outlier injection into the datasets
-            X_train_out_inj = OutlierInjector(X_train)
-            X_train_outlier, X_train_outlier_index_dict = X_train_out_inj.inject_outliers_PMUcaseA([meter], prob_m=0.4,prob_a=0.4)
-            X_test_out_inj = OutlierInjector(X_test)
-            X_test_outlier, X_test_outlier_index_dict = X_test_out_inj.inject_outliers_PMUcaseA([meter], prob_m=0.4, prob_a=0.4)
-
             X_old = X_test.copy()
 
-            #TODO Identify outliers per meter type
+            # TODO - Outlier injection into the datasets X_train, X_test
+            out_inj_X_train = OutlierInjector(X_train)
+            X_train_outlier_arr, X_train_outlier_index_dict = out_inj_X_train.inject_outliers_PMUcaseA([meter],
+                                                                                                       prob_m=0.01,
+                                                                                                       prob_a=0.01)
+            out_inj_X_test = OutlierInjector(X_test)
+            X_test_outlier, X_test_outlier_index_dict = out_inj_X_test.inject_outliers_PMUcaseA([meter],
+                                                                                                prob_m=0.01,
+                                                                                                prob_a=0.01)
+            print("X_test shape: ", X_test.shape)
+            print("y_test shape: ", y_test.shape)
+            print("X_test outlier shape: ", X_test_outlier.shape)
+            # TODO - Isolation Forest Outlier Detection - Gets outlier X_train dataset as input
             iso_detector = IF_OutlierDetection(meter)
-            iso_detector.train_isolation_forest_PMU_caseA(X_train_outlier)
+            iso_detector.train_isolation_forest_PMU_caseA(X_train_outlier_arr)
             per_edge_outliers = iso_detector.predict_outliers_PMU_caseA(X_test_outlier, X_test_outlier_index_dict)
 
-            #TODO Impute values with KNNImputer
+            # TODO - KNN imputer to impute values
             knn_imp = KNNImputerMeasurements(meter)
-            knn_imp.train_KNNImputers_PMU_caseA(X_train_outlier, X_train_outlier_index_dict)
-            X_test_imputed = knn_imp.impute_values_PMU_caseA(X_test_outlier, X_test_outlier_index_dict, compare_np=X_old)
+            knn_imp.train_KNNImputers_PMU_caseA(X_train_outlier_arr, X_train_outlier_index_dict)
+            X_test_imputed = knn_imp.impute_values_PMU_caseA(X_test_outlier, X_test_outlier_index_dict,
+                                                             compare_np=X_old)
 
-            #TODO From X_imputed and t_test, we need to remove the indices of all PMU measurements wrong
+            # TODO - From X_imputed and t_test, we need to remove the indices of all PMU measurements wrong
             X_test_imputed = X_test_imputed[~np.isin(np.arange(len(X_test_imputed)), per_edge_outliers["ALL"])]
             y_test_imputed = y_test[~np.isin(np.arange(len(y_test)), per_edge_outliers["ALL"])]
+            print("X_test imputed shape: ", X_test_imputed.shape)
+            print("y_test imputed shape: ", y_test_imputed.shape)
+            # TODO Here add y_test ALL_outlier indices exclusion
+
+            np.save("datasets/95UKGD_PMU_caseA_X_train_unscaled.npy", X_train)
+            np.save("datasets/95UKGD_PMU_caseA_y_train_unscaled.npy", y_train)
+            np.save("datasets/95UKGD_PMU_caseA_X_val_unscaled.npy", X_val)
+            np.save("datasets/95UKGD_PMU_caseA_y_val_unscaled.npy", y_val)
+            np.save("datasets/95UKGD_PMU_caseA_X_test_unscaled.npy", X_test)
+            np.save("datasets/95UKGD_PMU_caseA_y_test_unscaled.npy", y_test)
+
 
             #TODO Divide below code into 2 separate
             scaler          = StandardScaler()
@@ -388,11 +405,13 @@ class Preprocess:
             np.save(X_val_file, X_val)
             np.save(y_val_file, y_val)
             np.save(X_test_file, X_test)
+            np.save(y_test_file, y_test)
             np.save(X_test_PMU_caseA_outliers, X_test_outlier)
             np.save(X_test_PMU_caseA_imputed, X_test_imputed)
-            np.save(y_test_file, y_test_imputed)
+            np.save(y_test_PMU_caseA_imputed, y_test_imputed)
 
             print(X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test_outlier.shape, X_test_imputed.shape, y_test_imputed.shape)
+
 
         else:
             scaler   = StandardScaler()
@@ -1283,6 +1302,7 @@ class GraphTIPreprocess_IV:
         print(self.X_test_outliers.shape)
         print(self.X_test_imputed.shape)
         print(self.y_test_imputed.shape)
+
         train_edge_data, train_edge_mask, train_node_data, train_node_mask = self.preprocess_data_PMU_caseA(self.X_train, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
         val_edge_data, val_edge_mask, val_node_data, val_node_mask   = self.preprocess_data_PMU_caseA(self.X_val, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
         test_edge_data, test_edge_mask, test_node_data, test_node_mask  = self.preprocess_data_PMU_caseA(self.X_test, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)

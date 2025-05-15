@@ -178,7 +178,6 @@ class TI_GATNoEdgeAttrs(torch.nn.Module):
 
         return x
 
-
 #TODO TI Transformer based - PMU_caseB or conventional
 class TI_TransformerNoEdges(torch.nn.Module):
     def __init__(self, num_nodes, num_features, output_dim, GATConv_layers, GATConv_dim, embedding_dim=4, heads=4, dec_layers=1, ff_hid_dim=32):
@@ -248,7 +247,6 @@ class TI_TransformerNoEdges(torch.nn.Module):
         x = self.fc(x_global)
 
         return x
-
 
 #TODO TI Transformer based - PMU_caseA
 class TI_TransformerWithEdges(torch.nn.Module):
@@ -321,7 +319,6 @@ class TI_TransformerWithEdges(torch.nn.Module):
 
         return x  # F.log_softmax(x, dim=1)
 
-
 #TODO SE
 
 #TODO GATConv - PMU_caseB, conventional
@@ -373,7 +370,6 @@ class SE_GATNoEdgeAttrs(torch.nn.Module):
 
         return x
 
-
 #TODO GATConv - PMU_caseA
 class SE_GATWithEdgeAttr(torch.nn.Module):
     def __init__(self, num_features, output_dim, edge_attr_dim, GAT_dim=16, gat_layers=3, heads=4):
@@ -412,11 +408,9 @@ class SE_GATWithEdgeAttr(torch.nn.Module):
 
         return x
 
-
-
 #TODO TRANSFORMER-BASED GNNs SE
 
-#TODO Only Decoder Transformer - PMU_caseB and conventional
+#TODO Only Encoder Transformer - PMU_caseB and conventional
 class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
     def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4,
                  num_decoder_layers=1, gat_layers =4, GATConv_dim=16, ff_hid_dim=64):
@@ -484,6 +478,7 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
         x = self.fc(x_global)
         return x
 
+#TODO
 class SE_GATTransfomerOnlyDecoderWithEdges(nn.Module):
     def __init__(self, num_nodes, num_features, output_dim, embedding_dim=4, heads=4,
                  num_decoder_layers=1, edge_attr_dim=2, gat_layers=4, GATConv_dim=16, ff_hid_dim=64):
