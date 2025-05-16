@@ -354,14 +354,14 @@ class DSSE_TrainModel:
         # Define the EarlyStopping callback
         early_stopping = EarlyStopping(
             monitor='val_loss',  # You can use 'val_accuracy' or any other metric you are monitoring
-            patience=40,  # Number of epochs with no improvement before stopping
+            patience=15,  # Number of epochs with no improvement before stopping
             restore_best_weights=True  # Restore model weights from the epoch with the best metric
         )
 
         # Train the model and save the history
         history = self.model.fit(self.X_train,
                                  self.y_train,
-                                 epochs=300,
+                                 epochs=100,
                                  batch_size=BATCH_SIZE,
                                  callbacks=[early_stopping],
                                  validation_data=(self.X_val, self.y_val), verbose=1)
@@ -1076,14 +1076,14 @@ class Train_GNN_DSSE:
         if self.meterType == "PMU_caseA":
 
             #TODO Vanilla GATCONV
-            #self.model = SE_GATWithEdgeAttr(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, gat_layers=4,
-            #                                GAT_dim=12, heads=6).to(self.device)
+            self.model = SE_GATWithEdgeAttr(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, gat_layers=4,
+                                            GAT_dim=12, heads=4).to(self.device)
 
             #TODO Transformer based
-            self.model = SE_GATTransfomerOnlyDecoderWithEdges(num_nodes=NUM_NODES, num_features=2,output_dim=NUM_NODES,
-                                                              embedding_dim=4, heads=4, num_decoder_layers=1,
-                                                              edge_attr_dim=2, gat_layers=2, GATConv_dim=12,
-                                                              ff_hid_dim=48).to(self.device)
+            #self.model = SE_GATTransfomerOnlyDecoderWithEdges(num_nodes=NUM_NODES, num_features=2,output_dim=NUM_NODES,
+            #                                                  embedding_dim=4, heads=4, num_decoder_layers=1,
+            #                                                  edge_attr_dim=2, gat_layers=2, GATConv_dim=12,
+            #                                                  ff_hid_dim=48).to(self.device)
 
 
         elif self.meterType == "PMU_caseB":
@@ -1113,7 +1113,7 @@ class Train_GNN_DSSE:
     def _train(self):
 
         # Early stopping parameters
-        patience = 40  # Number of epochs to wait for improvement
+        patience = 15 #40  # Number of epochs to wait for improvement
         min_delta = 0.00000001  # Minimum change in validation loss to qualify as an improvement
         best_val_loss = float('inf')
         early_stop_counter = 0
@@ -1226,7 +1226,7 @@ class Train_GNN_DSSE:
 
 if __name__ == "__main__":
 
-    meterType = "conventional"
+    meterType = "PMU_caseA"
     if meterType == "conventional":
         if dataset == "IEEE33":
             old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]
@@ -1253,8 +1253,11 @@ if __name__ == "__main__":
     PP       = "RF"
     subPP    = "rfe"
 
-    PP_SE = Preprocess()
-    X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = PP_SE.preprocess_meter_type(meterType)
+    PreProc = Preprocess()
+    print(meterType)
+    (X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs,
+     y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs,
+     y_test_imputed_labels) = PreProc.preprocess_meter_type(meterType)
     print("X_train shape: ", X_train.shape)
     print("y_train shape: ", y_train_outputs.shape)
     print("X_val   shape: ", X_val.shape)

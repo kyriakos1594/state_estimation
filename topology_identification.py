@@ -61,8 +61,6 @@ class Preprocess:
         inputs = []
         labels = []
 
-        #additional_error = 0.002
-
         for topology in range(1, self.topologies + 1):
             for simulation in range(1, self.simulations + 1):
                 print("Topology: ", topology, "Simulation: ", simulation)
@@ -106,7 +104,7 @@ class Preprocess:
         print(f"Saving input into {PMU_caseA_output}")
         np.save(f"{PMU_caseA_output}", labels)
 
-        self.train_test_split_dataset(meterType)
+        self.train_test_split_dataset("PMU_caseA")
 
     def store_data_PMU_caseB(self):
 
@@ -472,12 +470,12 @@ class Preprocess:
         y_test_outputs = y_test[:, :2 * NUM_NODES]
         y_test_labels = y_test[:, 2 * NUM_NODES:]
 
-        if meterType == "PMU_caseA":
+        if type == "PMU_caseA":
             y_test_imputed_outputs = y_test_imputed[:, :2 * NUM_NODES]
             y_test_imputed_labels = y_test_imputed[:, 2 * NUM_NODES:]
 
 
-        if meterType == "PMU_caseA":
+        if type == "PMU_caseA":
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs,\
                 y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels
         else:
@@ -489,7 +487,7 @@ class Preprocess:
 
         if type == "PMU_caseA":
             # TODO Case A - Store then read for each measurement Vm, Va, Im, Ia
-            #self.store_data_PMU_caseA()
+            self.store_data_PMU_caseA()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
                 y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels = self.preprocess_data("PMU_caseA")
         elif type == "PMU_caseB":
@@ -971,7 +969,7 @@ class TIPredictorTrainProcess:
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train)
             #features = FS.execute()
             if self.meterType == "PMU_caseA":
-                features = IEEE33_PMU_caseA_TI_features
+                features = UKGD95_PMU_caseA_TI_features
                 features = features
                 print("TI Feature Selection Order - Branches: ", features)
             elif self.meterType == "PMU_caseB":
@@ -1829,7 +1827,7 @@ if __name__ == "__main__":
     #meterType = "PMU_caseB"
     meterType = "PMU_caseA"
 
-    model = "GNN"
+    model = "NN"
     PP    = "RF"
     subPP = "rfe"
     threshold = 0.95
