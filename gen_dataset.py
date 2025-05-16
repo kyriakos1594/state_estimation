@@ -346,9 +346,10 @@ class LoadPowerFlow:
             open_branches = config_dict[self.dataset][self.topology]["open_branches"]
             net.line["in_service"] = pd.Series(False if (i in open_branches) else True for i in range(net.line.shape[0]))
 
+    #TODO Now they change all the time
     def randomize_loads(self, net):
-        #self.net.load["LOAD_CHANGE_FLAG"] = np.random.choice([0, 1], size=len(self.net.load))
-        self.net.load["LOAD_CHANGE_FLAG"] = np.array([1 for i in range(self.net.load.shape[0])])
+        self.net.load["LOAD_CHANGE_FLAG"] = np.random.choice([0, 1], size=len(self.net.load))
+        #self.net.load["LOAD_CHANGE_FLAG"] = np.array([1 for i in range(self.net.load.shape[0])])
         #TODO 1 always
         r = 0.5
         # var_vector (same size as the number of loads) defines the scaling factors
@@ -356,6 +357,7 @@ class LoadPowerFlow:
         var_vector = np.ones(len(net.load))
         # Apply randomization to active power (p_mw)
         # We now apply the changes to each load based on the load change flag
+        print(net.load["LOAD_CHANGE_FLAG"])
         net.load["p_mw"] = net.load.apply(
             lambda row: row["p_mw"] * (1 + row["LOAD_CHANGE_FLAG"] * (-r + (2 * r) * np.random.rand())),
             axis=1
@@ -365,9 +367,6 @@ class LoadPowerFlow:
         pf = net.load["p_mw"] / np.sqrt(net.load["p_mw"] ** 2 + net.load["q_mvar"] ** 2)
         # Apply randomization to reactive power (q_mvar)
         net.load["q_mvar"] = np.tan(np.arccos(pf)) * net.load["p_mw"]
-
-        #print(self.net.load)
-        #print(self.net.bus)
 
     def insert_noise(self, df_V, df_I):
 
@@ -521,7 +520,6 @@ class LoadPowerFlow:
         # Run power flow
         pp.runpp(self.net)
 
-
     # Compute I branch magnitudes and angles
     # To compute I from per unit -> If_pu = Vpu (from node) / Spu (from node)
     def compute_Ibranch(self):
@@ -572,14 +570,12 @@ class LoadPowerFlow:
         self.net.res_line["Im_pu"] = pd.DataFrame([record[1] for record in branch_currents])
         self.net.res_line["Ia_pu"] = pd.DataFrame([record[2] for record in branch_currents])
 
-
     # Just devide with Sbase
     def compute_PQ_pu(self):
         # System base power in MVA
         S_base = self.net.sn_mva
         self.net.res_bus["P_pu"] = self.net.res_bus["p_mw"] / S_base
         self.net.res_bus["Q_pu"] = self.net.res_bus["q_mvar"] / S_base
-
 
     # Compute Ybus matrix to get injection currents
     def compute_Inj_currents(self):
@@ -660,6 +656,8 @@ class GenerateDataset:
             #else:
             #    profile_dict[i] = random.sample(profile_titles["LV"], 1)[0]
 
+        print(profile_dict)
+
         return datetime_list, profile_dict
 
     def generate_dataset(self):
@@ -669,14 +667,15 @@ class GenerateDataset:
         #print(self.dataset)
         concat_frame = pd.DataFrame()
         print(len(datetime_list))
-        for i in range(self.N_topologies):
+        for i in [0]: #range(self.N_topologies):
             n_sample=0
-            #for j in range(self.N_samples):
-            #    datetime_str = "2021-11-01 00:00:00"
-            for datetime_str in datetime_list:
+            for j in [0]: #range(self.N_samples):
+                #    datetime_str = "2021-11-01 00:00:00"
+                #for datetime_str in datetime_list:
+                datetime_str = datetime_list[j] #TODO Get subset of WD, PV profiles
                 topology = i+1
                 n_sample = n_sample+1
-                print("Topology: ", i+1, "Sample: ", n_sample)
+                print("Topology: ", i+1, "Sample: ", n_sample, "DateTime: ", datetime_str)
                 LPF = LoadPowerFlow(filename=self.filepath,
                                     dataset=self.dataset,
                                     topology=f"""T{topology}""",
@@ -692,19 +691,10 @@ class GenerateDataset:
 
 
 if __name__ == "__main__":
-    #PFS = LoadPowerFlow()
-    #PFS.get_powerflow_results()
-    #filename = "IEEE33aveg.mat"
-    #profile_dict = None
-    #lpf = LoadPowerFlow(mat_file, "IEEE33", "T1", "2021-11-01", )
-    #lpf.initialize_net()
-    #lpf.run_powerflow()
-    #lpf.compute_Ibranch()
-    #lpf.compute_PQ_pu()
-    #lpf.compute_Inj_currents()
-    #lpf.get_results()
-    print(f"""Generating dataset from file {mat_file}, N_topologies {NUM_TOPOLOGIES}, N_samples {NUM_SAMPLES}""")
-    GD = GenerateDataset(filepath=mat_file,N_topologies=NUM_TOPOLOGIES,N_samples=NUM_SIMULATIONS,dataset=dataset)
+    GD = GenerateDataset(filepath=mat_file,
+                         N_topologies=NUM_TOPOLOGIES,
+                         N_samples=NUM_SIMULATIONS,
+                         dataset=dataset)
     GD.generate_dataset()
 
     #ADP = AllignDataProfiles()
