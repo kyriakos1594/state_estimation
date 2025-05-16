@@ -351,13 +351,13 @@ class LoadPowerFlow:
         self.net.load["LOAD_CHANGE_FLAG"] = np.random.choice([0, 1], size=len(self.net.load))
         #self.net.load["LOAD_CHANGE_FLAG"] = np.array([1 for i in range(self.net.load.shape[0])])
         #TODO 1 always
-        r = 0.5
+        r = 0.7
         # var_vector (same size as the number of loads) defines the scaling factors
         # For simplicity, we'll use a vector of ones. Adjust as needed.
         var_vector = np.ones(len(net.load))
         # Apply randomization to active power (p_mw)
         # We now apply the changes to each load based on the load change flag
-        print(net.load["LOAD_CHANGE_FLAG"])
+        #print(net.load["LOAD_CHANGE_FLAG"])
         net.load["p_mw"] = net.load.apply(
             lambda row: row["p_mw"] * (1 + row["LOAD_CHANGE_FLAG"] * (-r + (2 * r) * np.random.rand())),
             axis=1
@@ -656,8 +656,6 @@ class GenerateDataset:
             #else:
             #    profile_dict[i] = random.sample(profile_titles["LV"], 1)[0]
 
-        print(profile_dict)
-
         return datetime_list, profile_dict
 
     def generate_dataset(self):
@@ -666,31 +664,34 @@ class GenerateDataset:
         #print(datetime_list, profile_dict)
         #print(self.dataset)
         concat_frame = pd.DataFrame()
-        print(len(datetime_list))
-        for i in [0]: #range(self.N_topologies):
+        for i in range(self.N_topologies):
             n_sample=0
-            for j in [0]: #range(self.N_samples):
-                #    datetime_str = "2021-11-01 00:00:00"
-                #for datetime_str in datetime_list:
-                datetime_str = datetime_list[j] #TODO Get subset of WD, PV profiles
-                topology = i+1
-                n_sample = n_sample+1
-                print("Topology: ", i+1, "Sample: ", n_sample, "DateTime: ", datetime_str)
-                LPF = LoadPowerFlow(filename=self.filepath,
-                                    dataset=self.dataset,
-                                    topology=f"""T{topology}""",
-                                    datetime_str=datetime_str,
-                                    profile_dict=profile_dict)
-                df_results = LPF.get_powerflow_results()
-                df_results["TopNo"] = pd.DataFrame([topology for k in range(df_results.shape[0])])
-                df_results["Simulation"] = pd.DataFrame([n_sample for k in range(df_results.shape[0])])
-                concat_frame = pd.concat([concat_frame, df_results], axis=0)
+            for j in range(self.N_samples):
+                try:
+                    #    datetime_str = "2021-11-01 00:00:00"
+                    #for datetime_str in datetime_list:
+                    datetime_str = datetime_list[j] #TODO Get subset of WD, PV profiles
+                    topology = i+1
+                    n_sample = n_sample+1
+                    print("Topology: ", i+1, "Sample: ", n_sample, "DateTime: ", datetime_str)
+                    LPF = LoadPowerFlow(filename=self.filepath,
+                                        dataset=self.dataset,
+                                        topology=f"""T{topology}""",
+                                        datetime_str=datetime_str,
+                                        profile_dict=profile_dict)
+                    df_results = LPF.get_powerflow_results()
+                    df_results["TopNo"] = pd.DataFrame([topology for k in range(df_results.shape[0])])
+                    df_results["Simulation"] = pd.DataFrame([n_sample for k in range(df_results.shape[0])])
+                    concat_frame = pd.concat([concat_frame, df_results], axis=0)
+                except Exception as e:
+                    print("Exception"+str(e))
 
         concat_frame.to_csv(f"datasets/{self.dataset}.csv")
 
 
 
 if __name__ == "__main__":
+    print(mat_file, NUM_TOPOLOGIES, NUM_SIMULATIONS, dataset)
     GD = GenerateDataset(filepath=mat_file,
                          N_topologies=NUM_TOPOLOGIES,
                          N_samples=NUM_SIMULATIONS,
