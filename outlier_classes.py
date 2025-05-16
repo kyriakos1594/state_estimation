@@ -49,7 +49,7 @@ class OutlierInjector:
             Va_list = list(self.X_dataset[sample_index][NUM_NODES:2*NUM_NODES])
             Im_list = list(self.X_dataset[sample_index][2*NUM_NODES:2*NUM_NODES+NUM_BRANCHES])
             Ia_list = list(self.X_dataset[sample_index][2*NUM_NODES+NUM_BRANCHES:])
-            flag=False
+
             for edge_idx in injection_edge_indices:
                 sending_node_idx = branch_data[edge_idx]["sending_node"]
                 if self.outlier_event(probability=prob_m):
@@ -270,31 +270,36 @@ if __name__ == "__main__":
     meter = 75
 
     # TODO Conventional
-    # X_train = np.load("datasets/outlier_datasets/95UKGD_conventional_X_train.npy")
-    X_train = np.load("datasets/outlier_datasets/95UKGDPMU_caseA_input.npy")
+    X_train = np.load("datasets/95UKGDPMU_caseA_input.npy")
+    y_train  = np.load("datasets/95UKGDPMU_caseA_output.npy")
 
-    X_train, X_test = train_test_split(X_train,test_size=0.1,random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2)
+
     X_old   = X_test.copy()
 
     #TODO - Outlier injection into the datasets X_train, X_test
     out_inj_X_train = OutlierInjector(X_train)
     X_train_outlier_arr, X_train_outlier_index_dict = out_inj_X_train.inject_outliers_PMUcaseA([meter], prob_m=0.01, prob_a=0.01)
     out_inj_X_test = OutlierInjector(X_test)
-    X_test_outlier_arr, X_test_outlier_index_dict = out_inj_X_test.inject_outliers_PMUcaseA([meter], prob_m=0.01, prob_a=0.01)
-
+    X_test_outlier, X_test_outlier_index_dict = out_inj_X_test.inject_outliers_PMUcaseA([meter], prob_m=0.01, prob_a=0.01)
+    print("X_test shape: ", X_test.shape)
+    print("y_test shape: ", y_test.shape)
+    print("X_test outlier shape: ", X_test_outlier.shape)
     #TODO - Isolation Forest Outlier Detection - Gets outlier X_train dataset as input
     iso_detector = IF_OutlierDetection(meter)
     iso_detector.train_isolation_forest_PMU_caseA(X_train_outlier_arr)
-    per_edge_outliers = iso_detector.predict_outliers_PMU_caseA(X_test_outlier_arr, X_test_outlier_index_dict)
+    per_edge_outliers = iso_detector.predict_outliers_PMU_caseA(X_test_outlier, X_test_outlier_index_dict)
+
 
     #TODO - KNN imputer to impute values
     knn_imp = KNNImputerMeasurements(meter)
     knn_imp.train_KNNImputers_PMU_caseA(X_train_outlier_arr, X_train_outlier_index_dict)
-    X_test = knn_imp.impute_values_PMU_caseA(X_test_outlier_arr, X_test_outlier_index_dict,compare_np=X_old)
-    print(X_test.shape)
+    X_test_imputed = knn_imp.impute_values_PMU_caseA(X_test_outlier, X_test_outlier_index_dict,compare_np=X_old)
 
     #TODO - From X_imputed and t_test, we need to remove the indices of all PMU measurements wrong
-    X_test_imputed = X_test[~np.isin(np.arange(len(X_test)), per_edge_outliers["ALL"])]
-    print(X_test_imputed.shape)
+    X_test_imputed = X_test_imputed[~np.isin(np.arange(len(X_test_imputed)), per_edge_outliers["ALL"])]
+    y_test_imputed = y_test[~np.isin(np.arange(len(y_test)), per_edge_outliers["ALL"])]
+    print("X_test imputed shape: ", X_test_imputed.shape)
+    print("y_test imputed shape: ", y_test_imputed.shape)
     #TODO Here add y_test ALL_outlier indices exclusion
 

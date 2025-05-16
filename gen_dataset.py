@@ -350,7 +350,7 @@ class LoadPowerFlow:
         #self.net.load["LOAD_CHANGE_FLAG"] = np.random.choice([0, 1], size=len(self.net.load))
         self.net.load["LOAD_CHANGE_FLAG"] = np.array([1 for i in range(self.net.load.shape[0])])
         #TODO 1 always
-        r = 0.3
+        r = 0.5
         # var_vector (same size as the number of loads) defines the scaling factors
         # For simplicity, we'll use a vector of ones. Adjust as needed.
         var_vector = np.ones(len(net.load))
@@ -365,7 +365,6 @@ class LoadPowerFlow:
         pf = net.load["p_mw"] / np.sqrt(net.load["p_mw"] ** 2 + net.load["q_mvar"] ** 2)
         # Apply randomization to reactive power (q_mvar)
         net.load["q_mvar"] = np.tan(np.arccos(pf)) * net.load["p_mw"]
-
 
         #print(self.net.load)
         #print(self.net.bus)
@@ -464,12 +463,13 @@ class LoadPowerFlow:
                 net.load[net.load["bus"] == index]["q_mvar"] = P_bus * np.sqrt(1 - cos_phi**2) / cos_phi
 
             elif index in bus_types["PQ_LV"]:
-                net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - LV - {self.profile_dict[index]}"]
-                #net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - MV - {self.profile_dict[index]}"]
+                net.bus.loc[index, ["type", "name"]] = ["b", f"PQ bus {str(index)} - LV - {str(index)}"]
                 if not net.load[net.load["bus"] == index]["p_mw"].empty :
                     P_load  = net.load[net.load["bus"] == index]["p_mw"].values.tolist()[0]
-                    profile = df_profiles[self.profile_dict[index]]
-                    P_bus   = P_load * profile
+                    #TODO Uncomment to follow a profile from file
+                    #profile = df_profiles[self.profile_dict[index]]
+                    #P_bus   = P_load * profile
+                    P_bus    = P_load
                     Q_load  = net.load[net.load["bus"] == index]["q_mvar"].values.tolist()[0]
                     #cos_phi = P_load / np.sqrt(P_load ** 2 + Q_load ** 2)
                     cos_phi = 0.95
@@ -657,8 +657,8 @@ class GenerateDataset:
                 profile_dict[i] = random.sample(profile_titles["WD"], 1)[0]
             elif i in bus_types["PQ_MV"]:
                 profile_dict[i] = random.sample(profile_titles["MV"], 1)[0]
-            else:
-                profile_dict[i] = random.sample(profile_titles["LV"], 1)[0]
+            #else:
+            #    profile_dict[i] = random.sample(profile_titles["LV"], 1)[0]
 
         return datetime_list, profile_dict
 
@@ -703,6 +703,7 @@ if __name__ == "__main__":
     #lpf.compute_PQ_pu()
     #lpf.compute_Inj_currents()
     #lpf.get_results()
+    print(f"""Generating dataset from file {mat_file}, N_topologies {NUM_TOPOLOGIES}, N_samples {NUM_SAMPLES}""")
     GD = GenerateDataset(filepath=mat_file,N_topologies=NUM_TOPOLOGIES,N_samples=NUM_SIMULATIONS,dataset=dataset)
     GD.generate_dataset()
 
