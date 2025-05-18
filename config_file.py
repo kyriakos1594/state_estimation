@@ -7,7 +7,7 @@ dataset = "95UKGD"
 #meterType = "conventional"
 #GLOBAL_BRANCH_LIST = [6]
 #NUM_TOPOLOGIES = 1 #15
-NUM_SIMULATIONS = 7787
+NUM_SIMULATIONS = 2000 #3000 #7787
 EXISTING_METER_BRANCHES = []
 EXISTING_METER_NODES    = []
 RAW_FILENAME    = f"datasets/{dataset}.csv"
@@ -214,8 +214,8 @@ elif dataset == "95UKGD":
     NUM_NODES = 95
     NUM_BRANCHES = 97
     NUM_TOPOLOGIES = 8
-    NUM_SAMPLES = 7787
-    NUM_SIMULATIONS = NUM_SAMPLES
+    NUM_SAMPLES = NUM_SIMULATIONS #7787
+    #NUM_SIMULATIONS = NUM_SAMPLES
     branch_data = {
         0: {"sending_node": 0, "receiving_node": 1},
         1: {"sending_node": 0, "receiving_node": 84},
