@@ -722,13 +722,16 @@ class DSSE_Estimator_TrainProcess:
                     print("New chosen PMUs: ", new_PMUs)
                     # TODO Train for magnitudes
                     DSSE_GNN_PP = DSSE_GNN_Preprocess(meterType=self.meterType,
-                                                      selected_edges=new_PMUs,
+                                                      selected_edges=self.old_PMUs,
                                                       X_train=self.X_train,
                                                       y_train=self.y_train,
+                                                      train_labels=self.train_labels,
                                                       X_val=self.X_val,
                                                       y_val=self.y_val,
+                                                      val_labels=self.val_labels,
                                                       X_test=self.X_test,
-                                                      y_test=self.y_test)
+                                                      y_test=self.y_test,
+                                                      test_labels=self.test_labels)
 
                     edge_indexes, train_loader, val_loader, test_loader = DSSE_GNN_PP.generate_dataset(output="magnitudes")
                     DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
