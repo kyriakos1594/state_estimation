@@ -386,8 +386,8 @@ class SE_GATWithEdgeAttr(torch.nn.Module):
         ])
 
         # Fully connected layer for classification
-        self.fc1 = torch.nn.Linear(GAT_dim * heads, 2 * GAT_dim)
-        self.fc2 = torch.nn.Linear(2 * GAT_dim, output_dim)
+        self.fc1 = torch.nn.Linear(GAT_dim * heads, 10 * GAT_dim)
+        self.fc2 = torch.nn.Linear(10 * GAT_dim, output_dim)
 
     def forward(self, data):
 
@@ -405,6 +405,57 @@ class SE_GATWithEdgeAttr(torch.nn.Module):
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc2(x)
+
+        return x
+
+class SE_GATWithEdgeAttrNodeProj(torch.nn.Module):
+    def __init__(self, num_nodes, proj_nodes, num_features, output_dim, edge_attr_dim, GAT_dim=16, gat_layers=3, heads=4):
+        super(SE_GATWithEdgeAttrNodeProj, self).__init__()
+
+        self.num_nodes = num_nodes
+        self.proj_nodes = proj_nodes
+
+        # Input Graph Attention layer
+        # Here, `edge_attr_dim` is the size of the edge features
+        self.input_conv = GATConv(num_features, GAT_dim, heads=heads, concat=True, edge_dim=edge_attr_dim)  # First GAT layer with edge features
+
+        # Hidden Graph Attention Layers
+        # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
+        self.GATConv_layers = nn.ModuleList([
+            GATConv(GAT_dim * heads, GAT_dim, heads=heads, edge_dim=edge_attr_dim, concat=True) for _ in range(gat_layers-1)
+        ])
+
+        # Fully connected layer for classification
+        self.node_proj = nn.Linear(GAT_dim * heads, 1 * self.proj_nodes)
+        self.fc1 = torch.nn.Linear(num_nodes * self.proj_nodes, output_dim)
+        #self.fc2 = torch.nn.Linear(10 * GAT_dim, output_dim)
+
+    def forward(self, data):
+
+        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
+
+        x = self.input_conv(x, edge_index=edge_index, edge_attr=edge_attr)
+        x = F.relu(x)
+
+        for gat_conv_layer in self.GATConv_layers:
+            x = gat_conv_layer(x, edge_index=edge_index, edge_attr=edge_attr)
+            x - F.relu(x)
+
+
+        #print("Shape after GAT: ", x.shape)
+        x = self.node_proj(x)
+        #print("Shape after node projection: ", x.shape)
+
+        batch_size = int(batch.max().item())+1
+        x = x.reshape(batch_size, -1)
+        #print("Shape after node projection reshape: ", x.shape)
+
+        #x = global_mean_pool(x, batch)
+
+        x = self.fc1(x)
+        #x = F.relu(x)
+        #x = self.fc2(x)
+        #print("Output: ", x.shape)
 
         return x
 

@@ -11,8 +11,8 @@ NUM_SIMULATIONS = 2000 #3000 #7787
 EXISTING_METER_BRANCHES = []
 EXISTING_METER_NODES    = []
 RAW_FILENAME    = f"datasets/{dataset}.csv"
-MAPE_v_threshold = 0.30
-MAE_a_threshold  = 0.15
+MAPE_v_threshold = 0.0004 #0.30
+MAE_a_threshold  = 0.0000006 #0.15
 BATCH_SIZE = 32
 PROFILES_FILEPATH = f"datasets/weekly_alligned_scaled_profiles.csv"
 
