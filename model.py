@@ -62,6 +62,50 @@ class TI_SimpleNNEdges(nn.Module):
 
         return x #F.log_softmax(x, dim=1)  # No softmax, using CrossEntropyLoss
 
+#TODO SE NN For all cases
+class SE_SimpleNNEdges(nn.Module):
+    def __init__(self, num_nodes, num_features, output_dim, branch_num=None, branch_feature_num=None):
+        super(SE_SimpleNNEdges, self).__init__()
+        self.branch_num = branch_num
+        self.branch_feature_num = branch_feature_num
+        if self.branch_feature_num is not None:
+            self.input_dim = num_nodes * num_features + branch_num * branch_feature_num  # Flatten the entire graph input
+            print("Input dimension: ", self.input_dim)
+        else:
+            self.input_dim = num_nodes * num_features # Flatten the entire graph input
+            print("Input dimension: ", self.input_dim)
+
+        print("Input dimension for SimpleNN: ", self.input_dim, "nodes: ", num_nodes, "features: ", num_features, "branches: ", branch_num, "features (branches): ", branch_feature_num)
+
+        # Fully connected layers
+        #self.fc1 = nn.Linear(self.input_dim, 256)
+        self.fc1 = nn.Linear(self.input_dim, 128)
+        self.fc2 = nn.Linear(128, 95)
+        self.fc3 = nn.Linear(95, output_dim)
+        #self.fc4 = nn.Linear(128, 64)
+        #self.fc5 = nn.Linear(64, num_classes)
+        #self.fc4 = nn.Linear(4, num_classes)
+
+        # Dropout for regularization
+        #self.dropout = nn.Dropout(0.3)
+
+    def forward(self, x):
+        # Flatten the input (batch_size, num_nodes, num_features) -> (batch_size, num_nodes * num_features)
+        #print("In net:", x)
+        x = x.view(x.size(0), -1)
+        #print("In net view: ", x)
+
+        # Forward pass through MLP
+        #x = F.relu(self.fc1(x))
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+
+        # Output layer (logits)
+        #x = self.fc4(x)
+
+        return x #F.log_softmax(x, dim=1)  # No softmax, using CrossEntropyLoss
+
 #TODO SE NN for all cases
 class SE_SimpleNN(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -353,19 +397,11 @@ class SE_GATNoEdgeAttrs(torch.nn.Module):
         layer = 0
         for gat_conv_layer in self.GATConv_layers:
             x = gat_conv_layer(x, edge_index=edge_index)
-            layer+=1
             #print(f"after conv {layer}: ", x)
             x = F.relu(x)
-        #print("Shape before pooling", x.shape)
-        x = global_mean_pool(x, batch)
-        #print("Shape after pooling", x.shape)
-        #import time
-        #time.sleep(100)
 
-        #x = x.flatten()
-        #print("flatten", x.shape)
-        #x = self.fc1(x)
-        #x = F.relu(x)
+        x = global_mean_pool(x, batch)
+
         x = self.fc1(x)
 
         return x
@@ -386,8 +422,8 @@ class SE_GATWithEdgeAttr(torch.nn.Module):
         ])
 
         # Fully connected layer for classification
-        self.fc1 = torch.nn.Linear(GAT_dim * heads, 10 * GAT_dim)
-        self.fc2 = torch.nn.Linear(10 * GAT_dim, output_dim)
+        self.fc1 = torch.nn.Linear(GAT_dim * heads, output_dim)
+        #self.fc2 = torch.nn.Linear(5 * GAT_dim, output_dim)
 
     def forward(self, data):
 
@@ -398,13 +434,13 @@ class SE_GATWithEdgeAttr(torch.nn.Module):
 
         for gat_conv_layer in self.GATConv_layers:
             x = gat_conv_layer(x, edge_index=edge_index, edge_attr=edge_attr)
-            x - F.relu(x)
+            x = F.relu(x)
 
         x = global_mean_pool(x, batch)
 
         x = self.fc1(x)
-        x = F.relu(x)
-        x = self.fc2(x)
+        #x = F.relu(x)
+        #x = self.fc2(x)
 
         return x
 
@@ -427,8 +463,7 @@ class SE_GATWithEdgeAttrNodeProj(torch.nn.Module):
 
         # Fully connected layer for classification
         self.node_proj = nn.Linear(GAT_dim * heads, 1 * self.proj_nodes)
-        self.fc1 = torch.nn.Linear(num_nodes * self.proj_nodes, output_dim)
-        #self.fc2 = torch.nn.Linear(10 * GAT_dim, output_dim)
+        self.fc_out = torch.nn.Linear(num_nodes * self.proj_nodes, output_dim)
 
     def forward(self, data):
 
@@ -439,23 +474,15 @@ class SE_GATWithEdgeAttrNodeProj(torch.nn.Module):
 
         for gat_conv_layer in self.GATConv_layers:
             x = gat_conv_layer(x, edge_index=edge_index, edge_attr=edge_attr)
-            x - F.relu(x)
+            x = F.relu(x)
 
-
-        #print("Shape after GAT: ", x.shape)
         x = self.node_proj(x)
-        #print("Shape after node projection: ", x.shape)
+        x = F.relu(x)
 
         batch_size = int(batch.max().item())+1
         x = x.reshape(batch_size, -1)
-        #print("Shape after node projection reshape: ", x.shape)
 
-        #x = global_mean_pool(x, batch)
-
-        x = self.fc1(x)
-        #x = F.relu(x)
-        #x = self.fc2(x)
-        #print("Output: ", x.shape)
+        x = self.fc_out(x)
 
         return x
 

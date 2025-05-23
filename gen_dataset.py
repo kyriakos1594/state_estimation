@@ -351,7 +351,7 @@ class LoadPowerFlow:
         self.net.load["LOAD_CHANGE_FLAG"] = np.random.choice([0, 1], size=len(self.net.load))
         #self.net.load["LOAD_CHANGE_FLAG"] = np.array([1 for i in range(self.net.load.shape[0])])
         #TODO 1 always
-        r = 0.90
+        r = 0.60
         # var_vector (same size as the number of loads) defines the scaling factors
         # For simplicity, we'll use a vector of ones. Adjust as needed.
         var_vector = np.ones(len(net.load))

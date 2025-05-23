@@ -119,6 +119,7 @@ class Preprocess:
 
         for topology in range(1, self.topologies + 1):
             for simulation in range(1, self.simulations + 1):
+                print(topology, simulation)
                 # TODO Input
                 Vm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
                 Va_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
@@ -484,16 +485,15 @@ class Preprocess:
 
 
     def preprocess_meter_type(self, type):
-
         if type == "PMU_caseA":
             # TODO Case A - Store then read for each measurement Vm, Va, Im, Ia
-            self.store_data_PMU_caseA()
+            #self.store_data_PMU_caseA()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
                 y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels = self.preprocess_data("PMU_caseA")
         elif type == "PMU_caseB":
             # TODO Case B - Store then read for each measurement Vm, Va, Iinjm, Iinja
             #self.store_data_PMU_caseB()
-            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("PMU_caseB")
+            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels, a, b, c, d = self.preprocess_data("PMU_caseB")
         elif type == "conventional":
             # TODO Case B - Store then read for each measurement Vm, Pinj, Qinj
             #self.store_data_conventional()
@@ -507,7 +507,7 @@ class Preprocess:
                 y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels
         else:
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
-                y_test_labels, None, None, None, None
+                y_test_labels, a, b, c, d
 
 class BuildModel:
 
@@ -1825,7 +1825,7 @@ if __name__ == "__main__":
 
     #meterType = "PMU_caseA"
     #meterType = "PMU_caseB"
-    meterType = "PMU_caseA"
+    meterType = "PMU_caseB"
 
     model = "NN"
     PP    = "RF"
