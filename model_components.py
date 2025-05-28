@@ -63,6 +63,7 @@ class TransfromerDecoderLayer2(nn.Module):
         # Multihead Attention Layer (Encoder-Decoder Attention)
         self.multihead_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=nhead, batch_first=True)
 
+
         # Linear functions
         self.linear1 = nn.Linear(d_model, dim_feedforward)
         self.linear2 = nn.Linear(dim_feedforward, d_model)
@@ -72,23 +73,29 @@ class TransfromerDecoderLayer2(nn.Module):
         self.activation2 = nn.ReLU()
 
 
-    def forward(self, tgt, memory, key_padding_mask=None):
+    def forward(self, tgt, memory):
         # Self-attention (decoder layer self-attention)
         #tgt, _ = self.self_attn(tgt, tgt, tgt)
         #print(tgt.shape, memory.shape, memory.shape)
         # Multihead attention
-        attn_output, _ = self.multihead_attn(tgt, memory, memory, key_padding_mask=key_padding_mask)
+        #print("Shape before multihead attention: ", tgt.shape)
+        #print(tgt[0, :])
+        attn_output, _ = self.multihead_attn(tgt, memory, memory)
+        #print("Shape after multihead attention: ",attn_output.shape)
+        #print(attn_output[0, :])
+
         #print(attn_output.shape)
 
-        #import time
-        #time.sleep(100)
 
-        output = self.linear1(attn_output)
-        output = self.activation1(output)
-        output = self.linear2(output)
-        output = self.activation2(output)
+        #output = self.linear1(attn_output)
+        #print(output.shape)
+        #output = self.activation1(output)
+        #output = self.linear2(output)
+        #print(output.shape)
 
-        return output
+        #output = self.activation2(output)
+
+        return attn_output
 
 
 class TransformerEncoderLayer(nn.Module):

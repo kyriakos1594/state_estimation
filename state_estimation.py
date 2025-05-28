@@ -1091,8 +1091,8 @@ class Train_GNN_DSSE:
 
             #TODO Transformer based
             self.model = SE_GATTransfomerOnlyDecoderWithEdges(num_nodes=NUM_NODES, num_features=2,output_dim=NUM_NODES,
-                                                              embedding_dim=4, heads=4, num_decoder_layers=1,
-                                                              edge_attr_dim=2, gat_layers=2, GATConv_dim=12,
+                                                              proj_dim=5, embedding_dim=4, heads=4, num_decoder_layers=1,
+                                                              edge_attr_dim=2, gat_layers=4, GATConv_dim=12,
                                                               ff_hid_dim=48).to(self.device)
 
 
@@ -1257,7 +1257,7 @@ if __name__ == "__main__":
         elif dataset == "MESOGEIA":
             old_PMUs = [130]
         elif dataset == "95UKGD":
-            old_PMUs = [75] #[75]
+            old_PMUs = [75] #, 67, 65, 84, 80, 64, 83, 95, 77, 70, 66] #[75]
 
     model    = "GNN"
     PP       = "RF"
