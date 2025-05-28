@@ -1090,7 +1090,7 @@ class Train_GNN_DSSE:
             #                                GAT_dim=12, heads=4).to(self.device)
 
             #TODO Transformer based
-            self.model = SE_GATTransfomerOnlyDecoderWithEdges(num_nodes=NUM_NODES, num_features=2,output_dim=NUM_NODES,
+            self.model = SE_GATTransfomerOnlyDecoderWithEdges(device=self.device, num_nodes=NUM_NODES, num_features=2,output_dim=NUM_NODES,
                                                               proj_dim=5, embedding_dim=4, heads=4, num_decoder_layers=1,
                                                               edge_attr_dim=2, gat_layers=4, GATConv_dim=12,
                                                               ff_hid_dim=48).to(self.device)

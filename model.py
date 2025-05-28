@@ -564,17 +564,24 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
 
 #TODO
 class SE_GATTransfomerOnlyDecoderWithEdges(nn.Module):
-    def __init__(self, num_nodes, num_features, output_dim, proj_dim=4, embedding_dim=4, heads=4,
+    def __init__(self, device, num_nodes, num_features, output_dim, proj_dim=4, embedding_dim=4, heads=4,
                  num_decoder_layers=1, edge_attr_dim=2, gat_layers=4, GATConv_dim=16, ff_hid_dim=64):
         super(SE_GATTransfomerOnlyDecoderWithEdges, self).__init__()
 
         self.num_nodes = num_nodes
+        self.device = device
+
+        # Embedding for node indices (shared across batches)
+        self.node_index_embedding = nn.Embedding(self.num_nodes, embedding_dim//2)
+
+        # Update feature_fc to take into account the concatenated input size
+        self.feature_fc = nn.Linear(num_features + embedding_dim//2, embedding_dim)
 
         # Node embedding layer (if needed, otherwise use raw features)
         #self.node_embedding = nn.Embedding(num_nodes, embedding_dim)
 
         # Feature Transformation (if needed)
-        self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
+        #self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
 
         # Input GATConv layer
         self.input_gat_conv = GATConv(embedding_dim, GATConv_dim, edge_dim=edge_attr_dim, heads=heads, concat=True)
@@ -606,9 +613,21 @@ class SE_GATTransfomerOnlyDecoderWithEdges(nn.Module):
         x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
         batch_size = int(batch.max().item()) + 1
 
+        node_indices = torch.arange(self.num_nodes, device=self.device).repeat(batch.max().item() + 1)
+        #print("Shape of node indices: ", node_indices.shape)
+
+        # Get node index embeddings
+        index_embeds = self.node_index_embedding(node_indices)  # [total_nodes, embedding_dim]
+        #print("Shape of index embeddings: ", index_embeds.shape)
+
+        # Concatenate raw features with index embeddings
+        x = torch.cat([x, index_embeds], dim=1)  # Shape: [total_nodes, num_features + embedding_dim]
+        #print("Concatenation of input after embedding", x.shape)
+
         #print("Shape before feature FC: ", x.shape)
         # Embedding node features if needed - input
         x = self.feature_fc(x)
+        #print("Feature FC after shape: ", x.shape)
 
         #print("Shape after feature FC: ", x.shape)
 
