@@ -1,18 +1,18 @@
 import sys
 
 #TODO Basic configurations
-dataset = "95UKGD"
+dataset = "MESOGEIA"
 #meterType = "PMU_caseA" # PMU_caseA, PMU_caseB, conventional
 #meterType = "PMU_caseB"
 #meterType = "conventional"
 #GLOBAL_BRANCH_LIST = [6]
 #NUM_TOPOLOGIES = 1 #15
-NUM_SIMULATIONS = 4000 #3000 #7787
+NUM_SIMULATIONS = 7787 #4000 #3000 #7787
 EXISTING_METER_BRANCHES = []
 EXISTING_METER_NODES    = []
 RAW_FILENAME    = f"datasets/{dataset}.csv"
-MAPE_v_threshold = 0.0004 #0.30
-MAE_a_threshold  = 0.0000006 #0.15
+MAPE_v_threshold = 0.30
+MAE_a_threshold  = 0.15
 BATCH_SIZE = 32
 PROFILES_FILEPATH = f"datasets/weekly_alligned_scaled_profiles.csv"
 
@@ -25,7 +25,7 @@ IEEE33_PMU_caseB_TI_features      = [17, 27, 21, 7, 8, 28, 20, 6, 11, 26, 9, 15,
 IEEE33_conventional_TI_features   = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10, 5, 19, 23, 4, 22, 3, 2, 18, 1, 0]
 
 MESOGEIA_PMU_caseA_TI_features    = []
-MESOGEIA_PMU_caseB_TI_features    = []
+MESOGEIA_PMU_caseB_TI_features    = [127, 128, 124]
 MESOGEIA_conventional_TI_features = []
 
 UKGD95_PMU_caseA_TI_features       = [75, 77, 95, 56, 91, 58, 53, 81, 87, 59, 80, 72, 55, 54, 79, 90, 74, 86, 65, 67, 78, 94, 69, 39, 71, 70, 23, 36, 63, 68, 76, 88, 62, 96, 66, 61, 64, 41, 29, 9, 34, 73, 47, 50, 46, 43, 40, 89, 45, 42, 52, 37, 60, 44, 57, 32, 38, 48, 84, 92, 93, 82, 49, 26, 85, 30, 27, 83, 33, 28, 24, 20, 51, 35, 22, 21, 25, 15, 18, 11, 13, 31, 12, 19, 10, 17, 16, 14, 7, 8, 5, 4, 6, 3, 2, 1, 0]
@@ -49,7 +49,8 @@ if dataset == "MESOGEIA":
     NUM_NODES = 131
     NUM_BRANCHES = 133
     NUM_TOPOLOGIES = 2
-    NUM_SAMPLES = 7500
+    NUM_SAMPLES = 7787
+    NUM_SIMULATIONS = NUM_SAMPLES
     branch_data = {
     0: {"sending_node": 1, "receiving_node": 0},
     1: {"sending_node": 1, "receiving_node": 2},

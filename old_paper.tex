@@ -1,0 +1,700 @@
+\documentclass[journal]{IEEEtran}  % 'journal' option gives 2-column layout
+\usepackage{graphicx} % Required for inserting images
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\title{Robust distribution system state estimation under low observability using transformer-enhanced graph neural network architecture}
+\author{kyriakos andresakis}
+\date{April 2025}
+
+
+
+\begin{document}
+
+\maketitle
+
+\textbf{Abstract - Accurate real-time situational awareness, essential for the reliable and economical operation of active power distribution systems, is enabled through distribution system state estimation (DSSE), which infers the current operating state from available measurement data. To address the limitations of conventional model-based approaches under low observability, this paper proposes a comprehensive machine learning-based DSSE framework that integrates optimal measurement placement, topology identification, state estimation, and bad data detection using a limited set of input data. Recursive feature elimination, in conjunction with random forest models, is used to allocate minimum measurement sets. A novel transformer-enhanced graph neural network (TEGNN) architecture is introduced to estimate both the network topology and state by effectively capturing local and global features from the system graph. The transformer-encoder self-attention block extracts dependencies between long-distance nodes, which are invaluable under low observability scenarios. Isolation forest and k-nearest neighbors algorithm, are employed to handle bad or missing data. The numerical studies conducted on benchmark test systems, demonstrate the superiority of the proposed methodology over standard deep and graph neural network implementations, as well as its robustness in presence of data imperfections.}
+
+\textbf{}
+
+\textbf{Index Terms - Bad data detection, distribution systems, graph neural networks, random forest, transformer neural networks, topology identification, state estimation.}
+
+\section{Introduction}
+
+During the last decades, power grids have undergone significant changes, shifting from their original, centralized, and unidirectional operation mode to decentralized and more dynamic paradigm. In particular, the proliferation of distributed generation (DG), renewable energy resources (RES) and flexible loads have imparted increasingly active behavior to the grid at power distribution level [1]. Operating active distribution networks (ADNs) has become challenging since high RES penetration causes voltage violations, reverse power flows, and disturbances [1],[2],[3], while the inclusion of flexible loads[1] and prosumers [1],[4] introduces even further challenges.
+
+Despite the ongoing instrumentation of primary substations with phasor measurement units (PMUs) and intelligent electronic devices (IEDs) and the gradual development of advanced metering infrastructure (AMI) with smart meters (SM) at customer side [6], ADNs still lack sufficient visibility compared to transmission systems. In this context, the implementation of distribution system state estimation (DSSE) algorithms, which are the cornerstone for real-time monitoring, has been prioritized by distribution system operators (DSO) worldwide. State estimators enable situational awareness in power grids - predominantly deployed at power transmission where supervisory control and data acquisition systems (SCADA) traditionally ensured measurement data redundancy - by performing real time grid topology identification (TI) and state estimation (SE), mainly defined by bus voltage phasors. The recent infrastructure advancements in ADNs have substantially expanded data sources, thus, facilitating the real-world application of DSSE [6], and TI [7].
+
+SE methods are divided into two large categories. Model based SE methods rely on physical models and laws of physics, while data driven SE utilize historical data and machine learning (ML) or statistical techniques to estimate the system state. Conventional model-based algorithms such as the weighted least squares (WLS) method, comprise the most popular SE model in both transmission and distribution side [6], [38], [39]. The WLS method attempts to minimize the error between the actual and the estimated measurement values [41]. However, the requirement for observability is not fulfilled in distribution systems unless pseudo-measurements, i.e. manufactured data are used [41]. Thus, real-world WLS applications may also rely on data-driven enhancements of the original model. In [8], the proposed model is a Bayesian DSSE method that uses variational inference and extends conventional WLS. [9] leverages a closed-loop information flow between a ML function and a robust state estimator and [10] proposes a game-theoretic data driven approach for generating pseudo-measurements to enhance DSSE under missing or bad data. In [42] data processing assists in mitigating the impact of data aggregation on the accuracy of WLS SE. [41] an ANN is used to produce pseudo-measurements, functioning as input to WLS and in [11] a data-driven method is used to initialize Gauss-Newton.
+
+As far as data-driven methods are concerned, several examples can be identified throughout the literature. In [12] a matrix completion algorithm is developed for voltage phasor estimation in low observability distribution systems (DS). In [13] a Bayesian belief framework is trained, outperforming linear estimators. Data driven approaches can also result in higher inference speeds, as shown by utilizing supervised learning in [14]. In [15], an alternative approach to DSSE is presented, adopting a probabilistic extension of the radial load flow algorithm.
+
+Amongst data-driven methods for DSSE, neural networks (NN) are starting to gain popularity, because of the abundance in available measurement data in distribution and their ability to predict system states with precision and speed, under low observability scenarios. [16] proposes a method for outlier detection and a weighted DNN for noise reduction. In [17] a Monte Carlo technique for the training of a deep NN (DNN)for state estimation (SE) is applied, outperforming pseudo-measurement techniques. In [18] a deep-learning framework is proposed for the scope of DSSE under low observability. A data-driven approach for judicious SMD placement to facilitate reliable TI and DSSE is provided. Lack of monitoring in DS is also the issue in [19], where a DSSE approach utilizing NNs is proposed. [20] proposes a Physics-Guided Deep Learning method for power system SE, using DNNs and results indicate superiority over traditional methods. [21] also presents a Bayesian framework for DSSE, utilizing NNs, considering measurements of different rates and data losses under low observability conditions. [22] leverages physics-inspired recurrent neural networks (RNNs) for real-time power system monitoring. Finally, in [23], a physics-aware approach using RNNs and DNNs is proposed.
+
+Data-driven frameworks are also exploited in solutions related to TI, however existing literature is quite limited. In [24], a two-stage topology identification framework is proposed to recognize mixed topologies. In [25] an integrated framework utilizing various components is proposed. A TI-DNN solution is presented in [26] to predict the actual network topology under various scenarios. However, the tests are carried in relatively small benchmark systems. Furthermore, in [27] the kernel-node-map is presented and a novel topology detection method using convolutional neural networks (CNN) is developed. However, no limited observability scenario is mentioned and the input has to manually be assigned per network topology.
+
+Data driven approaches have been utilized in another problem related to DSSE and TI, the meter placement problem. Their occurrences in existing bibliography are rare and the ones utilizing ML methods are even fewer. One such data-driven case is [28], where several approaches to input variable selection (IVS) are compared, in order to identify the most informative set of meters. However, PC is limited to linear dependencies, which is rarely the case in power systems and mRMR only considers pairwise relations. Furthermore both methods do not directly optimize prediction performance, but rather select features based on their statistical relationships alone. [18] is another one of the few examples performing data-driven meter placement. Sequential Forward Selection (SFS) and hierarchical clustering (HC) are utilized to obtain the optimal meter locations and DNNs are used to determine the meters required to reach the predefined accuracy thresholds. However, SFS is very time-consuming and HC on the SCC matrix only captures monotonic relationships and functions pairwise, ignoring multivariate interactions. Finally, [40] proposes a meter placement that utilizes an expectation-maximization (EM) approach to optimally place meters. However, the fixed distribution assumptions can result in inaccurate modeling.
+
+
+Out of the most promising ML methods for estimating the system state, is the graph neural network (GNN) approach. GNN models are widely utilized lately, because of their ability to incorporate graphical features of the distribution systems. They are divided into two types of convolutions, spatial and spectral. The former, operate on neighbor relationships in the graph, whereas the latter operate on the frequency domain. In [29], spatial convolution GNNs are implemented and compared with DNNs, demonstrating more accurate GNN predictions. However, this method relies on pseudo-measurement generation and the minimum amount of measurements that is tested upon is 15\%. Additionally, the GNN architecture mainly captures local relationships between nodes. In [30] a spatial convolution GNN on the power system's factor graph is utilized. However, the proposed method requires another optimal PMU placement algorithm and is tested under partial and full observability. Additionally, PMUs within the [K/2] - hop neighborhood of the bus to be predicted are required. In [31], a physics informed GNN with Bayesian Probability Weighted Averaging is proposed for the purpose of robust topology change-aware DSSE. However, GNN layers mainly capture local neighborhood interactions, while the 1D CNN captures global statistical features, but does not model global dependencies between nodes. In [32], an Adaptive Graph Convolutional Network (AGCN) is proposed to address the DSSE problem. However, under low observability scenarios, node embeddings between nodes lack enough information to capture accurate relationships.
+
+Graph attention is also employed in [33], where the proposed GNN model is trained on  WLS solutions. However, once again, the low observability cases are not considered and a PMU within the [K/2]-hop neighborhood of the prediction node is required, where K is the number of GNN layers. Temporal graph convolution networks (TGCN) are utilized in [34], in order to capture both spatial and temporal dependencies under full and partial measurement availability. However, under very low observability scenarios, most node features have zero values, affecting predictions that rely mainly on close neighboring nodes. A graph convolutional network (GCN) in [35] is using data of SCADA and limited phasor measurement unit (PMU). However, data from SCADA and PMUs are available for a large portion of the nodes. In [40], It a recurrent and residual GNN architecture is proposed, with trainable mappings implemented as standard ANNs for the SE problem. However, MLPs are utilized to take advantage of the graph's structure.
+
+The Graph attention mechanism is also utilized in [36], however PMU measurements are assumed minimum at distance of 1-hop neighbor away. Also, GNN layers utilized mainly focus on local feature extraction between nodes. Finally, in [37], the spectral-domain convolution method is used to construct a multilayer GNN to perform DSSE. However, the line parameters are considered known. Furthermore, the GNN architecture, once again, mainly performs local feature extraction between nodes.
+
+Various implementations regarding SE and TI aim at training robust models. Robustness against noise is of critical importance as implemented in [9] and [18], where non-Gaussian noise is applied on the measurements for training robust models. Furthermore, outlier or bad-data detection are utilized since measurements devices are prone to errors. In [30] and [33] GNNs are mentioned to be robust, by injecting outliers into a few nodes of the training set, which can prove problematic, when relying on very few measurements. [14] uses a kernel trick and distance thresholding based on historical similarity, but the distance has to be manually configured. [17] performs a pre-estimation outlier detection via learned prior distributions, but assumes the learned prior distribution constant. In [16] isolation forest (IF) is utilized, but the outlier value is imputed with the temporal mean, neglecting patterns in the measurements.
+
+In this paper, we propose a data-driven framework, that identifies the optimal meter locations and utilizes their measurements to effectively perform TI and DSSE, leveraging the power of NNs to perform accurately under very low observability. The meter placement problem is viewed as a feature selection problem and under the scope of very low observability, three separate NN architectures are being utilized. DNNs, GNNs and a novel transformer-based GNN architecture are trained and evaluated for comparison purposes. Outlier / bad-data detection is implemented by IF and imputation occurs by utilizing the k-nearest neighbors (KNN) algorithm. Finally, the models are trained in the presence of both Gaussian and non-Gaussian noise for robustness.
+
+The main contributions are:
+
+\begin{itemize}
+
+  \item A novel feature selection algorithm for meter placement is proposed, using RFE with RF. This greedy approach efficiently identifies optimal meter locations by leveraging non-linear relationships and re-evaluating feature importance at each step. All meter features (V, I, P, Q) are considered. To the best of the author’s knowledge, this is the first study to compare GNNs and DNNs under low observability. GNNs leverage graph structure and neighborhood information, outperforming DNNs in this context.
+
+  \item A novel Transformer-enhanced Graph Neural Network (GNN) architecture tailored for State Estimation (SE) and Topology Inference (TI) under conditions of very low observability. The model is designed to extract both local and global features while preserving graph connectivity. GNN layers perform localized feature aggregation and propagate information across immediate neighborhoods. Complementing this, a Transformer-style attention mechanism enables long-range interactions by attending to representations of distant nodes—connections that would otherwise require a deep GNN to capture. This hybrid architecture effectively combines global contextual information with the inherent structure of the graph, facilitating information propagation to nodes with missing measurements.
+
+  \item Robustness of the TI and SE algorithms has been implemented, utilizing ML techniques for outlier detection and imputation. Outliers are effectively identified by IF and their values are imputed using KNN. The outlier measurement values are imputed, based on the closest feature values of the same node, thus respecting the feature patterns of each node. The models are also trained in the presence of Gaussian and non-Gaussian noise for robustness.
+
+\end{itemize}
+
+The rest of this article is organized as follows. In Section II, the meter placement problem formulation is presented. Section III illustrates the proposed method. Section IV evaluates the performance of the proposed method and Section V concludes the article.
+
+
+\section{Methodology}
+
+Conventional DSSE approaches require full system observability to infer the system's state. This is extremely difficult to implement in DS, due to the high cost of meters (e.g. PMUs) and the high number of nodes. To overcome the above challenges, \textit{Minimum Mean Squared Error (MMSE)} estimators are propsoed as in [17], where the role of the estimator is performed by NNs. GNNs can be chosen as the NN models to be utilized, since these model encode the power system's topology during the training process and furthermore they can update nodes with missing information, based on the features of their neighbors' nodes.
+
+For optimal meter placement (OPM), a pure data driven method is also proposed. RF in conjunction with RFE is employed and the OPM problem is viewed as a feature selection (FS) problem. The result is a greedy algorithm that selects the optimal meter locations for a predetermined number of power system nodes. Additionally, detection and treatment of bad data measurements often occur due to sensor errors. The IF approach is initially used to identify bad data and KNN algorithm is employed to impute them with appropriate values. Furthermore, the models are trained introducing Gaussian and non-Gaussian noise into the samples to further increase their robustness. To this end a DSSE process is proposed, where RF-RFE is utilized for OMP, GNNs are utilized for SE (regression) and TI (classification) and IF with KNN for bad-data detection and imputation.
+
+\subsection{GNN Architecture for DSSE}
+
+The proposed architecture for DSSE includes Graph Attention Convolution (GATConv) layers followed by fully connected (FC) layers. This approach exploits the inherent graph structure of power distribution systems, where buses (nodes) and lines (edges) form a natural graph. The input of the GNN includes the node feature matrix \( \mathbf{Z} \in \mathbb{R}^{N \times M} \) and the adjacency matrix \( \mathbf{T} \), where \( N \) is the number of nodes and \( M \) is the dimension of the measurements. The matrix \( \mathbf{Z} \) is constructed based on the measurements \( \mathbf{z} \) to represent the graph's structure.
+
+Let $G = (V, E)$ be a graph with $N$ nodes. Each node $i \in V$ is associated with a raw input feature vector $\mathbf{z}_i \in \mathbb{R}^M$. The architecture consists of three main stages:
+
+\begin{enumerate}
+    \item Multi-Head Graph Attention Layers (with LeakyReLU)
+    \item Fully Connected Projection Layer
+    \item Output Fully Connected Layer
+\end{enumerate}
+
+\subsubsection*{1. Multi-Head Graph Attention Layers with LeakyReLU}
+
+The raw input features $\mathbf{z}_i$ are fed directly into $K$ parallel attention heads. Each attention head performs a neighborhood aggregation where attention scores determine how much each neighbor contributes to the updated representation of the node $i$. For each head $k$, the output is computed by:
+
+\begin{equation}
+\label{eq:k-th attention head}
+\mathbf{h}_{\text{GAT}, i}^{(k)} =  \mathbf{\sigma} \left( \sum_{j \in \mathcal{N}(i)} \alpha_{ij}^{(k)} \cdot \mathbf{W}^{(k)} \mathbf{z}_j \right)
+\end{equation}
+
+,where $\alpha_{ij}^{(k)}$ is the attention score of neighbor $j$ relative to node $i$ for attention head $k$. The signal from each node is filtered through the attention mechanism, which decides — for each node — how strongly it should consider each of its neighbors. The transformation matrix $\mathbf{W}^{(k)}$ learns how to project each neighbor's features, and $\alpha_{ij}^{(k)}$ decides how much to weigh them. $\sigma$ is the activation function, chosen as LeakyReLu.
+
+
+In order to calculate the attention coefficient $\alpha_{ij}^{(k)}$,
+
+\begin{equation}
+\label{eq:attention_coefficients_1}
+e_{ij}^{(k)} = \mathbf{\sigma} \left( \mathbf{a}^{(k)\top} \left[ \mathbf{W}^{(k)} \mathbf{z}_i \, \Vert \, \mathbf{W}^{(k)} \mathbf{z}_j \right] \right)
+\end{equation}
+
+is calculated and used as input into the softmax function
+
+\begin{equation}
+\label{eq:attention_coefficients_2}
+  \alpha_{ij}^{(k)} = \frac{\exp(e_{ij}^{(k)})}{\sum_{l \in \mathcal{N}(i)} \exp(e_{il}^{(k)})}
+\end{equation}
+
+, where $\Vert$ is vector concatenation of two neighbor nodes $i$ and $j$ and ${N}(i)$ is the neighbor node set of $i$.
+
+After computing all $K$ attention heads, their outputs are combined:
+
+\begin{equation}
+\label{eq:head_concatenation}
+\mathbf{h}_{\text{GAT}, i} = \text{Concat} \left( \mathbf{h}_{\text{GAT}, i}^{(1)}, \dots, \mathbf{h}_{\text{GAT}, i}^{(K)} \right)
+\end{equation}
+
+After this step, the $L$ in number GATConv layers utilized, allow nodes with meaningful (non-zero) values to propagate information to their neighbors. Thus, through (1), node values $L$ nodes away from a non-zero featured node are updated.
+
+
+\subsubsection*{2. Fully Connected Projection Layer}
+
+To further process node features after the graph attention, a fully connected layer is applied:
+
+\begin{equation}
+\label{eq:FC_projection}
+\mathbf{h}_{\text{proj}, i} = \sigma \left( \mathbf{W}_{\text{proj}} \mathbf{h}_{\text{GAT}, i} + \mathbf{b}_{\text{proj}} \right)
+\end{equation}
+
+,where $\mathbf{W}_{\text{proj}}$ is another transformation matrix that reduces the dimension of (4) into a predefined projection dimension $D_{proj}$. Bias is defined as $\mathbf{b}_{\text{proj}}$ and $\sigma$ is the activation function LeakyReLu.
+
+\subsubsection*{3. Output Fully Connected Layer}
+
+The final layer produces the output predictions:
+\begin{equation}
+\label{eq:FC_output}
+\mathbf{y}_i = \mathbf{W}_{\text{out}} \mathbf{h}_{\text{proj}, i} + \mathbf{b}_{\text{out}}
+\end{equation},
+where $\mathbf{W}_{\text{out}}$ is the learnable transformation matrix that uses the $\mathbf{h}_{\text{proj}, i}$ output of the previous FC projection layer as input and predicts the final output. In case of SE, $i$ corresponds to the number of nodes either for the voltage magnitude or the voltage angles. In case of TI, the output is a one-hot encoded output with dimension equal to the number of possible topologies.
+
+\vspace{5pt}
+This formulation aims to incorporates the principle of message passing, wherein each node aggregates information from its neighbors. As a result, even nodes with initially missing or zero-valued features can receive informative updates through their neighbors’ representations. This is particularly advantageous in DSSE, where not all buses are equipped with sensors. By propagating information across the graph structure, the GNN ensures that unobserved nodes are influenced by nearby measurements. An example of the GNN architecture for SE is displayed in Fig.1. For TI purposes the output is a single value instead of a whole graph.
+
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.5\textwidth, height=3cm]{GNN.png}
+  \caption{GNN architecture in 4 steps: a) Graph Input Features per Node, b) GATConv (orange) ndoes are updated by their neighbors (green), c) Node features are reduced for meaningful feature extraction with yellow color, d) Reduced with FC to a single output per ndoe for SE purposes}
+  \label{fig:GNN-image}
+\end{figure}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{TEGNN.png}
+  \caption{TEGNN architecture: In addition to Fig 1. 2 more modules are incorporated. The dark green Embedding and Transformation layer, where the node index embeddings are added into the feature vector per node and an FC layer extracts meaningful patterns and the orange module, where a single node is influenced not only by its neighbors but all node sin the graph, using the attention mechanism.}
+  \label{fig:TEGNN-image}
+\end{figure*}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.5\textwidth]{embeddings.png}
+  \caption{Index Embeddings \& Input Transformations: A graph with the power system's node indices (red color) is formed (left) and these indices are passed through an embedding layer (middle) and transformed to embeddings (dark green color). The node's feature vectors (V, I, P, Q) are concatenated per node with the node index embeddings and used as input to an FC layer for feature extraction (light green)}
+  \label{fig:GNN-image}
+\end{figure}
+
+
+
+\subsection{Transformer-enhanced GNN for SE and TI}
+
+Transformer NNs, originally introduced for sequence modeling tasks in natural language processing, have shown exceptional capability in learning global dependencies via self-attention mechanisms. Unlike traditional GNNs limited to local neighborhoods, transformer NNs allow each element in the input to attend to all others, enabling powerful long-range context modeling. This motivates our hybrid design, referred to as a \textit{Transformer-enhanced GNN}.The proposed architecture leverages a combination of embedding layers, graph attention convolution (GATConv) layers, transformer encoder (self-attention) layers and fully connected layers.
+
+The proposed architecture incorporates all the components of the previously defined GNN. Furhtermore, two new modules are incorporated, namely the embedding layer and the transformer encoder (multihead self-attention) layer.
+
+\subsubsection{Embedding and Input Transformation Layers}
+
+For the initial layers, we define one trainable transformation matrix and one trainable positional embedding matrix:
+
+A \textit{positional embedding matrix} \( \mathbf{E}_p \in \mathbb{R}^{V \times d} \), where each node index \( i \) corresponds to a learnable embedding vector:
+    \begin{equation}
+        \mathbf{h}_i^{(\text{pos})} = \mathbf{E}_p[i]
+    \end{equation}, where $V$ is the dimension of the input vector and $d$ the dimension of the output vector.
+
+The final embedded representation of node \( i \) is given by the concatenation of the input features and the positional embeddings and is directed into another FC layer for feature extraction:
+
+\begin{equation}
+\label{eq:Embedding concatenation}
+    \mathbf{h}_i^{(0)} = \mathbf{h}_i^{(\text{feat})} \Vert \, \mathbf{z}_{i} \in \mathbb{R}^{F''}
+\end{equation}, where $F'' = M+d$ and $M$ is the measurement dimension and
+
+\begin{equation}
+\label{eq:Feature FC layer}
+\mathbf{y}_{ft} = \mathbf{W}_{\text{ft}} \mathbf{h}_i^{(0)} + \mathbf{b}_{\text{ft}}
+\end{equation},
+
+where ${h}_{i}^{(0)}$ serves as the concatenated input of the feature vectors and positional embeddings of each node $i$ and ${W}_{\text{ft}} \in {R}^{2F'' \times F''}$ is a learnable transformation matrix and ${b}_{\text{ft}}$ is the corresponding bias. This layer extracts meaningful representations, providing both contextual and topological identity information. The output ${y}_{ft}$ is then lead into the GATConv layers.
+
+Since, the GATConv layers (and GNN layers in general) treat graph nodes as permutation invariant, embedding the node indices allows for differentiation of structurally similar but semantically distinct nodes. Furthermore, it introduces additional information as input to an already sparse measurement graph (few nodes with non-zero values) and also injects position-specific knowledge.
+
+\subsubsection{Transformer Encoder Multihead self-attention}
+
+To capture global context across the graph, we introduce a transformer encoder layer after the GATConv stages. This layer uses multi-head self-attention to allow each node to attend to all others, irrespective of each node's position in the graph.
+
+After the GATConv layers have processed the local neighborhood information, their concatenated outputs are assembled into a matrix \( \mathbf{H}_{\text{GAT}} \in \mathbb{R}^{N \times D} \), where \( N \) is the number of nodes and \( D \) is the total feature dimension resulting from concatenating the outputs of \( K \) attention heads.
+
+This matrix \( \mathbf{H}_{\text{GAT}} \) serves as the input to a multi-head self-attention block, enabling each node to attend to all others and capture global patterns across the graph. This is particularly useful in DSSE and topology identification, where distant nodes may still exhibit correlated behavior and many of which might not carry information, due to limited sensor locations. The purpose of this layer is to combine information signals from distant nodes, which in a standard GNN is only allowed by increasing the number of GNN layers. Unfortunately, this increase leads to several issues such as over-smoothing, overfitting and parameter increase.
+
+\subsubsection*{Multi-Head Self-Attention Layer}
+
+Let \( \mathbf{H}_{\text{GAT}} \) be the matrix of input node representations, then for each attention head \( h \in \{1, ..., H\} \), the following computations are performed:
+
+\begin{equation}
+\label{eq:MHA_q}
+\mathbf{Q}^{(h)} = \mathbf{H}_{\text{GAT}} \mathbf{W}^{Q(h)},
+\end{equation}
+
+\begin{equation}
+\label{eq:MHA_k}
+\mathbf{K}^{(h)} = \mathbf{H}_{\text{GAT}} \mathbf{W}^{K(h)},
+\end{equation}
+
+\begin{equation}
+\label{eq:MHA_v}
+\mathbf{V}^{(h)} = \mathbf{H}_{\text{GAT}} \mathbf{W}^{V(h)}
+\end{equation}
+
+
+where \( \mathbf{W}^{Q(h)}, \mathbf{W}^{K(h)}, \mathbf{W}^{V(h)} \in \mathbb{R}^{D \times d} \) are learnable weight matrices for queries, keys, and values, and \( d \) is the dimension of each attention head.
+
+The attention scores are computed using the scaled dot-product attention mechanism:
+
+\begin{equation}
+\label{eq:MHA_attention}
+\text{Attention}^{(h)}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\left( \frac{\mathbf{Q}^{(h)} (\mathbf{K}^{(h)})^\top}{\sqrt{d}} \right) \mathbf{V}^{(h)}
+\end{equation}
+
+The outputs from all \( H \) heads are concatenated:
+
+\begin{equation}
+\label{eq:MHA_concat}
+\mathbf{Z} = \text{Concat} \left( \text{Attention}^{(1)}, \dots, \text{Attention}^{(H)} \right)
+\end{equation}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.5\textwidth, height=5cm]{graph-self-attention.png}
+  \caption{The features of the input are first concatenated into a 2D array. The query, key and values matrices with red, blue and green color are then caluclated. For each binary node combination, the attention scores are calculated using matrices Q and K and multiplied by matrix V. The softmax function is then utilized to conclude on the attention scores.}
+  \label{fig:graph-self-attention}
+\end{figure}
+
+A final linear projection is applied to merge the concatenated output:
+
+\begin{equation}
+\label{eq:MHA_output}
+\mathbf{H}_{\text{MHA}} = \mathbf{Z} \mathbf{W}^{O} + \mathbf{b}^{O}
+\end{equation}
+
+where \( \mathbf{W}^{O} \in \mathbb{R}^{Hd \times D} \) is the output projection matrix and \( \mathbf{b}^{O} \) is the bias term.
+
+The resulting matrix \( \mathbf{H}_{\text{MHA}} \) carries global contextualized node embeddings and is passed to the same projection FC layers and output layers as the GNN's case. The embeddings carrying the information of the node's index enrich the signal entering this layer, which is critical since most features have zero values and otherwise the outputs of each node would be extremely close in value.
+
+This structure allows the model to first extract local topological features via GATConv, then integrate global context through self-attention, before compressing and mapping the node embeddings to prediction outputs such as voltage magnitudes, angles, or topology classes. These traits integrated into the TEGNN architecture, are aiming to specialize it for graph-based inference problems like DSSE and TI, where the input is very sparse and the graph's configuration belongs to predefined subset of cases.
+
+
+\subsection{Meter Placement Using Random Forests and Recursive Feature Elimination.}
+
+To address the optimal meter placement problem, we adopt a supervised learning approach that combines RF regression in conjunction with RFE. Unlike conventional RFE that operates at the level of individual features, our method aggregates importance scores across predefined groups of features corresponding to the physical meters.
+
+Let $\mathbf{X} \in \mathbb{R}^{N \times M}$ be the dataset, where each row represents a sample of power system measurements, and $M$ is the total number of features. Assume that the features are grouped into $P$ disjoint subsets, each corresponding to a specific meter:
+
+\begin{equation}
+\label{eq:Feature Groups}
+\mathcal{F} = \{ \mathcal{F}_1, \mathcal{F}_2, \ldots, \mathcal{F}_P \}
+\end{equation}
+
+and $\mathcal{F}$ is the union of all disjoint $\mathcal{F_p}, p \in M$ feature sets, the union of which corresponds to all measurements $\mathcal{M}$, as shown in below equations:
+
+\begin{equation}
+\label{eq:Union of Feature Groups}
+\bigcup_{p=1}^P \mathcal{F}_p = \mathcal{F}, \quad \mathcal{F}_p \cap \mathcal{F}_q = \emptyset \text{ for } p \neq q.
+\end{equation}
+
+
+The features between sets are disjoint, since each group $\mathcal{F}_p$ contains all the features measured by a single meter $p$.
+
+\paragraph{Random Forests.}
+
+RFs are an ensemble learning method based on decision trees, designed for both classification and regression tasks. An RF model builds a large number of decision trees during training, each trained on a random bootstrap sample of the dataset and using a random subset of features at each split. The final prediction is obtained by averaging the outputs of individual trees (in regression) or by majority voting (in classification). RFs naturally provide feature importance scores by evaluating how much each feature contributes to reducing impurity across all trees, making them particularly useful for feature selection tasks.
+
+Let $\mathbf{y} \in \mathbb{R}^N$ be the regression target — typically a measure of state estimation error (e.g., voltage MAPE) or the accuracy of the predicted versus the actual gird topology for TI purpose.
+
+We use a Random Forest (RF) $\hat{f}: \mathbb{R}^M \rightarrow \mathbb{R}$, composed of $T$ decision trees, to learn a mapping from the measurement features to the target metric:
+
+\begin{equation}
+\label{eq:Ensamble Prediction}
+\hat{y} = \frac{1}{T} \sum_{t=1}^{T} f_t(\mathbf{x}),
+\end{equation}
+
+where $f_t$ is the prediction from tree $t$. After training, the RF provides an importance score $I_j$ for each feature $j \in \{1, \ldots, M\}$, based on reductions of the corresponding problem. The Gini impurity is minimized for TI and the Mean Squared Error (MSE) for voltage prediction.
+
+\paragraph{Meter-Level Recursive Elimination.}
+To rank meters rather than individual features, we define the total importance score for each meter $p$ as the sum of the scores of its associated features:
+
+\begin{equation}
+\label{eq:Ensamble Prediction}
+S_p = \sum_{j \in \mathcal{F}_p} I_j.
+\end{equation}
+
+At each iteration of RFE, we remove the meter with the lowest total importance score:
+
+\begin{equation}
+\label{eq:Minimum Feature score}
+p^\ast = \arg\min_{p} S_p.
+\end{equation}
+
+and each feature belonging into the feature set with the minimum importance score $F_{p^*}$ , is removed from the dataset. At each iteration all the measurements from another feature set (meter) are removed iteratively with respect to the importance scores extracted by a RF trained using the reduced feature sets. The process finalizes when only one meter remains, which is the most important meter of the feature group as far as prediction purposes are concerned. The corresponding features $\mathcal{F}_{p^\ast}$ are removed from the dataset, and a new Random Forest model is trained on the reduced feature set.
+
+\paragraph{Objective.}
+
+The objective at each iteration is to identify the least informative feature set (i.e., meter) and remove it, thereby refining the set of meters to those that contribute the most to prediction accuracy. Let \(\mathcal{M}^{(i)}\) denote the subset of remaining meters at iteration \(i\), where
+\begin{equation}
+\label{Feature set in step i}
+\mathcal{M}^{(i)}| = F - i + 1
+\end{equation}, where $F$ is the full set of available feature sets. At each step, we aim to find the feature group \(\mathcal{F}_{p^*}\) such that:
+
+\begin{equation}
+\label{Feature set in step i}
+p^* = \arg\min_{p \in \mathcal{M}^{(i)}} S_p,
+\end{equation}
+
+and construct the next iteration's feature set as:
+
+\begin{equation}
+\label{Feature set reduction}
+\mathcal{M}^{(i+1)} = \mathcal{M}^{(i)} \setminus \{F_{p^*}\}.
+\end{equation}
+
+
+This greedy elimination continues until only the most informative meter group remains. The final ranked list \(\mathcal{M}^{(1)}, \ldots, \mathcal{M}^{(P)}\) defines the order of meters by decreasing predictive contribution, where meters removed last are deemed most important by aggregated importance score means.
+
+The complexity of this algorithm is linear to the number of meters and consumes time equal to the number of meters on the dataset times the time required to train the RF.
+
+\begin{equation}
+\label{RF time}
+\mathcal{T_{RFE-RF}} = \mathcal{M} * {T_{RF}}.
+\end{equation}, where $T_{RFE-RF}$ is the total time consumed and $T_{RF}$ is the time required for a sinle RF training.
+
+
+
+\subsection{Bad Data Detection and Imputation}
+
+In addition to optimal sensor placement, handling bad data is critical for maintaining the robustness of SE. Faulty or anomalous measurements, due to sensor failure, communication errors, or external disturbances can severely degrade model accuracy if not properly addressed. To tackle this, we adopt a two-stage strategy: \textit{outlier detection using IF} and \textit{node-wise imputation using KNN}.
+
+\paragraph{Outlier Detection via Isolation Forest.}
+IF is an unsupervised outlier detection algorithm that identifies outliers based on the principle of isolation. It operates by constructing an ensemble of randomized binary trees where each split isolates a feature by randomly selecting an attribute and a split value. Since anomalies are few and different, they are more likely to be isolated in fewer splits (shallower trees). The anomaly score for each data point is based on the average path length over all trees:
+
+\begin{equation}
+\label{IF anomaly score}
+s(x) = 2^{-\frac{E(h(x))}{c(n)}},
+\end{equation}
+
+where \( E(h(x)) \) is the average path length to isolate point \( x \), and \( c(n) \) is the average path length in a binary tree of \( n \) samples. Points with scores above a threshold are flagged as \textit{bad data}.
+
+\paragraph{Node-wise Imputation with KNN.}
+Once bad data points are detected, we apply a \textit{KNN-based imputer} on a per-node basis to reconstruct missing or unreliable values. For each affected node, we search its nearest neighbors in feature space, using the Euclidean distance, and impute the missing value as a weighted average of those neighbors’ corresponding feature values:
+
+\begin{equation}
+\label{IF anomaly score}
+\hat{x}_i = \frac{\sum_{j \in \mathcal{N}_k(i)} w_j x_j}{\sum_{j \in \mathcal{N}_k(i)} w_j},
+\end{equation}
+
+where \( \mathcal{N}_k(i) \) denotes the \( k \) nearest neighbors of node \( i \), and \( w_j \) is the weight (e.g., inverse distance) assigned to neighbor \( j \).
+
+
+\subsection{Overall Functionality of the Data- Driven framework}
+
+The methodology begins with feature selection for the TI task using RFE-RF. Let the complete set of available meter measurements be denoted as \( M = \{m_1, m_2, \dots, m_n\} \). RFE-RF assigns an importance ranking to each feature (meter) based on its contribution to TI classification accuracy. The TI task is treated as a multi-class node classification problem, where either a GNN or a TEGNN is trained using a subset of the measurements \( M_{TI} \subseteq M \). The training continues iteratively, progressively adding meters in descending order of importance according to the RFE-RF ranking, until the TI accuracy \( TI_{acc} \) surpasses a predefined threshold \(\tau_{TI}\), i.e.,
+
+\begin{equation}
+\label{TI_acc}
+TI_{acc} \geq \tau_{TI}.
+\end{equation}
+
+Once the TI model meets the required accuracy, FS is performed for the SE task. The process again uses RFE-RF. However, the initial feature set for NN training, now includes the TI-selected meters \( M_{TI} \) as a fixed base. Additional meters \( M_{SE}^{new} \) are then added sequentially based on the SE-specific importance, as determined by RFE-RF, until the predefined threshold for voltage magnitudes and angles prediction are reached.
+
+
+\begin{equation}
+\label{SE meter set}
+M_{SE} = M_{TI} \cup M_{SE}^{new}.
+\end{equation}
+
+GNN or TEGNN models are trained for SE to estimate nodal voltage magnitudes \(\hat{v}\) and angles \(\hat{\alpha}\). Training proceeds until the Mean Absolute Percentage Error for voltage,
+
+\begin{equation}
+\label{MAPE_v}
+MAPE_v = \frac{1}{N} \sum_{i=1}^N \left| \frac{v_i - \hat{v}_i}{v_i} \right|,
+\end{equation}, where $v_i$ is the actual value of the voltage magnitude of node $i$ and $\hat{v_i}$ is the voltage predicted magnitude value of node $i$. (29) requires to satisfy
+
+\begin{equation}
+\label{MAPE_v tau}
+MAPE_v \leq \tau_v,
+\end{equation},
+
+where $\tau_v$ is the predetermined $MAPE_v$ threshold. Furthermore, for the voltage angles, the Mean Absolute Error,
+
+\begin{equation}
+\label{MAE_a}
+MAE_{\alpha} = \frac{1}{N} \sum_{i=1}^N \left| \alpha_i - \hat{\alpha}_i \right|,
+\end{equation}, where $\alpha_i$ is the actual voltage angle of node $i$ and $\hat{\alpha}_i$ is the predicted voltage angle of node $i$. (31) requires to satisfy
+
+\begin{equation}
+\label{MAE_a tau}
+MAE_{\alpha} \leq \tau_{\alpha}.
+\end{equation}
+
+Before the inference step, a bad-data detection module is employed to filter out corrupted or anomalous inputs. This module operates on the raw measurement set \( M_{in} \) and outputs a cleaned set \( M_{clean} \subseteq M_{in} \), ensuring that inference is based only on trustworthy data. This improves robustness and avoids performance degradation due to outliers.
+
+Thus, the full DSSE estimator combines sequential RFE-RF-driven feature selection ordered by feature importance, graph-based neural modeling and pre-inference data validation to produce reliable and accurate TI and SE results.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.50\textwidth]{operations.png}
+  \caption{Offline Learning and Online Operation: Dataset Generation, Sensor Placement and model Training occur in offline training phase and the inference of the measurements at real time is conducted with trained models in online operation}
+  \label{fig:GNN-image}
+\end{figure}
+
+\section{Offline-to-Online Workflow}
+This section describes the process of generating the dataset to train the ML models, the different training processes of the utilized ML models and the modules operations in offline and online mode. That is the training of the module for an actual power system's case and the online operation performing SE and TI
+
+\subsection{Dataset Generation}
+As displayed in Fig.5 a dataset that is diverse and large enough, is required to train and evaluate the different ML modules. To this end, historical load profiles from LV and MV customers, as well as historical RES generation measurements are utilized. The resolution of all the load and generation profiles is assumed equal, therefore the profiles can be alligned per single time slot.
+
+Initially, for each LV node, a subset of all the available load profiles corresponding to the LV customers were added a small percentage of random noise and aggregated (summed). This process returned a single randomized load profile for each node, by accumulating LV customers. For each MV node a different MV load profile was assigned and the same is true for RES generation nodes, where a different solar or wind profile was picked and assigned per node. For all possible bus-branch configurations of the system all available time-steps of the existing load profiles were multiplied with the active and reactive power values of the nodes. For both the MV and LV profiles, in order to introduce further diversity into the dataset, node locations are picked from a uniform distribution and 60\% load variation (multiplied with a random value from 70\% to 130\% of the base load profile value) is introduced to the load profile value, before the power flow is executed. The latter values were utilized to solve separate power flows, one per time sample and topology combination. As a result, nodal voltages, injection current and branch current magnitudes and angles were extracted.
+
+ For each sensor type utilized another noise threshold is utilized. PMU sensors are added 0.1\% Gaussian noise for Voltage and current magnitudes and 1.8\% is added to the angles. The measurements of active and reactive power, used by conventional sensors, are added 5\% and 10\% noise respectively. 5\% is added to the voltage and current magnitudes for the latter sensors as well. As far as bad-data injection is concerned, a random percentage of the time sampled values were chosen to be converted to be injected bad data per measurement type and their values were either multiplied either by 0.05 or 10 for magnitudes or added +40 or -40 degrees for angles.
+
+\subsection{Model Training and Hyperparameter Optimization}
+
+Initially, the dataset is split into training, validation, and test sets using a standard 75\%/15\%/15\% ratio. The training set is then split into another 80\% 10\% 10\% ration specifically for the IF and KNN training. As far as hyperparameter optimization is concerned grid search is applied, where different values for hyper-parameters from a predefined set are evaluated.
+
+For the IF a number of decision trees from 25 to 100 with a step of 25 is utilized, a contamination rate from 0.01 to 0.1 with a step of 0.01 is used and the max_samples range from 256 to 2048 with a step of 256. One separate IF per measurement type (voltage magnitude, angles etc) is utilized. For the KNN imputer the number of neighbors was searched with integer values ranging from 1 to 10.  Two graph neural network (GNN) architectures are considered, namely the standard GNN and the TEGNN. The first model (Fig.1) consists of GAT convolutional layers followed and fully connected (FC) layers. The second model (Fig.2) builds upon the first by incorporating an embedding layer and a multi-head self-attention layer.
+
+Both models are trained in a supervised manner, minimizing the mean squared error (MSE) between the predicted and true voltage phasors for SE and maximizing the accuracy for TI. Hyperparameter optimization is performed via a grid search across the following parameter space: learning rate $\in \{1\text{e}{-4}, 5\text{e}{-4}, 1\text{e}{-3}\}$, dropout rate $\in \{0.0, 0.2, 0.5\}$, number of GAT heads $\in \{2, 4, 6\}$, GATConv layer number $\in \{1..10\}$ and number of hidden units per layer $\in \{32, 64, 128, 256, 512\}$ for a layer number in $\in \{1..3\}$. For the second model, additional parameters such as embedding dimensionality $\in \{1..4\}$ and the number of attention heads $\in \{2, 4, 6\}$ in the self- and global-attention layers are also tuned.
+
+Training is performed for up to 300 epochs using the Adam optimizer with a batch size of 32. Early stopping with a patience of 20 epochs is applied based on validation loss. The final model configuration is selected based on its generalization performance on the held-out test set.
+
+
+
+\subsection{Offline Learning Stage and Online Operation}
+Implementation of the proposed methodology is is divided into two separate processes, the offline learning stage and the online operation. Offline operation describes the required actions to train and evaluate the models for the online operation and the latter describes their real time application.
+
+\subsubsection*{Offline Learning Stage}
+During this stage the state estimator utilizes the dataset generated from all possible topologies of the specified DS. The assumption followed is that the load profiles at all node locations are considered known. Furthermore, these profiles extend over large periods of time, in order for patterns of various time intervals to be present within the data (daily weekly, e.t.c.). The load profiles gathered, enable the solution of multiple power flows, one per single time step. The result of the power flows are, among others, injection currents, branch currents and voltage magnitudes and angles. The actual values from the power flows are stored and all possible topologies of the targeted DS are sampled. The topologies are also stored as a part of the dataset. Then, we inject noise and bad-data into the measurements for robustness purposes. Utilizing the available measurement data as input, the model chosen for TI (GNN or TEGNN) is trained and evaluated. This is also the case for the SE model. Furthermore, the IF and KNN models performing bad-data detection and imputation are also trained on the above dataset. All above models are stored for online use.
+
+\subsubsection*{Online Operation}
+For the online operation, the available sensor data are initially passed into the trained IF algorithm for bad-data detection. In case of detection the data is imputed using the trained KNN model. Subsequently, the TI trained model is utilized to infer the system's configuration (topology), with the available sensor's imputed measurements as input. Upon prediction, the predicted topology of the system is also used into the SE model along with the sensors' imputed measurements as input. In contrast to [17], upon identifying a different topology, the same model is utilized and no transfer learning is required, allowing for faster operation. Furthermore, in case of a different topology, the SE model is not entirely different, but there is a small update on the input's topology configuration instead of deploying an entirely different model as in [17]. As a result, smaller errors are anticipated on false topologies' SE cases.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{UNTIL HERE YOU COMMENT}
+
+The evaluation of the method was conducted not only for one but three separate meter types. Conventional meters and two different subtypes of PMUs were used. Three separate noise threshold were utilized, one for each meter. Their impact on the meter placement, TI and DSSE methods are being compared.
+
+For the scope of evaluation a very large and diverse dataset was generated, taking into account various load profiles from low voltage (LV) and medium voltage (MV) clients, SCADA centers, and generation profiles from wind and solar farms. Additionally, in order to take into account the varying load, wind and solar profiles throughout a whole year the first week out of every month in duration was used in the final dataset, consisting of 15-minute measurements.
+
+
+
+\section{Models Utilized}
+
+Comment on GNNs are better
+
+Comment on RF in conjunction with RFE
+
+Talk about transformers, where are used and say what parts we use (embeddings) and Decoder and why in the specific problem with sparse inputs
+
+Maybe the algorithm in general, as was previously mentioned in the paper.
+
+\section{Dataset Generation}
+
+MV, LV, SCADA, solar, wind 1 week per month from a full year -> to take all into account, all data days, 15minutes RES e.t.c.
+
+\section{Data Preprocessing}
+
+Data Loaders, one hot encoding etc. Classification anjd regression problems for RF, NN, GNN, TBGNN
+
+\section{Model Training - Hyperparameter Optimization}
+
+How to train RFs, max depth, using RFE and importances on s smaller portion of the dataset.
+
+How to train simple NN models
+
+How to train GNNs
+
+How to train the transformer-based GNN
+
+
+\section{Results}
+
+\section{Conclusions}
+
+
+
+\section{Contributions}
+
+1. Novel RFE-RF ML Meter Placement Algorithm \\
+    \indent 1.1 RF is much faster than SFS and is popular \\
+    \indent 1.2 Aggregates all features per meter, not only a few\\
+    \indent 1.3 RFE is iterative per meter exclusion, not constant \\
+2. Using a novel transformer-based GNN architecture tailored for a SE and TI and for sparse inputs and global feature extraction, while maintaining the graph's connections and comparison with simple NNs and used GNN models.\\
+3. Using multiple meters (PMUA, PMUB, conventional) - Multiple noise thresholds\\
+    \indent 3.1 Checked robustness of the methods using Gaussian noise
+4. Very diverse and large dataset, using multiple data points and load profiles from all the seasons (1st week from each month) - 15minutes - multiple load profiles from MV and LV, solar and wind, with multiple meshed and radial topologies \\
+5. Robustness - lack of synchronization - TODO
+
+\begin{thebibliography}{9}
+
+\bibitem{knuth1984}
+Donald Knuth,
+\textit{The TeXbook},
+Addison-Wesley, 1984.
+
+\end{thebibliography}
+
+[1]
+__Active_Electric_Distribution_Network_Applications_Challenges_and_Opportunities
+
+[2]
+Review on Oscillatory Stability in Power Grids with Renewable Energy Sources:  Monitoring, Analysis, and Control Using Synchrophasor Technology
+
+[3]
+Guest Editorial: Towards Resilient Power Grids Integrated With High-Penetrated Renewable Energy Sources: Challenges, Opportunities, Implementation Strategies, and Future Perspectives
+
+[4]
+The Role of Prosumers in Modern Power System Operation: Opportunities, Challenges, and Emerging Solutions
+
+[5]
+Resilience-Driven Integration of Distributed Energy Resource (DER): Coordinating DER Services for Value
+
+[6]
+A Survey of Power System State Estimation Using Multiple Data Sources: PMUs, SCADA, AMI, and Beyond
+
+[7]
+__A review on TI methods and applications in DNs (Hatzi et al., EPSR2024)
+
+[8]
+Bayesian Approach for Distribution System State Estimation With Non-Gaussian Uncertainty Models
+
+[9]
+A Robust State Estimator for Medium Voltage Distribution Networks
+
+[10]
+A Game-Theoretic Data-Driven Approach for Pseudo-Measurement Generation in Distribution System State Estimation
+
+[11]
+Data-Driven Learning-Based Optimization for Distribution System State Estimation
+
+[12]
+State Estimation in Low-Observable Distribution Systems Using Matrix Completion
+
+[13]
+State Estimation in Smart Distribution System With Low-Precision Measurements
+
+[14]
+Robust Data-Driven State Estimation for Smart Grid
+
+[15]
+DISTRIBUTION CIRCUIT STATE ESTIMATION USING A PROBABILISTIC APPROACH
+
+[16]
+A Weighted Deep Neural Network for Processing Measurements for State Estimation
+
+[17]
+Bayesian State Estimation for Unobservable Distribution Systems via Deep Learning
+
+[18]
+State and Topology Estimation for Unobservable Distribution Systems Using Deep Neural Networks
+
+[19]
+Supervised Learning Approach for State Estimation of Unmeasured Points of Distribution Network
+
+[20]
+Physics-guided Deep Learning for Power System State Estimation
+
+[21]
+Bayesian Framework for Multi-timescale State Estimation in Low-Observable Distribution Systems
+
+[22]
+Real-Time Power System State Estimation and Forecasting via Deep Unrolled Neural Networks
+
+[23]
+DISTRIBUTION SYSTEM STATE ESTIMATION VIA DATA-DRIVEN AND PHYSICS-AWARE DEEP NEURAL NETWORKS
+
+[24]
+Topology Identification of Distribution Networks Using a Split-EM Based Data-Driven Approach
+
+[25]
+A Hybrid Framework for Topology Identification of Distribution Grid With Renewables Integration
+
+[26]
+A Deep Neural Network Approach for Online Topology Identification in State Estimation
+
+[27]
+Topology detection in power distribution system using kernel-node-map deep networks
+
+[28]
+Measurement Selection for Data-Driven Monitoring
+of Distribution Systems
+
+[29]
+Graph Neural Network-Based Distribution
+System State Estimators
+
+[30]
+Graph neural networks on factor graphs for robust, fast, and scalable
+linear state estimation with PMUs
+
+[31]
+Physics-Informed Graphical Learning and Bayesian
+Averaging for Robust Distribution State Estimation
+
+[32]
+Adaptive Graph Convolutional Network-Based
+Distribution System State Estimation
+
+[33]
+Robust and fast data-driven power system state estimator using graph neural networks (D. Vukobratovic, etal, arXiv-2206.02731v1, Jun. 2022)
+
+[34]
+State Estimation in Smart Grids Using Temporal Graph Convolution Networks
+
+[35]
+State Estimation of Energy Internet Using SCADA and PMU Data Based on Graph Convolutional Networks
+
+[36]
+Time-Synchronized State Estimation Using Graph Neural Networks in Presence of Topology Changes
+
+[37]
+Spatiotemporal Graph Convolutional Neural Network Based Forecasting-Aided State Estimation Using Synchrophasors
+
+[38]
+-A Survey on SE Techniques and Challenges in Smart Distribution Systems (Dehghanpour et al., TSG2018)
+
+[39]
+-A review on distribution system state estimation (A. Primadianto et al., TPWRS2016)
+
+[40]
+Topology identification in distribution network with limited measurements
+
+[41]
+State Estimation Concepts and Terminology
+
+[42]
+Distribution System State Estimation Using an Artificial Neural Network Approach for Pseudo Measurement Modeling
+
+[not used]
+State Estimation in Electric Power Systems Leveraging Graph Neural Networks
+
+
+
+Deep_Statistical_Solver_for_Distribution_System_State_Estimation
+
+
+
+
+
+
+\end{document}

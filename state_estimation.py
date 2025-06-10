@@ -15,7 +15,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from sklearn.feature_selection import SelectFromModel
-from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.preprocessing import StandardScaler
@@ -294,9 +293,9 @@ class DSSE_BuildModel:
         model = Sequential()
 
         # Input Layer (66 inputs)
-        model.add(Dense(128, input_dim=input_dim, activation='linear'))
-        model.add(Dense(128, activation='linear'))
-        model.add(Dense(95, activation='linear'))
+        model.add(Dense(64, input_dim=input_dim, activation='linear'))
+        #model.add(Dense(128, activation='linear'))
+        model.add(Dense(32, activation='linear'))
 
         # Output Layer (assuming 16 outputs, modify according to your use case)
         # For regression, we use 'linear' or no activation in the output layer
@@ -365,7 +364,7 @@ class DSSE_TrainModel:
                                  epochs=300,
                                  batch_size=BATCH_SIZE,
                                  callbacks=[early_stopping],
-                                 validation_data=(self.X_val, self.y_val), verbose=0)
+                                 validation_data=(self.X_val, self.y_val), verbose=1)
         if False:
             # Plot training & validation accuracy and loss values
             plt.figure(figsize=(14, 5))
@@ -479,7 +478,7 @@ class DSSE_Estimator_TrainProcess:
             elif self.meterType == "PMU_caseB":
                 #features = IEEE33_PMU_caseB_SE_features
                 #features = MESOGEIA_PMU_caseB_SE_features
-                features  = UKGD95_PMU_caseB_SE_features
+                features  = MESOGEIA_PMU_caseB_SE_features #UKGD95_PMU_caseB_SE_features
             elif self.meterType == "conventional":
                 #features = IEEE33_conventional_SE_features
                 #features = MESOGEIA_conventional_SE_features
@@ -496,13 +495,13 @@ class DSSE_Estimator_TrainProcess:
                     used_features.append(feature)
                     for index in [old_node, NUM_NODES + old_node, 2*NUM_NODES + old_branch, 2*NUM_NODES+NUM_BRANCHES + old_branch]:  # Vm, Va, Im, Ia
                         all_indices.append(index)
-                    all_indices = list(set(all_indices))
+                    all_indices = sorted(list(set(all_indices)))
                 elif self.meterType == "PMU_caseB":
                     used_features.append(feature)
                     old_node = feature
                     for index in [old_node, NUM_NODES + old_node, 2 * NUM_NODES + old_node, 3 * NUM_NODES + old_node]:  # Vm, Va, Im, Ia
                         all_indices.append(index)
-                    all_indices = list(set(all_indices))
+                    all_indices = sorted(list(set(all_indices)))
                 elif self.meterType == "conventional":
                     used_features.append(feature)
                     old_node = feature
@@ -547,27 +546,39 @@ class DSSE_Estimator_TrainProcess:
 
             mape_magnitudes = self.evaluate(y_pred_m, y_test_m, "MAPE")
 
+            print(y_pred_m[0])
+            print(y_test_m[0])
+            print(all_indices)
+
+            print(self.old_PMUs, "MAPE_v: ", mape_magnitudes)
+            filename = "DeployedModels/" + f"MESOGEIA_NN_NETERS_MAGNITUDES_{str('_'.join([str(x) for x in self.old_PMUs]))}_SE.h5"
+
+            self.model_m.save(filename)
+
             # TODO Angles
-            #ML_model = "NN"
-            #buildModel_a = DSSE_BuildModel(ML_model, "angles")
+            ML_model = "NN"
+            buildModel_a = DSSE_BuildModel(ML_model, "angles")
 
-            #input_dim = len(all_indices)
-            #output_dim = len(y_train_a[0])
+            input_dim = len(all_indices)
+            output_dim = len(y_train_a[0])
 
-            #self.model_a = buildModel_a.build_model(input_dim=input_dim, output_dim=output_dim)
+            self.model_a = buildModel_a.build_model(input_dim=input_dim, output_dim=output_dim)
 
-            #trainModel = DSSE_TrainModel(self.model_a, X_train, y_train_a, X_val, y_val_a, X_test, y_test_a)
-            #trainModel.train_model()
+            trainModel = DSSE_TrainModel(self.model_a, X_train, y_train_a, X_val, y_val_a, X_test, y_test_a)
+            trainModel.train_model()
 
             # Evaluate the model on the test data
-            #y_pred_a = self.model_a.predict(X_test)
+            y_pred_a = self.model_a.predict(X_test)
 
-            #mae_angles = self.evaluate(y_pred_a, y_test_a, "MAE")
+            mae_angles = self.evaluate(y_pred_a, y_test_a, "MAE")
+            filename = "DeployedModels/" + f"MESOGEIA_NN_NETERS_ANGLES_{str('_'.join([str(x) for x in self.old_PMUs]))}_SE.h5"
 
-            #print("Used Features: ", used_features, " - MAPE_v: ", str(mape_magnitudes), " - MAE_a: ", str(mae_angles))
+            self.model_a.save(filename)
+
+            print("Used Features: ", used_features, " - MAPE_v: ", str(mape_magnitudes), " - MAE_a: ", str(mae_angles))
             #filename = "results/DSSE___" + "MODEL___" + str(ML_model) + "___" + "PREPROCESSING_" + str(FS.Preproc_model) + "___SUBMETHOD_" + str(FS.submethod) + "_results.txt"
 
-            #print("MAE_a", mae_angles, "MAPE_v", mape_magnitudes)
+            print("MAE_a", mae_angles, "MAPE_v", mape_magnitudes)
 
             #with open(filename, "a") as wf:
             #    wf.write("Used branches (i-1): " + str(
@@ -575,7 +586,7 @@ class DSSE_Estimator_TrainProcess:
             #        all_indices) + ", MAPE_v: " + str(mape_magnitudes) + ", MAE_a: " + str(mae_angles) + "\n")
             #   wf.close()
 
-            if not ((mape_magnitudes <= MAPE_v_threshold) and (1000 <= MAE_a_threshold)):
+            if not ((mape_magnitudes <= MAPE_v_threshold) and (mae_angles <= MAE_a_threshold)):
 
                 for feature in features:
                     if feature not in self.old_PMUs:
@@ -1236,7 +1247,7 @@ class Train_GNN_DSSE:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseA"
+    meterType = "PMU_caseB"
     if meterType == "conventional":
         if dataset == "IEEE33":
             old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]
@@ -1259,7 +1270,7 @@ if __name__ == "__main__":
         elif dataset == "95UKGD":
             old_PMUs = [75] #, 67, 65, 84, 80, 64, 83, 95, 77, 70, 66] #[75]
 
-    model    = "GNN"
+    model    = "NN"
     PP       = "RF"
     subPP    = "rfe"
 

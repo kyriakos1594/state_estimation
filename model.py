@@ -656,6 +656,7 @@ class SE_GATTransfomerOnlyDecoderWithEdges(nn.Module):
                                       value=x)
             #print("Shape x after decoder layer: ", x.shape)
             #print(x[0, :])
+            print(x[0, :])
 
         # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
         x = x.squeeze(0)
