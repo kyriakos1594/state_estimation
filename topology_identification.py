@@ -39,6 +39,9 @@ from model import (TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs, TI_
 from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
 from IEEE_datasets.IEEE33 import config_dict
 from outlier_classes import OutlierInjector, IF_OutlierDetection, KNNImputerMeasurements
+import joblib
+from tensorflow.keras.callbacks import EarlyStopping
+
 
 # Set the device globally
 np.set_printoptions(threshold=np.inf)
@@ -340,16 +343,49 @@ class Preprocess:
             print("Enter meter type")
             sys.exit(0)
 
+        if (dataset == "MESOGEIA") and (meterType=="PMU_caseB"):
+            # First split: train+validation and test
 
-        # First split: train+validation and test
-        X_train, X_test, y_train, y_test = train_test_split(inputs, outputs, test_size=0.15, random_state=42)
+            # Print shape of inputs-outputs
+            print(inputs.shape, outputs.shape)
 
-        # Second split: train and validation
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.20, random_state=42)  # 0.25 x 0.8 = 0.2
+            topology_offset = 7787
 
-        meter = 75
+            train_T1_start, train_T1_end = 0, 7307
+            train_T2_start, train_T2_end = topology_offset + 0, topology_offset + 0 + 7307
+            print(train_T1_start, train_T1_end, train_T2_start, train_T2_end)
+
+            test_T1_start, test_T1_end = 7307, 7307+96
+            test_T2_start, test_T2_end = topology_offset + 7307+96, topology_offset + 7307+96+96
+            print(test_T1_start, test_T1_end, test_T2_start, test_T2_end)
+
+            val_T1_start, val_T1_end = 7307+96+96, topology_offset
+            val_T2_start, val_T2_end = topology_offset + 7307+96+96, topology_offset + topology_offset
+            print(val_T1_start, val_T1_end, val_T2_start, val_T2_end)
+
+            print(inputs.shape, outputs.shape)
+
+
+            X_train = np.concatenate([inputs[train_T1_start:train_T1_end, :], inputs[train_T2_start:train_T2_end, :]])
+            print(X_train.shape)
+            y_train = np.concatenate([outputs[train_T1_start:train_T1_end, :], outputs[train_T2_start:train_T2_end, :]])
+
+            X_test  = np.concatenate([inputs[test_T1_start:test_T1_end, :], inputs[test_T2_start:test_T2_end, :]])
+            y_test  = np.concatenate([outputs[test_T1_start:test_T1_end, :], outputs[test_T2_start:test_T2_end, :]])
+
+            X_val   = np.concatenate([inputs[val_T1_start:val_T1_end, :], inputs[val_T2_start:val_T2_end, :]])
+            y_val   = np.concatenate([outputs[val_T1_start:val_T1_end, :], outputs[val_T2_start:val_T2_end, :]])
+
+        else:
+            # First split: train+validation and test
+            X_train, X_test, y_train, y_test = train_test_split(inputs, outputs, test_size=0.15, random_state=42)
+
+            # Second split: train and validation
+            X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.20, random_state=42)  # 0.25 x 0.8 = 0.2
 
         if type == "PMU_caseA":
+
+            meter = 75
 
             X_old = X_test.copy()
 
@@ -414,9 +450,23 @@ class Preprocess:
 
         else:
             scaler   = StandardScaler()
+            X_old    = X_train.copy()
             X_train  = scaler.fit_transform(X_train)
             X_val    = scaler.transform(X_val)
             X_test   = scaler.transform(X_test)
+            joblib.dump(scaler, 'scalers/MESOGEIA_NN_PMUB_METERS_StandardScaler_all_features.pkl')
+
+            if dataset == "MESOGEIA":
+                used_feature_indices = sorted([128, 258, 259, 255, 389, 390, 386, 520, 521, 517, 124, 127])
+                print(used_feature_indices)
+
+                X_dep = X_old[:, used_feature_indices]
+                dep_scaler = StandardScaler()
+                X_dep = dep_scaler.fit_transform(X_dep)
+
+                #TODO Save scaler
+                joblib.dump(dep_scaler, 'scalers/MESOGEIA_NN_PMUB_METERS_StandardScaler.pkl')
+
 
             np.save(X_train_file, X_train)
             np.save(y_train_file, y_train)
@@ -515,31 +565,6 @@ class BuildModel:
 
         self.model=NN_class
 
-    def build_simple_nn_old(self, input_dim):
-
-        # Define the model
-        model = Sequential()
-
-        # Input Layer (66 inputs)
-        #model.add(Dense(128, input_dim=input_dim, activation='relu'))
-
-        model.add(Dense(64, input_dim=input_dim, activation='relu'))
-
-        # Hidden Layer(s)
-        model.add(Dense(32, activation='relu'))
-        model.add(Dense(16, activation='relu'))
-
-        # Output Layer (16 outputs)
-        model.add(Dense(NUM_TOPOLOGIES, activation='softmax'))
-
-        # Compile the model
-        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-
-        # Summary of the model
-        model.summary()
-
-        return model
-
     def build_simple_nn(self, input_dim):
         # Input layer
         inputs = layers.Input(shape=(input_dim,))
@@ -548,7 +573,6 @@ class BuildModel:
        # x = layers.Dense(128, activation='relu')(inputs)
 
         x = layers.Dense(32, activation='relu')(inputs)
-
         x = layers.Dense(16, activation='relu')(x)
 
         # First hidden layer with 64 neurons and ReLU activation
@@ -582,11 +606,17 @@ class TrainModel:
 
     def train_model(self):
 
+        early_stopping = EarlyStopping(
+            monitor='val_loss',  # You can use 'val_accuracy' or any other metric you are monitoring
+            patience=20,  # Number of epochs with no improvement before stopping
+            restore_best_weights=True  # Restore model weights from the epoch with the best metric
+        )
+
         # Compile the model
         self.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
         # Train the model and save the history
-        history = self.model.fit(self.X_train, self.y_train, epochs=20, batch_size=16, validation_data=(self.X_val, self.y_val))
+        history = self.model.fit(self.X_train, self.y_train, epochs=50, batch_size=16, validation_data=(self.X_val, self.y_val), callbacks=[early_stopping])
 
         # Plot training & validation accuracy and loss values
         plt.figure(figsize=(14, 5))
@@ -973,7 +1003,7 @@ class TIPredictorTrainProcess:
                 features = features
                 print("TI Feature Selection Order - Branches: ", features)
             elif self.meterType == "PMU_caseB":
-                features = IEEE33_PMU_caseB_TI_features
+                features = MESOGEIA_PMU_caseB_TI_features
                 features = features
                 print("TI Feature Selection Order - Nodes: ", features)
             elif self.meterType == "conventional":
@@ -984,7 +1014,9 @@ class TIPredictorTrainProcess:
             #TODO For every Currenct branch input feature add the magnitude and its angle
             # If the magnitude is at index X, then angle is at index X+35
             used_feature_indices = []
+            acc_meters = []
             for i in features:
+                acc_meters.append(i)
                 if self.meterType == "PMU_caseA":
                     used_feature_indices.append(i)
                     print("Chose feature - branch: ", i, "Total feature indices: ", used_feature_indices)
@@ -1000,7 +1032,7 @@ class TIPredictorTrainProcess:
                                    [NUM_NODES + i for i in used_feature_indices] + \
                                    [2*NUM_NODES + i for i in used_feature_indices] + \
                                    [3*NUM_NODES + i for i in used_feature_indices]
-                    all_indices = node_indices
+                    all_indices = sorted(node_indices)
                 elif self.meterType == "conventional":
                     used_feature_indices.append(i)
 
@@ -1018,41 +1050,43 @@ class TIPredictorTrainProcess:
                 X_test  = self.X_test[:, all_indices]
 
                 #TODO Simple NN with keras
-                if False:
-                    ML_model = "NN"
-                    buildModel = BuildModel(ML_model)
-                    input_dim = len(all_indices)
-                    self.model = buildModel.build_model(input_dim)
-                    print(X_train.shape, self.y_train.shape)
-                    trainModel = TrainModel(self.model, X_train, self.y_train, X_val, self.y_val)
-                    trainModel.train_model()
-                    # Evaluate the model on the test data
-                    test_loss, test_accuracy = self.model.evaluate(X_test, self.y_test, verbose=0)
-                    test_accuracy = self.evaluate_simple_NN(self.model, X_test, self.y_test)
+                ML_model = "NN"
+                buildModel = BuildModel(ML_model)
+                input_dim = len(all_indices)
+                print(all_indices)
+                self.model = buildModel.build_model(input_dim)
+                print(X_train.shape, self.y_train.shape)
+                trainModel = TrainModel(self.model, X_train, self.y_train, X_val, self.y_val)
+                trainModel.train_model()
+                # Evaluate the model on the test data
+                test_loss, test_accuracy = self.model.evaluate(X_test, self.y_test, verbose=0)
+                test_accuracy = self.evaluate_simple_NN(self.model, X_test, self.y_test)
+
+                print("Meters: ", acc_meters, " - Accuracy: ", test_accuracy)
 
                 NNdimension = len(used_feature_indices)
 
+                #ML_model   = "NN"
+                #if self.meterType == "PMU_caseA":
+                #    num_node_features = 2
+                #    ANN = TI_SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
+                #else:
+                #    ANN = TI_SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
+                #trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
+                #print("X_train shape: ", X_train.shape)
+                #test_accuracy = trainModel.evaluate()
 
-                ML_model   = "NN"
-                if self.meterType == "PMU_caseA":
-                    num_node_features = 2
-                    ANN = TI_SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
-                else:
-                    ANN = TI_SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
-                trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
-                print("X_train shape: ", X_train.shape)
-                test_accuracy = trainModel.evaluate()
+                #print(used_feature_indices, test_accuracy)
+                #with open("results.txt", "a") as wf:
+                #    wf.write("USed indices (i+1 for proper index): "+str([i+1 for i in used_feature_indices])+", Accuracy: "+str(test_accuracy)+"\n")
+                #    wf.close()
 
-                print(used_feature_indices, test_accuracy)
-                with open("results.txt", "a") as wf:
-                    wf.write("USed indices (i+1 for proper index): "+str([i+1 for i in used_feature_indices])+", Accuracy: "+str(test_accuracy)+"\n")
-                    wf.close()
+                filename = "DeployedModels/" + f"MESOGEIA_NN_METERS_{str('_'.join([str(x) for x in acc_meters]))}_TI.h5"
+                self.model.save(filename)
 
-                filename = "results/" + "TI___MODEL___" + str(ML_model) + "___" + "PREPROCESSING_" + str(FS.Preproc_model) + "___SUBMETHOD___" + str(FS.submethod) + "_results.txt"
-
-                with open(filename, "a") as wf:
-                    wf.write("Used indices (i+1 for proper index): "+str([i+1 for i in used_feature_indices])+", Accuracy: "+str(test_accuracy)+"\n")
-                    wf.close()
+                #with open(filename, "a") as wf:
+                #    wf.write("Used indices (i+1 for proper index): "+str([i+1 for i in used_feature_indices])+", Accuracy: "+str(test_accuracy)+"\n")
+                #    wf.close()
 
                 if test_accuracy >= self.threshold: break
 
@@ -1824,8 +1858,8 @@ class TrainNN_TI:
 if __name__ == "__main__":
 
     #meterType = "PMU_caseA"
-    #meterType = "PMU_caseB"
     meterType = "PMU_caseB"
+    #meterType = "conventional"
 
     model = "NN"
     PP    = "RF"

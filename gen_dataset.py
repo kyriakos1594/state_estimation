@@ -351,7 +351,7 @@ class LoadPowerFlow:
         self.net.load["LOAD_CHANGE_FLAG"] = np.random.choice([0, 1], size=len(self.net.load))
         #self.net.load["LOAD_CHANGE_FLAG"] = np.array([1 for i in range(self.net.load.shape[0])])
         #TODO 1 always
-        r = 0.60
+        r = 0.30
         # var_vector (same size as the number of loads) defines the scaling factors
         # For simplicity, we'll use a vector of ones. Adjust as needed.
         var_vector = np.ones(len(net.load))
@@ -374,9 +374,12 @@ class LoadPowerFlow:
         me_phasor_mag = 0.001  # pu
         me_phasor_ang = 0.018  # degrees
 
-        # Insert noise for buses
-        # Add measurement noise
-        #print("Before: ", df_V)
+        # Keep original
+        df_V['vm_pu_actual']     = df_V['vm_pu'].copy()
+        df_V['va_degree_actual'] = df_V['va_degree'].copy()
+
+        print(df_V['vm_pu_actual'])
+
         df_V['vm_pu'] *= (1 + (me_phasor_mag / 3) * np.random.randn(len(df_V)))
         df_V['va_degree'] *= (1 + (me_phasor_ang / 3) * np.random.randn(len(df_V)))
 
@@ -388,15 +391,12 @@ class LoadPowerFlow:
 
         df_V['Im_inj'] *= (1 + (me_phasor_mag / 3) * np.random.randn(len(df_V)))
         df_V['Ia_inj'] *= (1 + (me_phasor_ang / 3) * np.random.randn(len(df_V)))
-        #print("After: ", df_V)
 
         # Insert noise for branches
         # Add measurement noise
         # Add noisy magnitude (Im_pu) and angle (Ia_pu in degrees)
-        #print("Before: ", df_I)
         df_I['Im_pu'] *= (1 + (me_phasor_mag / 3) * np.random.randn(len(df_I)))
         df_I['Ia_pu'] *= (1 + (me_phasor_ang / 3) * np.random.randn(len(df_I)))
-        #print("After: ", df_I)
 
         return df_V, df_I
 
@@ -608,16 +608,17 @@ class LoadPowerFlow:
 
         self.net.res_bus["Im_inj"] = pd.DataFrame(Inj_mag)
         self.net.res_bus["Ia_inj"] = pd.DataFrame(Inj_angle)
+
+
     def get_results(self):
         # Display bus results
+        print(self.net.res_bus)
         df_V = self.net.res_bus[['vm_pu', 'va_degree', 'P_pu', 'Q_pu', 'Im_inj', 'Ia_inj']]
         df_I = self.net.res_line[["Im_pu", "Ia_pu"]]
 
         # Insert noise
         df_V, df_I = self.insert_noise(df_V, df_I)
-
-        #self.net.res_bus.to_csv("bus.csv")
-        #self.net.res_line.to_csv("lines.csv")
+        print(df_V, df_I)
 
         return pd.concat([df_V, df_I], axis=1)
     def get_powerflow_results(self):
@@ -683,8 +684,11 @@ class GenerateDataset:
                     df_results["TopNo"] = pd.DataFrame([topology for k in range(df_results.shape[0])])
                     df_results["Simulation"] = pd.DataFrame([n_sample for k in range(df_results.shape[0])])
                     concat_frame = pd.concat([concat_frame, df_results], axis=0)
+
                 except Exception as e:
                     print("Exception"+str(e))
+
+                sys.exit(0)
 
         concat_frame.to_csv(f"datasets/{self.dataset}.csv")
 
