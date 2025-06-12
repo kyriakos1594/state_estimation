@@ -1,20 +1,20 @@
 import sys
 
 #TODO Basic configurations
-dataset = "MESOGEIA"
+dataset = "IEEE33"
 #meterType = "PMU_caseA" # PMU_caseA, PMU_caseB, conventional
 #meterType = "PMU_caseB"
 #meterType = "conventional"
 #GLOBAL_BRANCH_LIST = [6]
 #NUM_TOPOLOGIES = 1 #15
-NUM_SIMULATIONS = 7787 #4000 #3000 #7787
+NUM_SIMULATIONS = 3981 # 4 months 7787 #4000 #3000 #7787
 EXISTING_METER_BRANCHES = []
 EXISTING_METER_NODES    = []
 RAW_FILENAME    = f"datasets/{dataset}.csv"
 MAPE_v_threshold = 0.30
 MAE_a_threshold  = 0.15
 BATCH_SIZE = 32
-PROFILES_FILEPATH = f"datasets/weekly_alligned_scaled_profiles.csv"
+PROFILES_FILEPATH = f"datasets/weekly_alligned_scaled_all_profiles.csv"
 
 #TODO Random Forest Variables
 TREE_DEPTH = 10
@@ -398,7 +398,7 @@ elif dataset == "IEEE33":
         "PV": ["PV_profile 1", "PV_profile 2", "PV_profile 3", "PV_profile 4", "PV_profile 5", "PV_profile 6", "PV_profile 7"],
         "WD": ["WD 1"],
         "MV": ["R210 Load","X84_1 MV Load_x","X84_1 MV Load_y"],
-        "LV": ["R1", "R2", "R3", "R4", "R5", "R6"]
+        "LV": [f"LV {str(i)}" for i in range(40)]
     }
 
 else:

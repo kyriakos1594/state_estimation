@@ -59,7 +59,7 @@ class Preprocess:
 
         df = pd.read_csv(self.dataset_filename)
         # "Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"
-        df = df[["vm_pu","va_degree","P_pu","Q_pu","Im_inj","Ia_inj","Im_pu","Ia_pu","TopNo","Simulation"]]
+        df = df[["vm_pu_actual", "va_degree_actual", "vm_pu","va_degree","P_pu","Q_pu","Im_inj","Ia_inj","Im_pu","Ia_pu","TopNo","Simulation"]]
         data = []
         inputs = []
         labels = []
@@ -69,24 +69,13 @@ class Preprocess:
                 print("Topology: ", topology, "Simulation: ", simulation)
                 # TODO Input
                 Vm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
-                #Vm_m *= (1 + (additional_error / 3) * np.random.randn(len(Vm_m)))
-                #Vm_m = list(Vm_m)
-
                 Va_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
-                #Va_m *= (1 + (additional_error / 3) * np.random.randn(len(Va_m)))
-                #Va_m = list(Va_m)
-
                 Ifm_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Im_pu"].values.tolist()
-                #Ifm_m *= (1 + (additional_error / 3) * np.random.randn(len(Ifm_m)))
-                #Ifm_m = list(Ifm_m)
-
                 Ifa_m = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Ia_pu"].values.tolist()
-                #Ifa_m *= (1 + (additional_error / 3) * np.random.randn(len(Ifa_m)))
-                #Ifa_m = list(Ifa_m)
 
                 # TODO Output
-                Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
-                Va_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
+                Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu_actual"].values.tolist()[:-2]
+                Va_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree_actual"].values.tolist()[:-2]
 
                 # Input, SE Output, TI Output
                 data.append([Vm_m + Va_m + Ifm_m + Ifa_m, Vm_t + Va_t, topology])
@@ -115,7 +104,7 @@ class Preprocess:
         print(df.shape)
         print("Entering case B")
         # "Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"
-        df = df[["vm_pu","va_degree","P_pu","Q_pu","Im_inj","Ia_inj","Im_pu","Ia_pu","TopNo","Simulation"]]
+        df = df[["vm_pu_actual", "va_degree_actual", "vm_pu","va_degree","P_pu","Q_pu","Im_inj","Ia_inj","Im_pu","Ia_pu","TopNo","Simulation"]]
         data = []
         inputs = []
         labels = []
@@ -130,8 +119,8 @@ class Preprocess:
                 Iinja = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["Ia_inj"].values.tolist()[:-2]
 
                 # TODO Output
-                Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
-                Va_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
+                Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu_actual"].values.tolist()[:-2]
+                Va_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree_actual"].values.tolist()[:-2]
 
                 # Input, SE Output, TI Output
                 data.append([Vm_m + Va_m + Iinjm + Iinja, Vm_t + Va_t, topology])
@@ -165,7 +154,7 @@ class Preprocess:
 
         df = pd.read_csv(self.dataset_filename)
         # "Vm_m","Va_m", "Ifm_m", "Ifa_m", "Vm_t", "Va_t", "SimNo", "TopoNo"
-        df = df[["vm_pu","va_degree","P_pu","Q_pu","Im_inj","Ia_inj","Im_pu","Ia_pu","TopNo","Simulation"]]
+        df = df[["vm_pu_actual", "va_degree_actual", "vm_pu","va_degree","P_pu","Q_pu","Im_inj","Ia_inj","Im_pu","Ia_pu","TopNo","Simulation"]]
         data = []
         inputs = []
         labels = []
@@ -186,8 +175,8 @@ class Preprocess:
                 print(f"Inserted {110*error}% noise to conventional meters")
 
                 # TODO Output
-                Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu"].values.tolist()[:-2]
-                Va_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree"].values.tolist()[:-2]
+                Vm_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["vm_pu_actual"].values.tolist()[:-2]
+                Va_t = df[(df["TopNo"] == topology) & (df["Simulation"] == simulation)]["va_degree_actual"].values.tolist()[:-2]
 
                 print(topology, simulation)
 
@@ -383,7 +372,7 @@ class Preprocess:
             # Second split: train and validation
             X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.20, random_state=42)  # 0.25 x 0.8 = 0.2
 
-        if type == "PMU_caseA":
+        if type == "PMU_caseA!":
 
             meter = 75
 
@@ -521,14 +510,14 @@ class Preprocess:
         y_test_outputs = y_test[:, :2 * NUM_NODES]
         y_test_labels = y_test[:, 2 * NUM_NODES:]
 
-        if type == "PMU_caseA":
+        if type == "PMU_caseA!":
             y_test_imputed_outputs = y_test_imputed[:, :2 * NUM_NODES]
             y_test_imputed_labels = y_test_imputed[:, 2 * NUM_NODES:]
 
 
         if type == "PMU_caseA":
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs,\
-                y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels
+                y_test_labels, None, None, None, None #X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels
         else:
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
                 y_test_labels, None, None, None, None

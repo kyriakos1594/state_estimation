@@ -9,6 +9,7 @@ from pandapower.pypower.makeYbus import makeYbus
 import warnings
 import random
 warnings.simplefilter(action='ignore', category=FutureWarning)
+import matplotlib.pyplot as plt
 
 class AllignDataProfiles:
 
@@ -402,7 +403,7 @@ class LoadPowerFlow:
 
     def assign_buses(self, net, dataset):
 
-        df_profiles = pd.read_csv("datasets/weekly_alligned_scaled_profiles.csv")
+        df_profiles = pd.read_csv(PROFILES_FILEPATH)
         df_profiles = df_profiles[df_profiles["Timestamp"] == self.datetime_str]
 
         bus_config_dict = bus_types
@@ -466,9 +467,11 @@ class LoadPowerFlow:
                 if not net.load[net.load["bus"] == index]["p_mw"].empty :
                     P_load  = net.load[net.load["bus"] == index]["p_mw"].values.tolist()[0]
                     #TODO Uncomment to follow a profile from file
-                    #profile = df_profiles[self.profile_dict[index]]
-                    #P_bus   = P_load * profile
-                    P_bus    = P_load
+                    print(index)
+                    print(df_profiles)
+                    profile = df_profiles[self.profile_dict[index]]
+                    P_bus   = P_load * profile
+                    #P_bus    = P_load
                     Q_load  = net.load[net.load["bus"] == index]["q_mvar"].values.tolist()[0]
                     #cos_phi = P_load / np.sqrt(P_load ** 2 + Q_load ** 2)
                     cos_phi = 0.95
@@ -641,6 +644,119 @@ class GenerateDataset:
         self.N_samples = N_samples
         self.dataset = dataset
 
+    def aggregate_random_columns_and_scale(self, df, iteration):
+
+        cols_to_use = [col for col in df.columns if col not in ['utc_timestamp', 'cet_cest_timestamp', 'interpolated']]
+        cols_to_use = [col for col in cols_to_use if "LV " not in col]
+        print(df.columns)
+        # Assign 0 or 1 uniformly to all columns
+        print("Total columns to use: ", cols_to_use)
+
+        # Assign 0 or 1 uniformly at random to each column
+        mask = np.random.choice([0, 1], size=len(cols_to_use))
+
+        # Select columns assigned 1
+        selected_cols = [col for col, val in zip(cols_to_use, mask) if val == 1]
+        print("selected columns", selected_cols)
+
+        # Create new column with sum of selected columns
+        df['LV '+str(iteration)] = df[selected_cols].sum(axis=1)
+
+        # Step 2: Generate random weights between 5 and 10
+        raw_weights = np.random.uniform(2, 10, size=len(selected_cols))
+
+        # Step 3: Normalize them to sum to 100
+        normalized_weights = 100 * raw_weights // raw_weights.sum()
+
+        # Optional: print weights for transparency
+        weight_map = dict(zip(selected_cols, normalized_weights))
+        print("Assigned weights:", weight_map)
+
+        # Step 4: Create a new scaled sum column
+        df['LV ' + str(iteration)] = sum(df[col] * weight_map[col] for col in selected_cols)
+
+        tmp_df = df[['LV '+str(iteration)]]
+
+
+        # Normalize to [0, 1]
+        min_val = tmp_df['LV '+str(iteration)].min()
+        max_val = tmp_df['LV '+str(iteration)].max()
+
+        if max_val == min_val:
+            # Avoid division by zero if constant column
+            tmp_df['LV '+str(iteration)] = 0.0
+            df['LV ' + str(iteration)] = 0.0
+        else:
+            tmp_df['LV '+str(iteration)] = (tmp_df['LV '+str(iteration)] - min_val) / (max_val - min_val)
+            df['LV '+str(iteration)] = (df['LV '+str(iteration)] - min_val) / (max_val - min_val)
+
+
+        import sys
+        #sys.exit(0)
+
+        tmp_df = tmp_df.iloc[24:48]
+
+        # Plot the load profile column
+        plt.figure(figsize=(12, 5))
+        plt.plot(tmp_df.index, tmp_df['LV ' + str(iteration)], label=f'LV {iteration}')
+        plt.xlabel('Time')
+        plt.ylabel('Load')
+        plt.title(f'Load Profile: LV {iteration}')
+        plt.legend()
+        plt.grid(True)
+
+        # Save figure
+        plt.savefig(f"load_profiles/LV_{iteration}_load_profile.png", dpi=300, bbox_inches='tight')
+
+        plt.show()
+
+        df.to_csv("datasets/LV_profiles.csv")
+
+        return df
+
+    def generate_LV_profiles(self, num_aggregated_profiles):
+
+        df = pd.read_csv('datasets/household_data.csv')
+        df["cet_cest_timestamp"] = df["cet_cest_timestamp"].apply(lambda x: str(x)[:-5].replace("T", " "))
+        df = df[df["cet_cest_timestamp"].astype(str).str.contains('2016', na=False)]
+        print(df.columns)
+
+        # Set timestamp as index if you want time-based plots
+        df.set_index('cet_cest_timestamp', inplace=True)
+        df = df.fillna(0)
+
+        load_columns = [col for col in df.columns if col not in ['utc_timestamp', 'cet_cest_timestamp', 'interpolated']]
+        for col in load_columns:
+            df[col] = df[col].diff()
+
+            # Normalize to [0, 1]
+            min_val = df[col].min()
+            max_val = df[col].max()
+
+            if max_val == min_val:
+                # Avoid division by zero if constant column
+                df[col] = 0.0
+            else:
+                df[col] = (df[col] - min_val) / (max_val - min_val)
+
+        for i in range(num_aggregated_profiles):
+            self.aggregate_random_columns_and_scale(df, i+1)
+
+        print(df)
+
+    def allign_generated_profiles(self):
+
+        df_alligned = pd.read_csv("datasets/weekly_alligned_scaled_profiles.csv")
+        df_lv_profiles = pd.read_csv("datasets/LV_profiles.csv")
+        sel_lv_cols = ["cet_cest_timestamp"] + [col for col in df_lv_profiles.columns if "LV " in col]
+        df_lv_profiles = df_lv_profiles[sel_lv_cols]
+        df_lv_profiles.rename(columns={'cet_cest_timestamp': 'Timestamp'}, inplace=True)
+        df_lv_profiles["Timestamp"] = df_lv_profiles["Timestamp"].apply(lambda x: x.replace("2016", "2021"))
+
+
+        df_alligned = pd.merge(df_alligned, df_lv_profiles, on="Timestamp", how="inner")
+        df_alligned.to_csv("datasets/weekly_alligned_scaled_all_profiles.csv")
+
     def process_profiles(self):
 
         df_profiles = pd.read_csv(PROFILES_FILEPATH)
@@ -654,8 +770,10 @@ class GenerateDataset:
                 profile_dict[i] = random.sample(profile_titles["WD"], 1)[0]
             elif i in bus_types["PQ_MV"]:
                 profile_dict[i] = random.sample(profile_titles["MV"], 1)[0]
-            #else:
-            #    profile_dict[i] = random.sample(profile_titles["LV"], 1)[0]
+            else:
+                profile_dict[i] = random.sample(profile_titles["LV"], 1)[0]
+
+        print(profile_dict)
 
         return datetime_list, profile_dict
 
@@ -665,15 +783,13 @@ class GenerateDataset:
         #print(datetime_list, profile_dict)
         #print(self.dataset)
         concat_frame = pd.DataFrame()
-        for i in range(self.N_topologies):
-            n_sample=0
-            for j in range(self.N_samples):
+        for i in range(1): #range(self.N_topologies):
+            for j in range(1): #range(self.N_samples):
                 try:
-                    #    datetime_str = "2021-11-01 00:00:00"
-                    #for datetime_str in datetime_list:
+                #if True:
                     datetime_str = datetime_list[j] #TODO Get subset of WD, PV profiles
                     topology = i+1
-                    n_sample = n_sample+1
+                    n_sample = j+1
                     print("Topology: ", i+1, "Sample: ", n_sample, "DateTime: ", datetime_str)
                     LPF = LoadPowerFlow(filename=self.filepath,
                                         dataset=self.dataset,
@@ -688,8 +804,6 @@ class GenerateDataset:
                 except Exception as e:
                     print("Exception"+str(e))
 
-                sys.exit(0)
-
         concat_frame.to_csv(f"datasets/{self.dataset}.csv")
 
 
@@ -700,6 +814,8 @@ if __name__ == "__main__":
                          N_topologies=NUM_TOPOLOGIES,
                          N_samples=NUM_SIMULATIONS,
                          dataset=dataset)
+    # GD.generate_LV_profiles(num_aggregated_profiles=40)
+    # GD.allign_generated_profiles()
     GD.generate_dataset()
 
     #ADP = AllignDataProfiles()
@@ -711,3 +827,4 @@ if __name__ == "__main__":
     #ADP.allign_datasets()
     #ADP.scale_profiles()
     #ADP.sample_weekly_data()
+
