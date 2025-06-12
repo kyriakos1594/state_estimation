@@ -379,7 +379,6 @@ class LoadPowerFlow:
         df_V['vm_pu_actual']     = df_V['vm_pu'].copy()
         df_V['va_degree_actual'] = df_V['va_degree'].copy()
 
-        print(df_V['vm_pu_actual'])
 
         df_V['vm_pu'] *= (1 + (me_phasor_mag / 3) * np.random.randn(len(df_V)))
         df_V['va_degree'] *= (1 + (me_phasor_ang / 3) * np.random.randn(len(df_V)))
@@ -467,8 +466,6 @@ class LoadPowerFlow:
                 if not net.load[net.load["bus"] == index]["p_mw"].empty :
                     P_load  = net.load[net.load["bus"] == index]["p_mw"].values.tolist()[0]
                     #TODO Uncomment to follow a profile from file
-                    print(index)
-                    print(df_profiles)
                     profile = df_profiles[self.profile_dict[index]]
                     P_bus   = P_load * profile
                     #P_bus    = P_load
@@ -615,13 +612,11 @@ class LoadPowerFlow:
 
     def get_results(self):
         # Display bus results
-        print(self.net.res_bus)
         df_V = self.net.res_bus[['vm_pu', 'va_degree', 'P_pu', 'Q_pu', 'Im_inj', 'Ia_inj']]
         df_I = self.net.res_line[["Im_pu", "Ia_pu"]]
 
         # Insert noise
         df_V, df_I = self.insert_noise(df_V, df_I)
-        print(df_V, df_I)
 
         return pd.concat([df_V, df_I], axis=1)
     def get_powerflow_results(self):
@@ -648,16 +643,13 @@ class GenerateDataset:
 
         cols_to_use = [col for col in df.columns if col not in ['utc_timestamp', 'cet_cest_timestamp', 'interpolated']]
         cols_to_use = [col for col in cols_to_use if "LV " not in col]
-        print(df.columns)
         # Assign 0 or 1 uniformly to all columns
-        print("Total columns to use: ", cols_to_use)
 
         # Assign 0 or 1 uniformly at random to each column
         mask = np.random.choice([0, 1], size=len(cols_to_use))
 
         # Select columns assigned 1
         selected_cols = [col for col, val in zip(cols_to_use, mask) if val == 1]
-        print("selected columns", selected_cols)
 
         # Create new column with sum of selected columns
         df['LV '+str(iteration)] = df[selected_cols].sum(axis=1)
@@ -670,7 +662,6 @@ class GenerateDataset:
 
         # Optional: print weights for transparency
         weight_map = dict(zip(selected_cols, normalized_weights))
-        print("Assigned weights:", weight_map)
 
         # Step 4: Create a new scaled sum column
         df['LV ' + str(iteration)] = sum(df[col] * weight_map[col] for col in selected_cols)
@@ -773,8 +764,6 @@ class GenerateDataset:
             else:
                 profile_dict[i] = random.sample(profile_titles["LV"], 1)[0]
 
-        print(profile_dict)
-
         return datetime_list, profile_dict
 
     def generate_dataset(self):
@@ -783,10 +772,9 @@ class GenerateDataset:
         #print(datetime_list, profile_dict)
         #print(self.dataset)
         concat_frame = pd.DataFrame()
-        for i in range(1): #range(self.N_topologies):
-            for j in range(1): #range(self.N_samples):
+        for i in range(self.N_topologies):
+            for j in range(self.N_samples):
                 try:
-                #if True:
                     datetime_str = datetime_list[j] #TODO Get subset of WD, PV profiles
                     topology = i+1
                     n_sample = j+1

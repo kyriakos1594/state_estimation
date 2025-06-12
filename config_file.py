@@ -398,7 +398,7 @@ elif dataset == "IEEE33":
         "PV": ["PV_profile 1", "PV_profile 2", "PV_profile 3", "PV_profile 4", "PV_profile 5", "PV_profile 6", "PV_profile 7"],
         "WD": ["WD 1"],
         "MV": ["R210 Load","X84_1 MV Load_x","X84_1 MV Load_y"],
-        "LV": [f"LV {str(i)}" for i in range(40)]
+        "LV": [f"LV {str(i+1)}" for i in range(40)]
     }
 
 else:
