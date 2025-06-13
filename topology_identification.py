@@ -146,7 +146,6 @@ class Preprocess:
 
         self.train_test_split_dataset(meterType)
 
-
     def store_data_conventional(self):
 
         #Large error for conventional meters - 1%
@@ -488,12 +487,12 @@ class Preprocess:
                 y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels = self.preprocess_data("PMU_caseA")
         elif type == "PMU_caseB":
             # TODO Case B - Store then read for each measurement Vm, Va, Iinjm, Iinja
-            self.store_data_PMU_caseB()
+            #self.store_data_PMU_caseB()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels, a, b, c, d = self.preprocess_data("PMU_caseB")
         elif type == "conventional":
             # TODO Case B - Store then read for each measurement Vm, Pinj, Qinj
-            self.store_data_conventional()
-            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("conventional")
+            #self.store_data_conventional()
+            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels, a, b, c, d = self.preprocess_data("conventional")
         else:
             print("Please enter known meter type")
             sys.exit(0)
@@ -919,18 +918,18 @@ class TIPredictorTrainProcess:
         if not self.iterative_fs:
             print(self.X_train.shape)
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train)
-            features = FS.execute()
+            #features = FS.execute()
             if self.meterType == "PMU_caseA":
-                #features = IEEE33_PMU_caseA_TI_features
-                features = features
+                features = IEEE33_PMU_caseA_TI_features
+                #features = features
                 print("TI Feature Selection Order - Branches: ", features)
             elif self.meterType == "PMU_caseB":
-                #features = IEEE33_PMU_caseB_TI_features
-                features = features
+                features = IEEE33_PMU_caseB_TI_features
+                #features = features
                 print("TI Feature Selection Order - Nodes: ", features)
             elif self.meterType == "conventional":
-                #features = IEEE33_conventional_TI_features
-                features = features
+                features = IEEE33_conventional_TI_features
+                #features = features
                 print("TI Feature Selection Order - Nodes: ", features)
 
             #TODO For every Currenct branch input feature add the magnitude and its angle
@@ -1461,7 +1460,7 @@ class TrainGNN_TI:
             #                                                  heads=4).to(self.device)
             self.model          = TI_TEGNN_WithEdges(self.device,num_nodes=NUM_NODES,num_features=2,proj_dim=4,
                                                      embedding_dim=2,heads=4,num_decoder_layers=1,edge_attr_dim=2,
-                                                     gat_layers=3,GATConv_dim=12,output_dim=self.num_classes).to(self.device)
+                                                     gat_layers=6,GATConv_dim=16,output_dim=self.num_classes).to(self.device)
         elif self.meterType =="PMU_caseB":
             #self.model          = TI_GATNoEdgeAttrs(num_features=4, num_classes=self.num_classes, heads=4,
             #                                        num_gat_layers=2, gat_dim=16).to(self.device)
@@ -1756,11 +1755,11 @@ class TrainNN_TI:
 
 if __name__ == "__main__":
 
-    #meterType = "PMU_caseA"
+    meterType = "PMU_caseA"
     #meterType = "PMU_caseB"
-    meterType = "conventional"
+    #meterType = "conventional"
 
-    model = "NN"
+    model = "GNN"
     PP    = "RF"
     subPP = "rfe"
     threshold = 0.95

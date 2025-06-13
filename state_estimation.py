@@ -468,22 +468,16 @@ class DSSE_Estimator_TrainProcess:
             all_indices          = []
 
             FS = FSPreProc_SE(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test, self.old_PMUs)
-
-            #features = FS.execute()
-            #features =  []
+            features = FS.execute()
             if self.meterType == "PMU_caseA":
                 #features = IEEE33_PMU_caseA_SE_features
-                #features  = MESOGEIA
-                features  = UKGD95_PMU_caseA_SE_features
+                features = features
             elif self.meterType == "PMU_caseB":
                 #features = IEEE33_PMU_caseB_SE_features
-                #features = MESOGEIA_PMU_caseB_SE_features
-                features  = MESOGEIA_PMU_caseB_SE_features #UKGD95_PMU_caseB_SE_features
+                features = features
             elif self.meterType == "conventional":
                 #features = IEEE33_conventional_SE_features
-                #features = MESOGEIA_conventional_SE_features
-                features  = UKGD95_conventional_SE_features
-
+                features = features
 
             print(features)
             print("SE Feature Selection Order: ", features)
@@ -635,21 +629,21 @@ class DSSE_Estimator_TrainProcess:
                         mape_magnitudes = self.evaluate(y_pred_m, y_test_m, "MAPE")
 
                         #TODO Angles
-                        #ML_model = "NN"
-                        #buildModel_a = DSSE_BuildModel(ML_model, "angles")
+                        ML_model = "NN"
+                        buildModel_a = DSSE_BuildModel(ML_model, "angles")
 
-                        #input_dim = len(all_indices)
-                        #output_dim = len(y_train_a[0])
+                        input_dim = len(all_indices)
+                        output_dim = len(y_train_a[0])
 
-                        #self.model_a = buildModel_a.build_model(input_dim=input_dim, output_dim=output_dim)
+                        self.model_a = buildModel_a.build_model(input_dim=input_dim, output_dim=output_dim)
 
-                        #trainModel = DSSE_TrainModel(self.model_a, X_train, y_train_a, X_val, y_val_a, X_test, y_test_a)
-                        #trainModel.train_model()
+                        trainModel = DSSE_TrainModel(self.model_a, X_train, y_train_a, X_val, y_val_a, X_test, y_test_a)
+                        trainModel.train_model()
 
                         #Evaluate the model on the test data
-                        #y_pred_a = self.model_a.predict(X_test)
+                        y_pred_a = self.model_a.predict(X_test)
 
-                        #mae_angles = self.evaluate(y_pred_a, y_test_a, "MAE")
+                        mae_angles = self.evaluate(y_pred_a, y_test_a, "MAE")
 
                         print("Used Features: ", used_features, " - MAPE_v: ", str(mape_magnitudes)) #, " - MAE_a: ", str(mae_angles))
                         #filename = "results/DSSE___" + "MODEL___" + str(ML_model) + "___" + "PREPROCESSING_" + str(FS.Preproc_model) + "___SUBMETHOD_" + str(FS.submethod) + "_results.txt"
@@ -668,7 +662,7 @@ class DSSE_Estimator_TrainProcess:
                         print(f"""Branch {feature} already in TI PMU set""")
                         mape_magnitudes, mae_angles = 1000, 1000
 
-                    if (mape_magnitudes <= MAPE_v_threshold) and (10000 <= MAE_a_threshold): break
+                    if (mape_magnitudes <= MAPE_v_threshold) and (mae_angles <= MAE_a_threshold): break
 
             return used_feature_indices
 
@@ -1250,25 +1244,25 @@ if __name__ == "__main__":
     meterType = "PMU_caseB"
     if meterType == "conventional":
         if dataset == "IEEE33":
-            old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]
+            old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]  #TODO Update
         elif dataset == "MESOGEIA":
-            old_PMUs = [94]
+            old_PMUs = [94]  #TODO Update
         elif dataset == "95UKGD":
-            old_PMUs = [57, 73, 17]
+            old_PMUs = [57, 73, 17]  #TODO Update
     elif meterType == "PMU_caseB":
         if dataset == "IEEE33":
-            old_PMUs = [17, 27]
+            old_PMUs = [17, 27]  #TODO Update
         elif dataset == "MESOGEIA":
-            old_PMUs = [127, 128, 124] #, 123, 127]
+            old_PMUs = [127, 128, 124] #, 123, 127]  #TODO Update
         elif dataset == "95UKGD":
-            old_PMUs = [79]
+            old_PMUs = [79]  #TODO Update
     elif meterType == "PMU_caseA":
         if dataset == "IEEE33":
-            old_PMUs = [6, 33]
+            old_PMUs = [32, 27]
         elif dataset == "MESOGEIA":
-            old_PMUs = [130]
+            old_PMUs = [130] #TODO Update
         elif dataset == "95UKGD":
-            old_PMUs = [75] #, 67, 65, 84, 80, 64, 83, 95, 77, 70, 66] #[75]
+            old_PMUs = [75] #, 67, 65, 84, 80, 64, 83, 95, 77, 70, 66] #[75]  #TODO Update
 
     model    = "NN"
     PP       = "RF"
