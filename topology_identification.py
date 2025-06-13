@@ -34,8 +34,8 @@ from torch_geometric.nn import MLP, EdgeConv # Multi-layer Perceptron
 from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
-from model import (TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATNoEdgeAttrs, TI_TransformerNoEdges,
-                   TI_GCNNoEdgeAttrs,  TI_GCNNoEdgeAttrs, TI_TransformerWithEdges)
+from model import (TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATWithEdgeAttrNodeProj, TI_GATNoEdgeAttrs, TI_TransformerNoEdges,
+                   TI_GCNNoEdgeAttrs,  TI_GCNNoEdgeAttrs, TI_TransformerWithEdges, TI_TEGNN_WithEdges)
 from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
 from IEEE_datasets.IEEE33 import config_dict
 from outlier_classes import OutlierInjector, IF_OutlierDetection, KNNImputerMeasurements
@@ -332,47 +332,15 @@ class Preprocess:
             print("Enter meter type")
             sys.exit(0)
 
-        if (dataset == "MESOGEIA") and (meterType=="PMU_caseB"):
-            # First split: train+validation and test
 
-            # Print shape of inputs-outputs
-            print(inputs.shape, outputs.shape)
+        # First split: train+validation and test
+        X_train, X_test, y_train, y_test = train_test_split(inputs, outputs, test_size=0.15, random_state=42)
 
-            topology_offset = 7787
+        # Second split: train and validation
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.20, random_state=42)  # 0.25 x 0.8 = 0.2
 
-            train_T1_start, train_T1_end = 0, 7307
-            train_T2_start, train_T2_end = topology_offset + 0, topology_offset + 0 + 7307
-            print(train_T1_start, train_T1_end, train_T2_start, train_T2_end)
-
-            test_T1_start, test_T1_end = 7307, 7307+96
-            test_T2_start, test_T2_end = topology_offset + 7307+96, topology_offset + 7307+96+96
-            print(test_T1_start, test_T1_end, test_T2_start, test_T2_end)
-
-            val_T1_start, val_T1_end = 7307+96+96, topology_offset
-            val_T2_start, val_T2_end = topology_offset + 7307+96+96, topology_offset + topology_offset
-            print(val_T1_start, val_T1_end, val_T2_start, val_T2_end)
-
-            print(inputs.shape, outputs.shape)
-
-
-            X_train = np.concatenate([inputs[train_T1_start:train_T1_end, :], inputs[train_T2_start:train_T2_end, :]])
-            print(X_train.shape)
-            y_train = np.concatenate([outputs[train_T1_start:train_T1_end, :], outputs[train_T2_start:train_T2_end, :]])
-
-            X_test  = np.concatenate([inputs[test_T1_start:test_T1_end, :], inputs[test_T2_start:test_T2_end, :]])
-            y_test  = np.concatenate([outputs[test_T1_start:test_T1_end, :], outputs[test_T2_start:test_T2_end, :]])
-
-            X_val   = np.concatenate([inputs[val_T1_start:val_T1_end, :], inputs[val_T2_start:val_T2_end, :]])
-            y_val   = np.concatenate([outputs[val_T1_start:val_T1_end, :], outputs[val_T2_start:val_T2_end, :]])
-
-        else:
-            # First split: train+validation and test
-            X_train, X_test, y_train, y_test = train_test_split(inputs, outputs, test_size=0.15, random_state=42)
-
-            # Second split: train and validation
-            X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.20, random_state=42)  # 0.25 x 0.8 = 0.2
-
-        if type == "PMU_caseA!":
+        #TODO Uncomment to produce outliers
+        if type == "PMU_caseA_outliers":
 
             meter = 75
 
@@ -443,18 +411,7 @@ class Preprocess:
             X_train  = scaler.fit_transform(X_train)
             X_val    = scaler.transform(X_val)
             X_test   = scaler.transform(X_test)
-            joblib.dump(scaler, 'scalers/MESOGEIA_NN_PMUB_METERS_StandardScaler_all_features.pkl')
-
-            if dataset == "MESOGEIA":
-                used_feature_indices = sorted([128, 258, 259, 255, 389, 390, 386, 520, 521, 517, 124, 127])
-                print(used_feature_indices)
-
-                X_dep = X_old[:, used_feature_indices]
-                dep_scaler = StandardScaler()
-                X_dep = dep_scaler.fit_transform(X_dep)
-
-                #TODO Save scaler
-                joblib.dump(dep_scaler, 'scalers/MESOGEIA_NN_PMUB_METERS_StandardScaler.pkl')
+            #joblib.dump(scaler, 'scalers/MESOGEIA_NN_PMUB_METERS_StandardScaler_all_features.pkl')
 
 
             np.save(X_train_file, X_train)
@@ -476,9 +433,9 @@ class Preprocess:
             y_test = np.load(y_test_PMU_caseA)
 
             #TODO Read outlier datasets
-            X_test_outliers = np.load(X_test_PMU_caseA_outliers)
-            X_test_imputed  = np.load(X_test_PMU_caseA_imputed)
-            y_test_imputed  = np.load(y_test_PMU_caseA_imputed)
+            #X_test_outliers = np.load(X_test_PMU_caseA_outliers)
+            #X_test_imputed  = np.load(X_test_PMU_caseA_imputed)
+            #y_test_imputed  = np.load(y_test_PMU_caseA_imputed)
 
         elif type == "PMU_caseB":
             X_train = np.load(X_train_PMU_caseB)
@@ -531,11 +488,11 @@ class Preprocess:
                 y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels = self.preprocess_data("PMU_caseA")
         elif type == "PMU_caseB":
             # TODO Case B - Store then read for each measurement Vm, Va, Iinjm, Iinja
-            #self.store_data_PMU_caseB()
+            self.store_data_PMU_caseB()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels, a, b, c, d = self.preprocess_data("PMU_caseB")
         elif type == "conventional":
             # TODO Case B - Store then read for each measurement Vm, Pinj, Qinj
-            #self.store_data_conventional()
+            self.store_data_conventional()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels = self.preprocess_data("conventional")
         else:
             print("Please enter known meter type")
@@ -605,31 +562,7 @@ class TrainModel:
         self.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
         # Train the model and save the history
-        history = self.model.fit(self.X_train, self.y_train, epochs=50, batch_size=16, validation_data=(self.X_val, self.y_val), callbacks=[early_stopping])
-
-        # Plot training & validation accuracy and loss values
-        plt.figure(figsize=(14, 5))
-
-        # Accuracy plot
-        plt.subplot(1, 2, 1)
-        plt.plot(history.history['accuracy'], label='Train Accuracy')
-        plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
-        plt.title('Model Accuracy')
-        plt.xlabel('Epoch')
-        plt.ylabel('Accuracy')
-        plt.legend(loc='upper left')
-
-        # Loss plot
-        plt.subplot(1, 2, 2)
-        plt.plot(history.history['loss'], label='Train Loss')
-        plt.plot(history.history['val_loss'], label='Validation Loss')
-        plt.title('Model Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend(loc='upper left')
-
-        # Show plots
-        plt.savefig('TI_train_plot.png')
+        history = self.model.fit(self.X_train, self.y_train, epochs=5, batch_size=32, validation_data=(self.X_val, self.y_val), callbacks=[early_stopping])
 
         return self.model
 
@@ -986,17 +919,17 @@ class TIPredictorTrainProcess:
         if not self.iterative_fs:
             print(self.X_train.shape)
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train)
-            #features = FS.execute()
+            features = FS.execute()
             if self.meterType == "PMU_caseA":
-                features = UKGD95_PMU_caseA_TI_features
+                #features = IEEE33_PMU_caseA_TI_features
                 features = features
                 print("TI Feature Selection Order - Branches: ", features)
             elif self.meterType == "PMU_caseB":
-                features = MESOGEIA_PMU_caseB_TI_features
+                #features = IEEE33_PMU_caseB_TI_features
                 features = features
                 print("TI Feature Selection Order - Nodes: ", features)
             elif self.meterType == "conventional":
-                features = IEEE33_conventional_TI_features
+                #features = IEEE33_conventional_TI_features
                 features = features
                 print("TI Feature Selection Order - Nodes: ", features)
 
@@ -1014,8 +947,6 @@ class TIPredictorTrainProcess:
                     all_indices = node_indices + current_indices
                 elif self.meterType == "PMU_caseB":
                     used_feature_indices.append(i)
-                    #TODO Insert manually
-                    #used_feature_indices = [127, 128, 112, 117] Case B
                     print("Chose feature - node: ", i, "Total feature indices: ", used_feature_indices)
                     node_indices = [i for i in used_feature_indices] + \
                                    [NUM_NODES + i for i in used_feature_indices] + \
@@ -1024,10 +955,6 @@ class TIPredictorTrainProcess:
                     all_indices = sorted(node_indices)
                 elif self.meterType == "conventional":
                     used_feature_indices.append(i)
-
-                    #TODO - Static TI
-                    #used_feature_indices = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
-
                     print("Chose feature - node: ", i, "Total feature indices: ", used_feature_indices)
                     node_indices = [i for i in used_feature_indices] + \
                                    [NUM_NODES + i for i in used_feature_indices] + \
@@ -1038,44 +965,23 @@ class TIPredictorTrainProcess:
                 X_val   = self.X_val[:, all_indices]
                 X_test  = self.X_test[:, all_indices]
 
-                #TODO Simple NN with keras
-                ML_model = "NN"
-                buildModel = BuildModel(ML_model)
-                input_dim = len(all_indices)
-                print(all_indices)
-                self.model = buildModel.build_model(input_dim)
-                print(X_train.shape, self.y_train.shape)
-                trainModel = TrainModel(self.model, X_train, self.y_train, X_val, self.y_val)
-                trainModel.train_model()
-                # Evaluate the model on the test data
-                test_loss, test_accuracy = self.model.evaluate(X_test, self.y_test, verbose=0)
-                test_accuracy = self.evaluate_simple_NN(self.model, X_test, self.y_test)
-
-                print("Meters: ", acc_meters, " - Accuracy: ", test_accuracy)
-
                 NNdimension = len(used_feature_indices)
 
-                #ML_model   = "NN"
-                #if self.meterType == "PMU_caseA":
-                #    num_node_features = 2
-                #    ANN = TI_SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
-                #else:
-                #    ANN = TI_SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
-                #trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
-                #print("X_train shape: ", X_train.shape)
-                #test_accuracy = trainModel.evaluate()
+                ML_model   = "NN"
+                if self.meterType == "PMU_caseA":
+                    num_node_features = 2
+                    ANN = TI_SimpleNNEdges(NNdimension,num_node_features,NUM_TOPOLOGIES, branch_num=NNdimension, branch_feature_num=2).to(self.device)
+                else:
+                    ANN = TI_SimpleNNEdges(NNdimension, self.num_features, NUM_TOPOLOGIES, branch_num=None, branch_feature_num=None).to(self.device)
+                trainModel = TrainNN_TI(ANN,X_train,self.y_train,X_val,self.y_val, X_test, self.y_test, NUM_TOPOLOGIES)
+                print("X_train shape: ", X_train.shape)
+                test_accuracy = trainModel.evaluate()
 
-                #print(used_feature_indices, test_accuracy)
-                #with open("results.txt", "a") as wf:
-                #    wf.write("USed indices (i+1 for proper index): "+str([i+1 for i in used_feature_indices])+", Accuracy: "+str(test_accuracy)+"\n")
-                #    wf.close()
+                print(used_feature_indices, test_accuracy)
+                with open("results.txt", "a") as wf:
+                    wf.write("USed indices (i+1 for proper index): "+str([i+1 for i in used_feature_indices])+", Accuracy: "+str(test_accuracy)+"\n")
+                    wf.close()
 
-                filename = "DeployedModels/" + f"MESOGEIA_NN_METERS_{str('_'.join([str(x) for x in acc_meters]))}_TI.h5"
-                self.model.save(filename)
-
-                #with open(filename, "a") as wf:
-                #    wf.write("Used indices (i+1 for proper index): "+str([i+1 for i in used_feature_indices])+", Accuracy: "+str(test_accuracy)+"\n")
-                #    wf.close()
 
                 if test_accuracy >= self.threshold: break
 
@@ -1088,16 +994,16 @@ class TIPredictorTrainProcess:
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train)
             #Ib_features = FS.execute()
             #Ib_features = GLOBAL_BRANCH_LIST
-            Ib_features = []
+            #Ib_features = []
             if self.meterType == "PMU_caseA":
-                Ib_features = UKGD95_PMU_caseA_TI_features
+                Ib_features = IEEE33_PMU_caseA_TI_features
                 print("TI Feature Selection Order - Branches: ", Ib_features)
             elif self.meterType == "PMU_caseB":
-                Ib_features = UKGD95_PMU_caseB_TI_features #IEEE33_PMU_caseB_TI_features
+                Ib_features = IEEE33_PMU_caseB_TI_features
                 #Ib_features = Ib_features
                 print("TI Feature Selection Order - Nodes: ", Ib_features)
             elif self.meterType == "conventional":
-                Ib_features = UKGD95_conventional_TI_features #IEEE33_conventional_TI_features
+                Ib_features = IEEE33_conventional_TI_features
                 print("TI Feature Selection Order - Nodes: ", Ib_features)
             print("TI Feature Selection Order: ", Ib_features)
 
@@ -1133,7 +1039,7 @@ class TIPredictorTrainProcess:
                         test_imputed_loader = GTIP.generate_dataset_TI_GNN_PMU_caseA()
                     print(train_loader)
                     Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader,
-                                               validation_loader, test_loader, test_outliers_loader, test_imputed_loader)
+                                               validation_loader, test_loader, None, None)
                     acc = Train_GNN_TI.evaluate()
                 elif self.meterType == "PMU_caseB":
                     edges, train_loader, validation_loader, test_loader = GTIP.generate_dataset_TI_GNN_PMU_caseB()
@@ -1320,15 +1226,15 @@ class GraphTIPreprocess_IV:
         num_features_edge     = 2
 
         #self.selected_edges = [6, 32, 9]
-        print(self.X_test_outliers.shape)
-        print(self.X_test_imputed.shape)
-        print(self.y_test_imputed.shape)
+        #print(self.X_test_outliers.shape)
+        #print(self.X_test_imputed.shape)
+        #print(self.y_test_imputed.shape)
 
         train_edge_data, train_edge_mask, train_node_data, train_node_mask = self.preprocess_data_PMU_caseA(self.X_train, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
         val_edge_data, val_edge_mask, val_node_data, val_node_mask   = self.preprocess_data_PMU_caseA(self.X_val, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
         test_edge_data, test_edge_mask, test_node_data, test_node_mask  = self.preprocess_data_PMU_caseA(self.X_test, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
-        test_edge_outlier_data, test_edge_outlier_mask, test_node_outlier_data, test_node_outlier_mask  = self.preprocess_data_PMU_caseA(self.X_test_outliers, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
-        test_edge_imputed_data, test_edge_imputed_mask, test_node_imputed_data, test_node_imputed_mask  = self.preprocess_data_PMU_caseA(self.X_test_imputed, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
+        #test_edge_outlier_data, test_edge_outlier_mask, test_node_outlier_data, test_node_outlier_mask  = self.preprocess_data_PMU_caseA(self.X_test_outliers, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
+        #test_edge_imputed_data, test_edge_imputed_mask, test_node_imputed_data, test_node_imputed_mask  = self.preprocess_data_PMU_caseA(self.X_test_imputed, self.selected_edges, num_edges, num_features_edge, num_nodes, num_features_node)
 
 
         #print("X train shape: ", self.X_train.shape)
@@ -1382,35 +1288,36 @@ class GraphTIPreprocess_IV:
         self.test_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
         test_outlier_data = []
-        for i in range(self.X_test_outliers.shape[0]):
-            tmp_edge_attr = torch.tensor(test_edge_outlier_data[i].reshape(-1, num_features_edge), dtype=torch.float)
-            tmp_edge_mask = torch.tensor(test_edge_outlier_mask[i].reshape(-1, num_features_edge), dtype=torch.float)
+        #for i in range(self.X_test_outliers.shape[0]):
+        #    tmp_edge_attr = torch.tensor(test_edge_outlier_data[i].reshape(-1, num_features_edge), dtype=torch.float)
+        #    tmp_edge_mask = torch.tensor(test_edge_outlier_mask[i].reshape(-1, num_features_edge), dtype=torch.float)
 
-            tmp_node_attr = torch.tensor(test_node_outlier_data[i].reshape(-1, num_features_node), dtype=torch.float)
-            tmp_node_mask = torch.tensor(test_node_outlier_mask[i].reshape(-1, num_features_node), dtype=torch.float)
+        #    tmp_node_attr = torch.tensor(test_node_outlier_data[i].reshape(-1, num_features_node), dtype=torch.float)
+        #    tmp_node_mask = torch.tensor(test_node_outlier_mask[i].reshape(-1, num_features_node), dtype=torch.float)
 
-            label = torch.tensor(self.y_test[i, :], dtype=torch.float)
+        #    label = torch.tensor(self.y_test[i, :], dtype=torch.float)
             # print(edge_index, edge_attr, mask, label)
-            test_outlier_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
+        #    test_outlier_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
 
-        self.test_outlier_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
+        #self.test_outlier_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
-        test_imputed_data = []
-        for i in range(self.X_test_imputed.shape[0]):
-            tmp_edge_attr = torch.tensor(test_edge_imputed_data[i].reshape(-1, num_features_edge), dtype=torch.float)
-            tmp_edge_mask = torch.tensor(test_edge_imputed_mask[i].reshape(-1, num_features_edge), dtype=torch.float)
+        #test_imputed_data = []
+        #for i in range(self.X_test_imputed.shape[0]):
+        #    tmp_edge_attr = torch.tensor(test_edge_imputed_data[i].reshape(-1, num_features_edge), dtype=torch.float)
+        #    tmp_edge_mask = torch.tensor(test_edge_imputed_mask[i].reshape(-1, num_features_edge), dtype=torch.float)
 
-            tmp_node_attr = torch.tensor(test_node_imputed_data[i].reshape(-1, num_features_node), dtype=torch.float)
-            tmp_node_mask = torch.tensor(test_node_imputed_mask[i].reshape(-1, num_features_node), dtype=torch.float)
+        #    tmp_node_attr = torch.tensor(test_node_imputed_data[i].reshape(-1, num_features_node), dtype=torch.float)
+        #    tmp_node_mask = torch.tensor(test_node_imputed_mask[i].reshape(-1, num_features_node), dtype=torch.float)
 
-            label = torch.tensor(self.y_test[i, :], dtype=torch.float)
+        #    label = torch.tensor(self.y_test[i, :], dtype=torch.float)
             # print(edge_index, edge_attr, mask, label)
-            test_imputed_data.append(
-                Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
+        #    test_imputed_data.append(
+        #        Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
 
-        self.test_imputed_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
+        #self.test_imputed_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
-        return [edge_index, self.train_loader, self.val_loader, self.test_loader, self.test_outlier_loader, self.test_imputed_loader]
+        #return [edge_index, self.train_loader, self.val_loader, self.test_loader, self.test_outlier_loader, self.test_imputed_loader]
+        return [edge_index, self.train_loader, self.val_loader, self.test_loader, None, None]
 
     def generate_dataset_TI_GNN_PMU_caseB(self):
 
@@ -1549,9 +1456,12 @@ class TrainGNN_TI:
         if self.meterType == "PMU_caseA":
             #self.model          = TI_GATWithEdgeAttrs(num_features=2, num_classes=self.num_classes, edge_attr_dim=2,
             #                                         gat_layers=7, GAT_dim=8, heads=4).to(self.device)
-            self.model          = TI_TransformerWithEdges(num_features=2, num_classes=self.num_classes,
-                                                          gat_layers=4, GAT_dim=12, edge_attr_dim=2, heads=4,
-                                                          embedding_dim=2, dec_layers=1, ff_hid_dim=48).to(self.device)
+            #self.model           = TI_GATWithEdgeAttrNodeProj(num_nodes=NUM_NODES,proj_nodes=4,num_features=2,
+            #                                                  output_dim=self.num_classes,edge_attr_dim=2,GAT_dim=12,gat_layers=10,
+            #                                                  heads=4).to(self.device)
+            self.model          = TI_TEGNN_WithEdges(self.device,num_nodes=NUM_NODES,num_features=2,proj_dim=4,
+                                                     embedding_dim=2,heads=4,num_decoder_layers=1,edge_attr_dim=2,
+                                                     gat_layers=3,GATConv_dim=12,output_dim=self.num_classes).to(self.device)
         elif self.meterType =="PMU_caseB":
             #self.model          = TI_GATNoEdgeAttrs(num_features=4, num_classes=self.num_classes, heads=4,
             #                                        num_gat_layers=2, gat_dim=16).to(self.device)
@@ -1682,7 +1592,7 @@ class TrainGNN_TI:
         accuracy = correct_predictions / total_samples
         print(f"Test Accuracy: {accuracy:.4f}")
 
-        if self.test_outlier_loader is not None:
+        if False: #if self.test_outlier_loader is not None:
             correct_predictions = 0
             total_samples = 0
             for batch_test in self.test_outlier_loader:
@@ -1707,7 +1617,7 @@ class TrainGNN_TI:
             accuracy = correct_predictions / total_samples
             print(f"Test Accuracy: {accuracy:.4f}")
 
-        if self.test_imputed_loader is not None:
+        if False: #self.test_imputed_loader is not None:
             correct_predictions = 0
             total_samples = 0
             for batch_test in self.test_imputed_loader:
@@ -1762,7 +1672,7 @@ class TrainNN_TI:
         train_loader = DL_NN(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
         val_loader = DL_NN(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-        max_epochs = 200
+        max_epochs = 50
         best_val_loss = float('inf')
         early_stop_counter = 0
         patience = 20
@@ -1847,8 +1757,8 @@ class TrainNN_TI:
 if __name__ == "__main__":
 
     #meterType = "PMU_caseA"
-    meterType = "PMU_caseB"
-    #meterType = "conventional"
+    #meterType = "PMU_caseB"
+    meterType = "conventional"
 
     model = "NN"
     PP    = "RF"

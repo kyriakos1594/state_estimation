@@ -7,7 +7,7 @@ dataset = "IEEE33"
 #meterType = "conventional"
 #GLOBAL_BRANCH_LIST = [6]
 #NUM_TOPOLOGIES = 1 #15
-NUM_SIMULATIONS = 3981 # 4 months 7787 #4000 #3000 #7787
+NUM_SIMULATIONS = 3981 # 6 months 7787 #4000 #3000 #7787
 EXISTING_METER_BRANCHES = []
 EXISTING_METER_NODES    = []
 RAW_FILENAME    = f"datasets/{dataset}.csv"
@@ -18,9 +18,9 @@ PROFILES_FILEPATH = f"datasets/weekly_alligned_scaled_all_profiles.csv"
 
 #TODO Random Forest Variables
 TREE_DEPTH = 10
-RF_ESTIMATORS = 25
+RF_ESTIMATORS = 50
 
-IEEE33_PMU_caseA_TI_features      = [6, 33, 27, 10, 32, 5, 4, 20, 8, 24, 7, 25, 19, 26, 9, 34, 17, 3, 2, 11, 12, 16, 18, 31, 23, 13, 15, 14, 22, 21, 29, 30, 28, 1, 0]
+IEEE33_PMU_caseA_TI_features      = [32, 27, 10, 6, 33, 4, 7, 24, 20, 5, 9, 26, 19, 8, 34, 2, 16, 3, 25, 17, 18, 11, 13, 28, 23, 12, 31, 14, 15, 22, 21, 29, 30, 1, 0]
 IEEE33_PMU_caseB_TI_features      = [17, 27, 21, 7, 8, 28, 20, 6, 11, 26, 9, 15, 24, 25, 19, 10, 5, 13, 29, 14, 12, 4, 32, 16, 30, 23, 31, 3, 22, 2, 18, 1, 0]
 IEEE33_conventional_TI_features   = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10, 5, 19, 23, 4, 22, 3, 2, 18, 1, 0]
 
@@ -344,7 +344,7 @@ elif dataset == "IEEE33":
     NUM_NODES = 33  # 131 #33
     NUM_BRANCHES = 35  # 133 #35
     NUM_TOPOLOGIES = 15
-    NUM_SAMPLES = 1000
+    NUM_SAMPLES = NUM_SIMULATIONS
     NUM_SIMULATIONS = NUM_SAMPLES
     branch_data = {
         0: {'sending_node': 0, 'receiving_node': 1},
@@ -406,9 +406,8 @@ else:
     sys.exit(0)
 
 #TODO Data files for PMU case A
-PMU_caseA_dataset           = f"datasets/{dataset}PMU_caseA_dataset.csv"
-PMU_caseA_input             = f"datasets/{dataset}PMU_caseA_input.npy"
-PMU_caseA_output            = f"datasets/{dataset}PMU_caseA_output.npy"
+PMU_caseA_input             = f"datasets/{dataset}_PMU_caseA_input.npy"
+PMU_caseA_output            = f"datasets/{dataset}_PMU_caseA_output.npy"
 X_train_PMU_caseA           = f"datasets/{dataset}_PMU_caseA_X_train.npy"
 y_train_PMU_caseA           = f"datasets/{dataset}_PMU_caseA_y_train.npy"
 X_val_PMU_caseA             = f"datasets/{dataset}_PMU_caseA_X_val.npy"
@@ -420,7 +419,6 @@ y_test_PMU_caseA            = f"datasets/{dataset}_PMU_caseA_y_test.npy"
 y_test_PMU_caseA_imputed    = f"datasets/{dataset}_PMU_caseA_y_test_imputed.npy"
 
 #TODO Data files for PMU case B
-PMU_caseB_dataset = f"datasets/{dataset}PMU_caseB_dataset.csv"
 PMU_caseB_input   = f"datasets/{dataset}PMU_caseB_input.npy"
 PMU_caseB_output  = f"datasets/{dataset}PMU_caseB_output.npy"
 X_train_PMU_caseB = f"datasets/{dataset}_PMU_caseB_X_train.npy"
@@ -431,7 +429,6 @@ X_test_PMU_caseB  = f"datasets/{dataset}_PMU_caseB_X_test.npy"
 y_test_PMU_caseB  = f"datasets/{dataset}_PMU_caseB_y_test.npy"
 
 #TODO Data files for conventional meters
-conventional_dataset = f"datasets/{dataset}_conventional_dataset.csv"
 conventional_input   = f"datasets/{dataset}_conventional_input.npy"
 conventional_output  = f"datasets/{dataset}_conventional_output.npy"
 X_train_conventional = f"datasets/{dataset}_conventional_X_train.npy"
