@@ -373,6 +373,56 @@ class TI_GATNoEdgeAttrs(torch.nn.Module):
 
         return x
 
+class TI_GATNoEdgeAttrNodeProj(torch.nn.Module):
+    def __init__(self, num_nodes, proj_nodes, num_features, output_dim, GAT_dim=16, gat_layers=3,
+                 heads=4):
+        super(TI_GATNoEdgeAttrNodeProj, self).__init__()
+
+        self.num_nodes = num_nodes
+        self.proj_nodes = proj_nodes
+
+        # Input Graph Attention layer
+        # Here, `edge_attr_dim` is the size of the edge features
+        self.input_conv = GATConv(num_features, GAT_dim, heads=heads, concat=True)  # First GAT layer with edge features
+
+        # Hidden Graph Attention Layers
+        # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
+        self.GATConv_layers = nn.ModuleList([
+            GATConv(GAT_dim * heads, GAT_dim, heads=heads, concat=True) for _ in
+            range(gat_layers - 1)
+        ])
+
+        # Fully connected layer for classification
+        self.node_proj = nn.Linear(GAT_dim * heads, 1 * self.proj_nodes)
+        self.fc_out = torch.nn.Linear(num_nodes * self.proj_nodes, output_dim)
+
+    def forward(self, data):
+        x, edge_index, batch = data.x, data.edge_index, data.batch
+        #print("x input: ", x.shape)
+
+        x = self.input_conv(x, edge_index=edge_index)
+        x = F.relu(x)
+        #print("x after input GATCONV shape: ", x.shape)
+
+        for gat_conv_layer in self.GATConv_layers:
+            x = gat_conv_layer(x, edge_index=edge_index)
+            x = F.relu(x)
+            # print("x after GATCONV shape: ", x.shape)
+
+        x = self.node_proj(x)
+        x = F.relu(x)
+        #print("x after node projection shape: ", x.shape)
+
+        batch_size = int(batch.max().item()) + 1
+        x = x.reshape(batch_size, -1)
+        #print("x after node reshape: ", x.shape)
+
+        x = self.fc_out(x)
+        #print("x output: ", x.shape)
+
+        return x
+
+
 #TODO TI Transformer based - PMU_caseB or conventional
 class TI_TransformerNoEdges(torch.nn.Module):
     def __init__(self, num_nodes, num_features, output_dim, GATConv_layers, GATConv_dim, embedding_dim=4, heads=4, dec_layers=1, ff_hid_dim=32):
@@ -802,7 +852,7 @@ class SE_GATTransfomerOnlyDecoderWithEdges(nn.Module):
                                       value=x)
             #print("Shape x after decoder layer: ", x.shape)
             #print(x[0, :])
-            print(x[0, :])
+            #print(x[0, :])
 
         # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
         x = x.squeeze(0)

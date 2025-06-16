@@ -294,7 +294,7 @@ class DSSE_BuildModel:
 
         # Input Layer (66 inputs)
         model.add(Dense(64, input_dim=input_dim, activation='linear'))
-        #model.add(Dense(128, activation='linear'))
+        #model.add(Dense(64, activation='linear'))
         model.add(Dense(32, activation='linear'))
 
         # Output Layer (assuming 16 outputs, modify according to your use case)
@@ -316,7 +316,7 @@ class DSSE_BuildModel:
 
         # Input Layer (66 inputs)
         model.add(Dense(64, input_dim=input_dim, activation='linear'))
-        #model.add(Dense(128, activation='linear'))
+        #model.add(Dense(64, activation='linear'))
         model.add(Dense(32, activation='linear'))
 
 
@@ -364,7 +364,7 @@ class DSSE_TrainModel:
                                  epochs=300,
                                  batch_size=BATCH_SIZE,
                                  callbacks=[early_stopping],
-                                 validation_data=(self.X_val, self.y_val), verbose=1)
+                                 validation_data=(self.X_val, self.y_val), verbose=0)
         if False:
             # Plot training & validation accuracy and loss values
             plt.figure(figsize=(14, 5))
@@ -468,10 +468,10 @@ class DSSE_Estimator_TrainProcess:
             all_indices          = []
 
             FS = FSPreProc_SE(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test, self.old_PMUs)
-            features = FS.execute()
+            #features = FS.execute()
             if self.meterType == "PMU_caseA":
-                #features = IEEE33_PMU_caseA_SE_features
-                features = features
+                features = IEEE33_PMU_caseA_SE_features
+                #features = features
             elif self.meterType == "PMU_caseB":
                 #features = IEEE33_PMU_caseB_SE_features
                 features = features
@@ -540,14 +540,14 @@ class DSSE_Estimator_TrainProcess:
 
             mape_magnitudes = self.evaluate(y_pred_m, y_test_m, "MAPE")
 
-            print(y_pred_m[0])
-            print(y_test_m[0])
-            print(all_indices)
+            #print(y_pred_m[0])
+            #print(y_test_m[0])
+            #print(all_indices)
 
-            print(self.old_PMUs, "MAPE_v: ", mape_magnitudes)
-            filename = "DeployedModels/" + f"MESOGEIA_NN_NETERS_MAGNITUDES_{str('_'.join([str(x) for x in self.old_PMUs]))}_SE.h5"
+            #print(self.old_PMUs, "MAPE_v: ", mape_magnitudes)
+            #filename = "DeployedModels/" + f"MESOGEIA_NN_NETERS_MAGNITUDES_{str('_'.join([str(x) for x in self.old_PMUs]))}_SE.h5"
 
-            self.model_m.save(filename)
+            #self.model_m.save(filename)
 
             # TODO Angles
             ML_model = "NN"
@@ -565,9 +565,9 @@ class DSSE_Estimator_TrainProcess:
             y_pred_a = self.model_a.predict(X_test)
 
             mae_angles = self.evaluate(y_pred_a, y_test_a, "MAE")
-            filename = "DeployedModels/" + f"MESOGEIA_NN_NETERS_ANGLES_{str('_'.join([str(x) for x in self.old_PMUs]))}_SE.h5"
+            #filename = "DeployedModels/" + f"MESOGEIA_NN_NETERS_ANGLES_{str('_'.join([str(x) for x in self.old_PMUs]))}_SE.h5"
 
-            self.model_a.save(filename)
+            #self.model_a.save(filename)
 
             print("Used Features: ", used_features, " - MAPE_v: ", str(mape_magnitudes), " - MAE_a: ", str(mae_angles))
             #filename = "results/DSSE___" + "MODEL___" + str(ML_model) + "___" + "PREPROCESSING_" + str(FS.Preproc_model) + "___SUBMETHOD_" + str(FS.submethod) + "_results.txt"
@@ -580,7 +580,7 @@ class DSSE_Estimator_TrainProcess:
             #        all_indices) + ", MAPE_v: " + str(mape_magnitudes) + ", MAE_a: " + str(mae_angles) + "\n")
             #   wf.close()
 
-            if not ((mape_magnitudes <= MAPE_v_threshold) and (mae_angles <= MAE_a_threshold)):
+            if not ((mape_magnitudes <= MAPE_v_threshold) and (1000 <= MAE_a_threshold)):
 
                 for feature in features:
                     if feature not in self.old_PMUs:
@@ -648,7 +648,7 @@ class DSSE_Estimator_TrainProcess:
                         print("Used Features: ", used_features, " - MAPE_v: ", str(mape_magnitudes)) #, " - MAE_a: ", str(mae_angles))
                         #filename = "results/DSSE___" + "MODEL___" + str(ML_model) + "___" + "PREPROCESSING_" + str(FS.Preproc_model) + "___SUBMETHOD_" + str(FS.submethod) + "_results.txt"
 
-                        print("MAPE_v", mape_magnitudes) #, "MAE_a", mae_angles)
+                        print(used_features, "MAPE_v", mape_magnitudes, "MAE_a", mae_angles)
                         #print("Actual Magnitudes: ", list(y_test_m[0]))
                         #print("Predicted Magnitudes: ", list(y_pred_m[0]))
                         #print("Actual angles: ", list(y_test_a[0]))
@@ -662,7 +662,7 @@ class DSSE_Estimator_TrainProcess:
                         print(f"""Branch {feature} already in TI PMU set""")
                         mape_magnitudes, mae_angles = 1000, 1000
 
-                    if (mape_magnitudes <= MAPE_v_threshold) and (mae_angles <= MAE_a_threshold): break
+                    if (mape_magnitudes <= MAPE_v_threshold) and (1000 <= MAE_a_threshold): break
 
             return used_feature_indices
 
@@ -674,12 +674,11 @@ class DSSE_Estimator_TrainProcess:
         branches = []
 
         FS = FSPreProc_SE(self.meterType, self.FS, self.method, self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test, old_PMUs=self.old_PMUs)
-
         #branches = FS.execute()
         branches = []
         if self.meterType == "PMU_caseA":
-            #branches = IEEE33_PMU_caseA_SE_features
-            branches  = UKGD95_PMU_caseA_SE_features
+            branches = IEEE33_PMU_caseA_SE_features
+            #branches  = UKGD95_PMU_caseA_SE_features
             #branches = [67, 65, 84, 80, 64, 83, 95, 77, 70, 66, 55, 59, 82, 71, 81, 61, 69, 39, 79, 76, 63, 87, 54, 72, 78, 24, 62, 8, 36, 56, 41, 60, 96, 34, 91, 58, 74, 93, 29, 25, 90, 75, 23, 68, 6, 40, 86, 43, 21, 88, 92, 22, 32, 45, 53, 51, 44, 89, 47, 26, 49, 9, 33, 46, 37, 15, 52, 2, 42, 94, 4, 11, 27, 30, 7, 13, 18, 38, 35, 19, 31, 14, 48, 12, 16, 20, 50]
         elif self.meterType == "PMU_caseB":
             #branches = IEEE33_PMU_caseB_SE_features
@@ -706,11 +705,11 @@ class DSSE_Estimator_TrainProcess:
         DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
         mape_v = DSSE_GNN_TRAIN._evaluate(criterion="MAPE")
 
-        #edge_indexes, train_loader, val_loader, test_loader = DSSE_GNN_PP.generate_dataset(output="angles")
-        #DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
-        #mae_a = DSSE_GNN_TRAIN._evaluate(criterion="MAE")
+        edge_indexes, train_loader, val_loader, test_loader = DSSE_GNN_PP.generate_dataset(output="angles")
+        DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
+        mae_a = DSSE_GNN_TRAIN._evaluate(criterion="MAE")
 
-        #print(f"""For old TI PMUs {self.old_PMUs}, we got MAPE_v: {str(mape_v)} and MAE_a {str(mae_a)}""")
+        print(f"""For old TI PMUs {self.old_PMUs}, we got MAPE_v: {str(mape_v)} and MAE_a {str(mae_a)}""")
         #print("Used Features: ", used_branches, " - MAPE_v: ", str(mape_v), " - MAE_a: ", str(mae_a))
         #filename = "results/DSSE___" + "MODEL___GNN___" + "PREPROCESSING_" + str(FS.Preproc_model) + "___SUBMETHOD_" + str(FS.submethod) + "_results.txt"
 
@@ -744,12 +743,12 @@ class DSSE_Estimator_TrainProcess:
                     DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
                     mape_v = DSSE_GNN_TRAIN._evaluate(criterion="MAPE")
 
-                    #edge_indexes, train_loader, val_loader, test_loader = DSSE_GNN_PP.generate_dataset(output="angles")
-                    #DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
-                    #mae_a = DSSE_GNN_TRAIN._evaluate(criterion="MAE")
+                    edge_indexes, train_loader, val_loader, test_loader = DSSE_GNN_PP.generate_dataset(output="angles")
+                    DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
+                    mae_a = DSSE_GNN_TRAIN._evaluate(criterion="MAE")
 
-                    #print(f"""For new PMUs {new_PMUs}, we got MAPE_v: {str(mape_v)} and MAE_a {str(mae_a)}""")
-                    #print("Used branches: ", new_PMUs, " - MAPE_v: ", str(mape_v), " - MAE_a: ", str(mae_a))
+                    print(f"""For new PMUs {new_PMUs}, we got MAPE_v: {str(mape_v)} and MAE_a {str(mae_a)}""")
+                    print("Used branches: ", new_PMUs, " - MAPE_v: ", str(mape_v), " - MAE_a: ", str(mae_a))
                     #filename = "results/DSSE___" + "MODEL___GNN___" + "PREPROCESSING_" + str(FS.Preproc_model) + "___SUBMETHOD_" + str(FS.submethod) + "_results.txt"
 
                     #with open(filename, "a") as wf:
@@ -891,7 +890,7 @@ class DSSE_GNN_Preprocess:
         num_nodes = NUM_NODES
         num_features = 2
 
-        print(self.selected_edges)
+        #print(self.selected_edges)
 
         # self.selected_edges = [6, 32, 9]
 
@@ -1087,17 +1086,17 @@ class Train_GNN_DSSE:
         if self.meterType == "PMU_caseA":
 
             #TODO Vanilla GATCONV
-            #self.model = SE_GATWithEdgeAttr(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, gat_layers=4,
+            #self.model = SE_GATWithEdgeAttr(num_features=2,output_dim=NUM_NODES,edge_attr_dim=2, gat_layers=6,
             #                                GAT_dim=12, heads=4).to(self.device)
 
             #from model import SE_GATWithEdgeAttrNodeProj
-            #self.model = SE_GATWithEdgeAttrNodeProj(NUM_NODES, proj_nodes=5, num_features=2, output_dim=NUM_NODES, edge_attr_dim=2, gat_layers=4,
-            #                                GAT_dim=12, heads=4).to(self.device)
+            #self.model = SE_GATWithEdgeAttrNodeProj(NUM_NODES, proj_nodes=5, num_features=2, output_dim=NUM_NODES, edge_attr_dim=2, gat_layers=5,
+            #                                GAT_dim=8, heads=4).to(self.device)
 
             #TODO Transformer based
             self.model = SE_GATTransfomerOnlyDecoderWithEdges(device=self.device, num_nodes=NUM_NODES, num_features=2,output_dim=NUM_NODES,
                                                               proj_dim=5, embedding_dim=4, heads=4, num_decoder_layers=1,
-                                                              edge_attr_dim=2, gat_layers=4, GATConv_dim=12,
+                                                              edge_attr_dim=2, gat_layers=3, GATConv_dim=6,
                                                               ff_hid_dim=48).to(self.device)
 
 
@@ -1138,6 +1137,7 @@ class Train_GNN_DSSE:
 
         # Training loop
         for epoch in range(max_epochs):
+            #print("epoch")
             self.model.train()
             total_loss = 0
 
@@ -1184,8 +1184,8 @@ class Train_GNN_DSSE:
                 print(f"Early stopping at epoch {epoch + 1}")
                 break  # Stop training if no improvement for `patience` epochs
 
-            #print(f'Epoch {epoch + 1}, - Training Loss: {total_loss / len(self.train_loader)}',
-            #  f""" - Validation Loss: {val_loss / len(self.val_loader)}""")
+            print(f'Epoch {epoch + 1}, - Training Loss: {total_loss / len(self.train_loader)}',
+              f""" - Validation Loss: {val_loss / len(self.val_loader)}""")
 
         return self.model.load_state_dict(best_model_weights)
 
@@ -1241,7 +1241,7 @@ class Train_GNN_DSSE:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseB"
+    meterType = "PMU_caseA"
     if meterType == "conventional":
         if dataset == "IEEE33":
             old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]  #TODO Update
@@ -1264,7 +1264,7 @@ if __name__ == "__main__":
         elif dataset == "95UKGD":
             old_PMUs = [75] #, 67, 65, 84, 80, 64, 83, 95, 77, 70, 66] #[75]  #TODO Update
 
-    model    = "NN"
+    model    = "GNN"
     PP       = "RF"
     subPP    = "rfe"
 

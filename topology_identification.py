@@ -35,7 +35,7 @@ from torch.nn import Linear, BatchNorm1d
 import shap
 from config_file import *
 from model import (TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATWithEdgeAttrNodeProj, TI_GATNoEdgeAttrs, TI_TransformerNoEdges,
-                   TI_GCNNoEdgeAttrs,  TI_GCNNoEdgeAttrs, TI_TransformerWithEdges, TI_TEGNN_WithEdges)
+                   TI_GCNNoEdgeAttrs,  TI_GCNNoEdgeAttrs, TI_TransformerWithEdges, TI_TEGNN_WithEdges, TI_GATNoEdgeAttrNodeProj)
 from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
 from IEEE_datasets.IEEE33 import config_dict
 from outlier_classes import OutlierInjector, IF_OutlierDetection, KNNImputerMeasurements
@@ -1041,12 +1041,14 @@ class TIPredictorTrainProcess:
                                                validation_loader, test_loader, None, None)
                     acc = Train_GNN_TI.evaluate()
                 elif self.meterType == "PMU_caseB":
-                    edges, train_loader, validation_loader, test_loader = GTIP.generate_dataset_TI_GNN_PMU_caseB()
+                    edges, train_loader, validation_loader, test_loader, test_outliers_loader, \
+                        test_imputed_loader = GTIP.generate_dataset_TI_GNN_PMU_caseB()
                     Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader,
                                                validation_loader, test_loader, None, None)
                     acc = Train_GNN_TI.evaluate()
                 elif self.meterType == "conventional":
-                    edges, train_loader, validation_loader, test_loader = GTIP.generate_dataset_TI_GNN_conventional()
+                    edges, train_loader, validation_loader, test_loader, test_outliers_loader, \
+                        test_imputed_loader = GTIP.generate_dataset_TI_GNN_conventional()
                     Train_GNN_TI = TrainGNN_TI(self.meterType, self.model, used_feature_indices, train_loader,
                                                validation_loader, test_loader, None, None)
                     acc = Train_GNN_TI.evaluate()
@@ -1460,13 +1462,16 @@ class TrainGNN_TI:
             #                                                  heads=4).to(self.device)
             self.model          = TI_TEGNN_WithEdges(self.device,num_nodes=NUM_NODES,num_features=2,proj_dim=4,
                                                      embedding_dim=2,heads=4,num_decoder_layers=1,edge_attr_dim=2,
-                                                     gat_layers=6,GATConv_dim=16,output_dim=self.num_classes).to(self.device)
+                                                     gat_layers=8,GATConv_dim=16,output_dim=self.num_classes).to(self.device)
         elif self.meterType =="PMU_caseB":
             #self.model          = TI_GATNoEdgeAttrs(num_features=4, num_classes=self.num_classes, heads=4,
             #                                        num_gat_layers=2, gat_dim=16).to(self.device)
-            self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=4,output_dim=8,
-                                                        GATConv_layers=3, GATConv_dim=8, embedding_dim=4, heads=4,
-                                                        dec_layers=1, ff_hid_dim=24).to(self.device)
+            self.model           = TI_GATNoEdgeAttrNodeProj(num_nodes=NUM_NODES,proj_nodes=4,num_features=4,
+                                                              output_dim=self.num_classes,gat_layers=6,GAT_dim=12,
+                                                              heads=4).to(self.device)
+            #self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=4,output_dim=8,
+            #                                            GATConv_layers=3, GATConv_dim=8, embedding_dim=4, heads=4,
+            #                                            dec_layers=1, ff_hid_dim=24).to(self.device)
 
         elif self.meterType == "conventional":
             #self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=self.num_classes, heads=4,
@@ -1755,7 +1760,7 @@ class TrainNN_TI:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseA"
+    meterType = "PMU_caseB"
     #meterType = "PMU_caseB"
     #meterType = "conventional"
 
