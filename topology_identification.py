@@ -1463,16 +1463,16 @@ class TrainGNN_TI:
             #                                                  heads=4).to(self.device)
             self.model          = TI_TEGNN_WithEdges(self.device,num_nodes=NUM_NODES,num_features=2,proj_dim=4,
                                                      embedding_dim=2,heads=4,num_decoder_layers=1,edge_attr_dim=2,
-                                                     gat_layers=8,GATConv_dim=16,output_dim=self.num_classes).to(self.device)
+                                                     gat_layers=3,GATConv_dim=16,output_dim=self.num_classes).to(self.device)
         elif self.meterType =="PMU_caseB":
             #self.model          = TI_GATNoEdgeAttrs(num_features=4, num_classes=self.num_classes, heads=4,
             #                                        num_gat_layers=2, gat_dim=16).to(self.device)
-            #self.model           = TI_GATNoEdgeAttrNodeProj(num_nodes=NUM_NODES,proj_nodes=4,num_features=4,
-            #                                                  output_dim=self.num_classes,gat_layers=6,GAT_dim=12,
-            #                                                  heads=4).to(self.device)
-            self.model = TI_TEGNN_WithEdges(self.device, num_nodes=NUM_NODES, num_features=2, proj_dim=4,
-                                            embedding_dim=2, heads=4, num_decoder_layers=1,
-                                            gat_layers=4, GATConv_dim=16, output_dim=self.num_classes).to(self.device)
+            self.model           = TI_GATNoEdgeAttrNodeProj(num_nodes=NUM_NODES,proj_nodes=4,num_features=4,
+                                                              output_dim=self.num_classes,gat_layers=4,GAT_dim=16,
+                                                              heads=4).to(self.device)
+            #self.model = TI_TEGNN_NoEdges(self.device, num_nodes=NUM_NODES, num_features=4, proj_dim=4,
+            #                                embedding_dim=2, heads=4, num_decoder_layers=1,
+            #                                gat_layers=4, GATConv_dim=16, output_dim=self.num_classes).to(self.device)
 
         elif self.meterType == "conventional":
             #self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=self.num_classes, heads=4,

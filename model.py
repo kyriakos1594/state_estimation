@@ -240,13 +240,13 @@ class TI_TEGNN_WithEdges(nn.Module):
         self.device = device
 
         # Embedding for node indices (shared across batches)
-        self.node_index_embedding = nn.Embedding(self.num_nodes, embedding_dim//2)
+        self.node_index_embedding = nn.Embedding(self.num_nodes, embedding_dim)
 
         # Update feature_fc to take into account the concatenated input size
-        self.feature_fc = nn.Linear(num_features + embedding_dim//2, embedding_dim)
+        self.feature_fc = nn.Linear(num_features + embedding_dim, 3*embedding_dim)
 
         # Input GATConv layer
-        self.input_gat_conv = GATConv(embedding_dim, GATConv_dim, edge_dim=edge_attr_dim, heads=heads, concat=True)
+        self.input_gat_conv = GATConv(3*embedding_dim, GATConv_dim, edge_dim=edge_attr_dim, heads=heads, concat=True)
 
         # GATConv stacking for graph feature extraction
         self.gatconv_layers = nn.ModuleList([
@@ -432,13 +432,13 @@ class TI_TEGNN_NoEdges(nn.Module):
         self.device = device
 
         # Embedding for node indices (shared across batches)
-        self.node_index_embedding = nn.Embedding(self.num_nodes, embedding_dim//2)
+        self.node_index_embedding = nn.Embedding(self.num_nodes, embedding_dim)
 
         # Update feature_fc to take into account the concatenated input size
-        self.feature_fc = nn.Linear(num_features + embedding_dim//2, embedding_dim)
+        self.feature_fc = nn.Linear(num_features + embedding_dim, 3*embedding_dim)
 
         # Input GATConv layer
-        self.input_gat_conv = GATConv(embedding_dim, GATConv_dim, heads=heads, concat=True)
+        self.input_gat_conv = GATConv(3*embedding_dim, GATConv_dim, heads=heads, concat=True)
 
         # GATConv stacking for graph feature extraction
         self.gatconv_layers = nn.ModuleList([
@@ -464,25 +464,25 @@ class TI_TEGNN_NoEdges(nn.Module):
         batch_size = int(batch.max().item()) + 1
 
         node_indices = torch.arange(self.num_nodes, device=self.device).repeat(batch.max().item() + 1)
-        print("Shape of node indices: ", node_indices.shape)
+        #print("Shape of node indices: ", node_indices.shape)
 
         # Get node index embeddings
         index_embeds = self.node_index_embedding(node_indices)  # [total_nodes, embedding_dim]
-        print("Shape of index embeddings: ", index_embeds.shape)
+        #print("Shape of index embeddings: ", index_embeds.shape)
 
         # Concatenate raw features with index embeddings
         x = torch.cat([x, index_embeds], dim=1)  # Shape: [total_nodes, num_features + embedding_dim]
-        print("Concatenation of input after embedding", x.shape)
+        #print("Concatenation of input after embedding", x.shape)
 
-        print("Shape before feature FC: ", x.shape)
+        #print("Shape before feature FC: ", x.shape)
         # Embedding node features if needed - input
         x = self.feature_fc(x)
-        print("Feature FC after shape: ", x.shape)
+        #print("Feature FC after shape: ", x.shape)
 
         # Input GATConv
         x = self.input_gat_conv(x, edge_index=edge_index)
         x = F.leaky_relu(x)
-        print("Shape x after input GATConv: ", x.shape)
+        #print("Shape x after input GATConv: ", x.shape)
 
         # Local graph feature extraction, using graph attention layers
         for gat_conv in self.gatconv_layers:
@@ -492,10 +492,10 @@ class TI_TEGNN_NoEdges(nn.Module):
 
         # Prepare for Transformer by adding a batch dimension (1, batch_size, features)
         x = x.unsqueeze(0)  # Shape: [1, batch_size, feature_dim]
-        print("Shape x after decoder squeeze: ", x.shape)
+        #print("Shape x after decoder squeeze: ", x.shape)
 
         x = x.reshape(batch_size,self.num_nodes,-1)
-        print("Shape x after batch reshape: ", x.shape)
+        #print("Shape x after batch reshape: ", x.shape)
 
         # Global attention applied through transformer
         for decoder in self.transformer_decoder:
@@ -506,18 +506,18 @@ class TI_TEGNN_NoEdges(nn.Module):
 
         # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
         x = x.squeeze(0)
-        print("Shape x after decoder squeeze: ", x.shape)
+        #print("Shape x after decoder squeeze: ", x.shape)
 
         x = self.node_proj_FC(x)
-        print("Shape after node projection", x.shape)
+        #print("Shape after node projection", x.shape)
 
         batch_size = int(batch.max().item())+1
         x = x.reshape(batch_size, -1)
-        print("Shape after batch projection", x.shape)
+        #print("Shape after batch projection", x.shape)
 
         # Final fully connected layer for the output
         x = self.out(x)
-        print("Shape of output: ", x.shape)
+        #print("Shape of output: ", x.shape)
 
         return x
 
@@ -707,6 +707,50 @@ class SE_GATNoEdgeAttrs(torch.nn.Module):
 
         return x
 
+class SE_GATNoEdgeAttrsNodeProj(torch.nn.Module):
+    def __init__(self, num_nodes, proj_nodes, num_features, output_dim, GAT_dim=16, gat_layers=3, heads=4):
+        super(SE_GATNoEdgeAttrsNodeProj, self).__init__()
+
+        self.num_nodes = num_nodes
+        self.proj_nodes = proj_nodes
+
+        # Input Graph Attention layer
+        # Here, `edge_attr_dim` is the size of the edge features
+        self.input_conv = GATConv(num_features, GAT_dim, heads=heads, concat=True)  # First GAT layer with edge features
+
+        # Hidden Graph Attention Layers
+        # GAT Convolution Layers (Graph Attention) - Stacking to retrieve features n-hops away
+        self.GATConv_layers = nn.ModuleList([
+            GATConv(GAT_dim * heads, GAT_dim, heads=heads, concat=True) for _ in range(gat_layers-1)
+        ])
+
+        # Fully connected layer for classification
+        self.node_proj = nn.Linear(GAT_dim * heads, 1 * self.proj_nodes)
+        self.fc_out = torch.nn.Linear(num_nodes * self.proj_nodes, output_dim)
+
+    def forward(self, data):
+
+        x, edge_index, batch = data.x, data.edge_index, data.batch
+
+        x = self.input_conv(x, edge_index=edge_index)
+        x = F.relu(x)
+
+        for gat_conv_layer in self.GATConv_layers:
+            x = gat_conv_layer(x, edge_index=edge_index)
+            x = F.relu(x)
+
+        x = self.node_proj(x)
+        x = F.relu(x)
+
+        batch_size = int(batch.max().item())+1
+        x = x.reshape(batch_size, -1)
+
+        x = self.fc_out(x)
+
+
+        return x
+
+
 #TODO GATConv - PMU_caseA
 class SE_GATWithEdgeAttr(torch.nn.Module):
     def __init__(self, num_features, output_dim, edge_attr_dim, GAT_dim=16, gat_layers=3, heads=4):
@@ -859,19 +903,19 @@ class SE_GATTransfomerOnlyDecoderNoEdges(nn.Module):
         return x
 
 #TODO
-class SE_GATTransfomerOnlyDecoderWithEdges(nn.Module):
+class SE_TEGNN_WithEdges(nn.Module):
     def __init__(self, device, num_nodes, num_features, output_dim, proj_dim=4, embedding_dim=4, heads=4,
                  num_decoder_layers=1, edge_attr_dim=2, gat_layers=4, GATConv_dim=16, ff_hid_dim=64):
-        super(SE_GATTransfomerOnlyDecoderWithEdges, self).__init__()
+        super(SE_TEGNN_WithEdges, self).__init__()
 
         self.num_nodes = num_nodes
         self.device = device
 
         # Embedding for node indices (shared across batches)
-        self.node_index_embedding = nn.Embedding(self.num_nodes, embedding_dim//2)
+        self.node_index_embedding = nn.Embedding(self.num_nodes, embedding_dim)
 
         # Update feature_fc to take into account the concatenated input size
-        self.feature_fc = nn.Linear(num_features + embedding_dim//2, embedding_dim)
+        self.feature_fc = nn.Linear(num_features + embedding_dim, 2*embedding_dim)
 
         # Node embedding layer (if needed, otherwise use raw features)
         #self.node_embedding = nn.Embedding(num_nodes, embedding_dim)
@@ -880,7 +924,7 @@ class SE_GATTransfomerOnlyDecoderWithEdges(nn.Module):
         #self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
 
         # Input GATConv layer
-        self.input_gat_conv = GATConv(embedding_dim, GATConv_dim, edge_dim=edge_attr_dim, heads=heads, concat=True)
+        self.input_gat_conv = GATConv(2*embedding_dim, GATConv_dim, edge_dim=edge_attr_dim, heads=heads, concat=True)
 
         # GATConv stacking for graph feature extraction
         self.gatconv_layers = nn.ModuleList([

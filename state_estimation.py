@@ -1094,15 +1094,16 @@ class Train_GNN_DSSE:
             #                                GAT_dim=8, heads=4).to(self.device)
 
             #TODO Transformer based
-            self.model = SE_GATTransfomerOnlyDecoderWithEdges(device=self.device, num_nodes=NUM_NODES, num_features=2,output_dim=NUM_NODES,
-                                                              proj_dim=5, embedding_dim=4, heads=4, num_decoder_layers=1,
-                                                              edge_attr_dim=2, gat_layers=3, GATConv_dim=6,
-                                                              ff_hid_dim=48).to(self.device)
+            self.model = SE_TEGNN_WithEdges(device=self.device, num_nodes=NUM_NODES, num_features=2,output_dim=NUM_NODES,
+                                              proj_dim=5, embedding_dim=4, heads=4, num_decoder_layers=1,
+                                              edge_attr_dim=2, gat_layers=2, GATConv_dim=16,
+                                              ff_hid_dim=48).to(self.device)
 
 
         elif self.meterType == "PMU_caseB":
             #TODO Vanilla GATConv
-            self.model = SE_GATNoEdgeAttrs(num_features=4,output_dim=NUM_NODES, heads=4, gat_layers=4, GAT_dim=12).to(self.device)
+            self.model = SE_GATNoEdgeAttrsNodeProj(num_nodes=NUM_NODES, proj_nodes=5, num_features=4,
+                                                   output_dim=NUM_NODES, gat_layers=4, GAT_dim=16, heads=4).to(self.device)
 
             #self.model = SE_GATTransfomerOnlyDecoderNoEdges(num_nodes=NUM_NODES,num_features=4,output_dim=NUM_NODES,embedding_dim=4,
             #                                      heads=4, num_decoder_layers=1,gat_layers=5,GATConv_dim=12,
@@ -1241,7 +1242,7 @@ class Train_GNN_DSSE:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseA"
+    meterType = "PMU_caseB"
     if meterType == "conventional":
         if dataset == "IEEE33":
             old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]  #TODO Update
