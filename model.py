@@ -38,10 +38,10 @@ class TI_SimpleNNEdges(nn.Module):
 
         # Fully connected layers
         #self.fc1 = nn.Linear(self.input_dim, 256)
-        self.fc2 = nn.Linear(self.input_dim, 32)
-        #self.fc3 = nn.Linear(128, 64)
-        self.fc4 = nn.Linear(32, 32)
-        self.fc5 = nn.Linear(32, num_classes)
+        self.fc2 = nn.Linear(self.input_dim, 256)
+        self.fc3 = nn.Linear(256, 128)
+        self.fc4 = nn.Linear(128, 64)
+        self.fc5 = nn.Linear(64, num_classes)
         #self.fc4 = nn.Linear(128, 64)
         #self.fc5 = nn.Linear(64, num_classes)
         #self.fc4 = nn.Linear(4, num_classes)
@@ -58,7 +58,7 @@ class TI_SimpleNNEdges(nn.Module):
         # Forward pass through MLP
         #x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        #x = F.relu(self.fc3(x))
+        x = F.relu(self.fc3(x))
         x = F.relu(self.fc4(x))
         x = self.fc5(x)
 
@@ -750,6 +750,118 @@ class SE_GATNoEdgeAttrsNodeProj(torch.nn.Module):
 
         return x
 
+class SE_TEGNN_NoEdges(nn.Module):
+    def __init__(self, device, num_nodes, num_features, output_dim, proj_dim=4, embedding_dim=4, heads=4,
+                 num_decoder_layers=1, gat_layers=4, GATConv_dim=16, ff_hid_dim=64):
+        super(SE_TEGNN_NoEdges, self).__init__()
+
+        self.num_nodes = num_nodes
+        self.device = device
+
+        # Embedding for node indices (shared across batches)
+        self.node_index_embedding = nn.Embedding(self.num_nodes, embedding_dim)
+
+        # Update feature_fc to take into account the concatenated input size
+        self.feature_fc = nn.Linear(num_features + embedding_dim, embedding_dim)
+
+        # Node embedding layer (if needed, otherwise use raw features)
+        #self.node_embedding = nn.Embedding(num_nodes, embedding_dim)
+
+        # Feature Transformation (if needed)
+        #self.feature_fc = nn.Linear(num_features, embedding_dim) if num_features > 0 else None
+
+        # Input GATConv layer
+        self.input_gat_conv = GATConv(embedding_dim, GATConv_dim, heads=heads, concat=True)
+
+        # GATConv stacking for graph feature extraction
+        self.gatconv_layers = nn.ModuleList([
+            GATConv(GATConv_dim * heads, GATConv_dim, heads=heads, concat=True)
+            for _ in range(gat_layers-1)
+        ])
+
+        # Custom Transformer Decoder Layer
+        self.transformer_decoder = nn.ModuleList([
+            #TransfromerDecoderLayer2(d_model=GATConv_dim * heads, nhead=heads, dim_feedforward=ff_hid_dim)
+            nn.MultiheadAttention(embed_dim=GATConv_dim * heads, num_heads=heads, batch_first=True)
+            for _ in range(num_decoder_layers)
+        ])
+
+        #self.attn_pool = GlobalAttention(gate_nn = nn.Sequential(torch.nn.Linear(GATConv_dim * heads, 2 * GATConv_dim),
+        #                                                         torch.nn.ReLU(),
+        #                                                         torch.nn.Linear(2 * GATConv_dim, 1)))
+
+        self.node_proj_FC = nn.Linear(GATConv_dim * heads, proj_dim)
+
+        # Fully connected layer for output (e.g., classification or regression)
+        self.out = nn.Linear(proj_dim * output_dim, output_dim)
+
+    def forward(self, data):
+        # Extract node features and graph structure
+        x, edge_index, batch = data.x, data.edge_index, data.batch
+        batch_size = int(batch.max().item()) + 1
+
+        node_indices = torch.arange(self.num_nodes, device=self.device).repeat(batch.max().item() + 1)
+        #print("Shape of node indices: ", node_indices.shape)
+
+        # Get node index embeddings
+        index_embeds = self.node_index_embedding(node_indices)  # [total_nodes, embedding_dim]
+        #print("Shape of index embeddings: ", index_embeds.shape)
+
+        # Concatenate raw features with index embeddings
+        x = torch.cat([x, index_embeds], dim=1)  # Shape: [total_nodes, num_features + embedding_dim]
+        #print("Concatenation of input after embedding", x.shape)
+
+        #print("Shape before feature FC: ", x.shape)
+        # Embedding node features if needed - input
+        x = self.feature_fc(x)
+        #print("Feature FC after shape: ", x.shape)
+
+        #print("Shape after feature FC: ", x.shape)
+
+        # Input GATConv
+        x = self.input_gat_conv(x, edge_index=edge_index)
+        x = F.leaky_relu(x)
+        #print("Shape x after input GATConv: ", x.shape)
+
+        # Local graph feature extraction, using graph attention layers
+        for gat_conv in self.gatconv_layers:
+            x = gat_conv(x, edge_index=edge_index)
+            x = F.leaky_relu(x)
+            #print("Shape x after GATConv: ", x.shape)
+
+        # Prepare for Transformer by adding a batch dimension (1, batch_size, features)
+        x = x.unsqueeze(0)  # Shape: [1, batch_size, feature_dim]
+        #print("Shape x after decoder squeeze: ", x.shape)
+
+        x = x.reshape(batch_size,self.num_nodes,-1)
+        #print("Shape x after batch reshape: ", x.shape)
+
+        # Global attention applied through transformer
+        for decoder in self.transformer_decoder:
+            x, attn_weights = decoder(query=x,
+                                      key=x,
+                                      value=x)
+            #print("Shape x after decoder layer: ", x.shape)
+            #print(x[0, :])
+            #print(x[0, :])
+
+        # Remove the batch dimension (1, batch_size, feature_dim) -> (batch_size, feature_dim)
+        x = x.squeeze(0)
+        #print("Shape x after decoder squeeze: ", x.shape)
+
+        x = self.node_proj_FC(x)
+        #print("Shape after node projection", x.shape)
+
+        batch_size = int(batch.max().item())+1
+        x = x.reshape(batch_size, -1)
+        #print("Shape after batch projection", x.shape)
+
+        # Final fully connected layer for the output
+        x = self.out(x)
+        #print("Shape of output: ", x.shape)
+
+        return x
+
 
 #TODO GATConv - PMU_caseA
 class SE_GATWithEdgeAttr(torch.nn.Module):
@@ -1014,7 +1126,6 @@ class SE_TEGNN_WithEdges(nn.Module):
         #print("Shape of output: ", x.shape)
 
         return x
-
 
 #TODO Not used
 

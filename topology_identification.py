@@ -1477,9 +1477,12 @@ class TrainGNN_TI:
         elif self.meterType == "conventional":
             #self.model          = TI_GATNoEdgeAttrs(num_features=3, num_classes=self.num_classes, heads=4,
             #                                        num_gat_layers=2, gat_dim=16).to(self.device)
-            self.model          = TI_TransformerNoEdges(num_nodes=NUM_NODES,num_features=3,output_dim=8,
-                                                        GATConv_layers=2, GATConv_dim=12, embedding_dim=4, heads=4,
-                                                        dec_layers=1, ff_hid_dim=24).to(self.device)
+            #self.model           = TI_GATNoEdgeAttrNodeProj(num_nodes=NUM_NODES,proj_nodes=5,num_features=3,
+            #                                            output_dim=self.num_classes,gat_layers=4,GAT_dim=12,
+            #                                            heads=4).to(self.device)
+            self.model          = TI_TEGNN_NoEdges(self.device, num_nodes=NUM_NODES, num_features=3, proj_dim=4,
+                                                   embedding_dim=2, heads=4, num_decoder_layers=1,
+                                                   gat_layers=4, GATConv_dim=12, output_dim=self.num_classes).to(self.device)
 
         print(self.model)
         print("# Trainable parameters: ", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
@@ -1761,9 +1764,9 @@ class TrainNN_TI:
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseB"
     #meterType = "PMU_caseB"
-    #meterType = "conventional"
+    #meterType = "PMU_caseB"
+    meterType = "conventional"
 
     model = "GNN"
     PP    = "RF"
