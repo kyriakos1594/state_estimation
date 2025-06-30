@@ -802,8 +802,8 @@ if __name__ == "__main__":
                          N_topologies=NUM_TOPOLOGIES,
                          N_samples=NUM_SIMULATIONS,
                          dataset=dataset)
-    # GD.generate_LV_profiles(num_aggregated_profiles=40)
-    # GD.allign_generated_profiles()
+    GD.generate_LV_profiles(num_aggregated_profiles=100)
+    GD.allign_generated_profiles()
     GD.generate_dataset()
 
     #ADP = AllignDataProfiles()

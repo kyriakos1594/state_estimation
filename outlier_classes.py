@@ -5,301 +5,584 @@ from sklearn.ensemble import IsolationForest
 from sklearn.impute import KNNImputer
 from config_file import NUM_BRANCHES, NUM_NODES, branch_data
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from config_file import *
 # Show all rows
-pd.set_option('display.max_rows', None)
 
-class OutlierInjector:
+class BadDataInjector:
 
-    def __init__(self, X_dataset):
+    def __init__(self, meterType, feature_list):
+        self.input          = f"datasets/{dataset}_PMU_caseA_input.npy"
+        self.output         = f"datasets/{dataset}_PMU_caseA_output.npy"
+        self.meterType      = meterType
+        self.feature_list   = feature_list
+        self.prob_m         = 0.002
+        self.prob_a         = 0.002
+        self.X_train_orig   = None
+        self.y_train_orig   = None
+        self.X_val_orig     = None
+        self.y_val_orig     = None
+        self.X_test_orig    = None
+        self.y_test_orig    = None
 
-        self.X_dataset = X_dataset
 
-    def outlier_event(self, probability=0.01):
+    def custom_one_hot_encode(self, labels):
+
+        one_hot_encoded_labels = []
+        for label in labels:
+            tmp = [0 for i in range(NUM_TOPOLOGIES)]
+            tmp[int(label)-1] = 1
+
+            one_hot_encoded_labels.append(tmp)
+
+        one_hot_encoded_labels = np.array(one_hot_encoded_labels)
+
+        return one_hot_encoded_labels
+
+    def outlier_event(self, probability=0.02):
         return random.random() < probability
 
-    # Generates outliers per node sample
     def generate_outlier_value(self, normal_value, type="voltage_magnitude"):
         # Voltage normally ~1.0 p.u., outliers could be severe drops or spikes
         if type in ["voltage_magnitude"]:
             return normal_value * np.random.choice([0.05, 20])
         elif type in ["current_magnitude"]:
-            return normal_value * np.random.choice([0.05, 20])
+            return normal_value * np.random.choice([20])
         elif type in ["voltage_angle"]:
             return normal_value + 40 if normal_value>0 else normal_value - 40
-        #elif type in ["current_angle"]:
-        #    return normal_value + 20 if normal_value>0 else normal_value - 20
         else:
             return normal_value
 
+    def inject_outliers_PMU_caseA(self, X, y, note=""):
 
-    # Inject outliers per input sample at specified indices
-    def inject_outliers_PMUcaseA(self, injection_edge_indices, prob_m=0.001, prob_a=0.001):
-
-        outlier_index_dict = {
-            "Vm":  [],
-            "Va":  [],
-            "Im":  [],
-            "ALL": [],
+        X_outlier_dict = {
+            i: {
+                "Vm": [],
+                "Va": [],
+                "Im": [],
+            } for i in self.feature_list
         }
         outlier_num = 0
         outlier_data_list = []
 
-        for sample_index in range(self.X_dataset.shape[0]):
-            Vm_list = list(self.X_dataset[sample_index][0:NUM_NODES])
-            Va_list = list(self.X_dataset[sample_index][NUM_NODES:2*NUM_NODES])
-            Im_list = list(self.X_dataset[sample_index][2*NUM_NODES:2*NUM_NODES+NUM_BRANCHES])
-            Ia_list = list(self.X_dataset[sample_index][2*NUM_NODES+NUM_BRANCHES:])
+        for sample_index in range(X.shape[0]):
+            Vm_list = list(X[sample_index][0:NUM_NODES])
+            Va_list = list(X[sample_index][1*NUM_NODES:2*NUM_NODES])
+            Im_list = list(X[sample_index][2*NUM_NODES:2*NUM_NODES+NUM_BRANCHES])
+            Ia_list = list(X[sample_index][2*NUM_NODES+NUM_BRANCHES:])
 
-            for edge_idx in injection_edge_indices:
+            for edge_idx in self.feature_list:
                 sending_node_idx = branch_data[edge_idx]["sending_node"]
-                if self.outlier_event(probability=prob_m):
-                    Im = Im_list[sending_node_idx]
+                if self.outlier_event(probability=self.prob_m) and Im_list[edge_idx]>0:
+                    Im = Im_list[edge_idx]
                     Im_outlier_value = self.generate_outlier_value(Im, "current_magnitude")
                     Im_list[edge_idx] = Im_outlier_value
-                    outlier_num+=1
-                    outlier_index_dict["Im"].append(sample_index)
-                if self.outlier_event(probability=prob_m):
+
+                    outlier_num += 1
+                    X_outlier_dict[edge_idx]["Im"].append(sample_index)
+                if self.outlier_event(probability=self.prob_m):
                     Vm = Vm_list[sending_node_idx]
                     Vm_outlier_value = self.generate_outlier_value(Vm, "voltage_magnitude")
                     Vm_list[sending_node_idx] = Vm_outlier_value
                     flag = True
-                    outlier_num+=1
-                    outlier_index_dict["Vm"].append(sample_index)
-                if self.outlier_event(probability=prob_m):
+                    outlier_num += 1
+                    X_outlier_dict[edge_idx]["Vm"].append(sample_index)
+                if self.outlier_event(probability=self.prob_m):
                     Va = Va_list[sending_node_idx]
                     Va_outlier_value = self.generate_outlier_value(Va, "voltage_angle")
                     Va_list[sending_node_idx] = Va_outlier_value
-                    outlier_num+=1
-                    outlier_index_dict["Va"].append(sample_index)
-                if self.outlier_event(probability=prob_a):
-                    Im = Im_list[edge_idx]
-                    Vm = Vm_list[sending_node_idx]
-                    Va = Va_list[sending_node_idx]
+                    outlier_num += 1
+                    X_outlier_dict[edge_idx]["Va"].append(sample_index)
 
+            sample = Vm_list + Va_list + Im_list + Ia_list
+            outlier_data_list.append(sample)
+
+        print("Outlier number: ", outlier_num)
+        X = np.array(outlier_data_list)
+
+        if note=="test":
+            for sensor_idx in X_outlier_dict.keys():
+                    for key in X_outlier_dict[sensor_idx].keys():
+                        print(f"""{sensor_idx}-{key} bad-data length: , {str(len(X_outlier_dict[sensor_idx][key]))}""")
+
+        return X, y, X_outlier_dict
+
+    def inject_outliers_PMU_caseB(self, X, y):
+
+        X_outlier_dict = {
+            i: {
+                "Vm": [],
+                "Va": [],
+                "Im": [],
+            } for i in self.feature_list
+        }
+        outlier_num = 0
+        outlier_data_list = []
+
+        for sample_index in range(X.shape[0]):
+            Vm_list = list(X[sample_index][0:NUM_NODES])
+            Va_list = list(X[sample_index][1*NUM_NODES:2*NUM_NODES])
+            Im_list = list(X[sample_index][2*NUM_NODES:3*NUM_NODES])
+            Ia_list = list(X[sample_index][3*NUM_NODES:])
+
+            for node_idx in self.feature_list:
+                if self.outlier_event(probability=self.prob_m):
+                    Im = Im_list[node_idx]
                     Im_outlier_value = self.generate_outlier_value(Im, "current_magnitude")
+                    Im_list[node_idx] = Im_outlier_value
+                    outlier_num += 1
+                    X_outlier_dict[node_idx]["Im"].append(sample_index)
+                if self.outlier_event(probability=self.prob_m):
+                    Vm = Vm_list[node_idx]
                     Vm_outlier_value = self.generate_outlier_value(Vm, "voltage_magnitude")
+                    Vm_list[node_idx] = Vm_outlier_value
+                    outlier_num += 1
+                    X_outlier_dict[node_idx]["Vm"].append(sample_index)
+                if self.outlier_event(probability=self.prob_m):
+                    Va = Va_list[node_idx]
                     Va_outlier_value = self.generate_outlier_value(Va, "voltage_angle")
-
-                    Ia_list[edge_idx] = Im_outlier_value
-                    Vm_list[sending_node_idx] = Vm_outlier_value
-                    Va_list[sending_node_idx] = Va_outlier_value
-
-                    outlier_num+=1
-                    outlier_index_dict["ALL"].append(sample_index)
+                    Va_list[node_idx] = Va_outlier_value
+                    outlier_num += 1
+                    X_outlier_dict[node_idx]["Va"].append(sample_index)
 
 
             sample = Vm_list + Va_list + Im_list + Ia_list
-
             outlier_data_list.append(sample)
 
-        outlier_dataset = np.array(outlier_data_list)
+        X = np.array(outlier_data_list)
 
-        return outlier_dataset, outlier_index_dict
+        return X, y, X_outlier_dict
 
-class IF_OutlierDetection:
+    def generate_datasets(self):
 
-    def __init__(self, meter):
-        self.model_Im           = IsolationForest(max_samples=256, contamination=0.02, random_state=42)
-        self.model_Vm           = IsolationForest(max_samples=256, contamination=0.02, random_state=42)
-        self.model_Va           = IsolationForest(max_samples=256, contamination=0.02, random_state=42)
-        self.model_ALL          = IsolationForest(max_samples=256, contamination=0.01, random_state=42)
-        self.meter              = meter
+        inputs = np.load(self.input)
+        print("Input shape: ", inputs.shape)
 
-    def divide_outlier_indices(self, per_edge_outliers):
+        outputs = np.load(self.output)
 
-        per_edge_outliers["Im"] = sorted(list(set(per_edge_outliers["Im"]) - set(per_edge_outliers["ALL"])))
-        print("Standalone Im outliers: ", len(per_edge_outliers["Im"]))
-        per_edge_outliers["Vm"] = sorted(list(set(per_edge_outliers["Vm"]) - set(per_edge_outliers["ALL"])))
-        print("Standalone Vm outliers: ", len(per_edge_outliers["Vm"]))
-        per_edge_outliers["Va"] = sorted(list(set(per_edge_outliers["Va"]) - set(per_edge_outliers["ALL"])))
-        print("Standalone Va outliers: ", len(per_edge_outliers["Va"]))
+        # Reshape the labels to a 2D array
+        output_SE, output_TI = outputs[:, :-1], outputs[:, -1]
 
-        return per_edge_outliers
+        labels_reshaped = list(output_TI)
 
-    def train_isolation_forest_PMU_caseA(self, X_train):
+        ohe_labels = self.custom_one_hot_encode(labels_reshaped)
 
-        edge_idx = self.meter
-        node_idx = branch_data[self.meter]["sending_node"]
+        # Initialize an empty list to store concatenated elements
+        concatenated_list = []
 
-        #TODO Train Isolation Forest - ALL
-        # Keep only meter relevant information and predict per meter
-        dataset = X_train[:, [node_idx, NUM_NODES+node_idx, 2*NUM_NODES+edge_idx, 2*NUM_NODES+NUM_BRANCHES+edge_idx]]
-        self.model_ALL.fit(dataset)
+        # Loop through each element (i) of outputs and labels
+        for i in range(len(outputs)):
+            # Concatenate the ith elements of outputs and labels
+            concatenated = np.concatenate((output_SE[i], ohe_labels[i]))
+            concatenated_list.append(concatenated)
 
-        #TODO Im
-        # Keep only meter relevant information and predict per meter
-        dataset = X_train[:, [2*NUM_NODES+edge_idx]]
-        self.model_Im.fit(dataset)
+        outputs = np.array(concatenated_list)
 
-        #TODO Vm
-        # Keep only meter relevant information and predict per meter
-        dataset = X_train[:, [node_idx]]
-        self.model_Vm.fit(dataset)
+        print("Output shape: ", outputs.shape, "Output_SE shape: ", output_SE.shape, "Output_TI shape: ", output_TI.shape)
 
-        #TODO Va
-        # Keep only meter relevant information and predict per meter
-        dataset = X_train[:, [NUM_NODES + node_idx]]
-        self.model_Va.fit(dataset)
+        # First split: train validation and test
+        X_train, X_test, y_train, y_test = train_test_split(inputs, outputs, test_size=0.15, random_state=42)
+        # Second split: train and validation
+        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.20, random_state=42)  # 0.25 x 0.8 = 0.2
 
-    def predict_outliers_PMU_caseA(self, X_test, outlier_dict):
-        per_edge_outliers = {
-            "Im":  [],
-            "Vm":  [],
-            "Va":  [],
-            "ALL": [],
+        self.X_train_orig = X_train.copy()
+        self.y_train_orig = y_train.copy()
+        self.X_val_orig   = X_val.copy()
+        self.y_val_orig   = y_val.copy()
+        self.X_test_orig  = X_test.copy()
+        self.y_test_orig  = y_test.copy()
+
+        if self.meterType == "PMU_caseA":
+            X_train, y_train, X_train_indices = self.inject_outliers_PMU_caseA(X_train, y_train)
+            X_val, y_val, X_val_indices       = self.inject_outliers_PMU_caseA(X_val, y_val)
+            X_test, y_test, X_test_indices    = self.inject_outliers_PMU_caseA(X_test, y_test, note="test")
+        elif self.meterType == "PMU_caseB":
+            X_train, y_train, X_train_indices = self.inject_outliers_PMU_caseB(X_train, y_train)
+            X_val, y_val, X_val_indices = self.inject_outliers_PMU_caseB(X_val, y_val)
+            X_test, y_test, X_test_indices = self.inject_outliers_PMU_caseB(X_test, y_test)
+        else:
+            X_train, y_train, X_train_indices, X_val, y_val, X_val_indices, \
+                X_test, y_test, X_test_indices = None, None, None, None, None, None, None, None, None
+
+        return X_train, y_train, X_train_indices, X_val, y_val, X_val_indices, X_test, y_test, X_test_indices, \
+            self.X_train_orig, self.y_train_orig, self.X_val_orig, self.y_val_orig, self.X_test_orig, self.y_test_orig
+
+class IF_BadDataDetector:
+
+    def __init__(self, meterType, feature_list, X_train, y_train, X_train_outlier_indices,
+                 X_val, y_val, X_val_outlier_indices, X_test, y_test, X_test_outlier_indices):
+        self.feature_list               = feature_list
+        self.meterType                  = meterType
+        self.X_train                    = X_train
+        self.y_train                    = y_train
+        self.X_train_outlier_indices    = X_train_outlier_indices
+        self.X_val                      = X_val
+        self.y_val                      = y_val
+        self.X_val_outlier_indices      = X_val_outlier_indices
+        self.X_test                     = X_test
+        self.y_test                     = y_test
+        self.X_test_outlier_indices     = X_test_outlier_indices
+        # Isolation Forest dictionary for every node-feature combination
+        self.IF_dict = {
+            i: {
+                "Vm": IsolationForest(max_samples=256, contamination=0.01, random_state=42),
+                "Va": IsolationForest(max_samples=256, contamination=0.01, random_state=42),
+                "Im": IsolationForest(max_samples=256, contamination=0.01, random_state=42),
+            } for i in self.feature_list
+        }
+        self.predicted_outliers = {
+            i: {
+                "Vm": [],
+                "Va": [],
+                "Im": [],
+            } for i in self.feature_list
+        }
+        # Predicted outliers dictionary
+        self.predicted_outliers_val = {
+            i: {
+                "Vm": [],
+                "Va": [],
+                "Im": [],
+            } for i in self.feature_list
+        }
+        # Predicted outliers dictionary
+        self.predicted_outliers_test = {
+            i: {
+                "Vm": [],
+                "Va": [],
+                "Im": [],
+            } for i in self.feature_list
         }
 
-        edge_idx = self.meter
-        node_idx = branch_data[self.meter]["sending_node"]
+    def train_IF(self):
 
-        # TODO ALL
-        # Keep only meter relevant information and predict per meter
-        dataset = X_test[:, [node_idx, NUM_NODES + node_idx, 2 * NUM_NODES + edge_idx, 2 * NUM_NODES + NUM_BRANCHES + edge_idx]]
-        predictions = self.model_ALL.predict(dataset)
-        predicted_outlier_indices = list(np.where(predictions == -1)[0])
-        real_outliers = outlier_dict["ALL"]
-        set_diff = set(real_outliers) - set(predicted_outlier_indices)
-        print("NOT FOUND FOR ALL MEASUREMENTS ERRORS: ", 100 * (len(set_diff) / len(real_outliers)), "%", "Real Outliers: ", len(real_outliers), "Predicted Outliers:", len(predicted_outlier_indices))
-        per_edge_outliers["ALL"] = list(predicted_outlier_indices)
+        #TODO Train IFs
 
-        # TODO Im
-        dataset = X_test[:, [2 * NUM_NODES + edge_idx]]
-        predictions = self.model_Im.predict(dataset)
-        predicted_outlier_indices = list(np.where(predictions == -1)[0])
-        real_outliers = outlier_dict["Im"]
-        set_diff = set(real_outliers) - set(predicted_outlier_indices)
-        print("NOT FOUND FOR Im MEASUREMENTS ERRORS: ", 100 * (len(set_diff) / len(real_outliers)), "%", "Real Outliers: ", len(real_outliers), "Predicted Outliers:", len(predicted_outlier_indices))
-        per_edge_outliers["Im"] = list(predicted_outlier_indices)
+        if self.meterType == "PMU_caseA":
+            for branch_idx in self.feature_list:
+                for feature in ["Vm", "Va", "Im"]:
+                    node_idx = branch_data[branch_idx]["sending_node"]
+                    if feature == "Vm":
+                        X_tmp = self.X_train[:, 0*NUM_NODES+node_idx].reshape(-1, 1)
+                        iso_f = self.IF_dict[branch_idx]["Vm"]
+                        iso_f.fit(X_tmp)
+                        predictions = iso_f.predict(X_tmp)
+                        predicted_outlier_indices = list(np.where(predictions == -1)[0])
+                        real_outliers = self.X_train_outlier_indices[branch_idx]["Vm"]
+                        set_diff = set(real_outliers) - set(predicted_outlier_indices)
+                        print(f"{branch_idx}-NOT FOUND FOR Vm MEASUREMENTS ERRORS: ", 100 * (len(set_diff) / len(real_outliers)), "%",
+                              "Real Outliers: ", len(real_outliers), "Predicted Outliers:", len(predicted_outlier_indices))
 
-        # TODO Vm
-        dataset = X_test[:, [node_idx]]
-        predictions = self.model_Vm.predict(dataset)
-        predicted_outlier_indices = list(np.where(predictions == -1)[0])
-        real_outliers = outlier_dict["Vm"]
+                        self.predicted_outliers[branch_idx]["Vm"] = predicted_outlier_indices
 
-        set_diff = set(real_outliers) - set(predicted_outlier_indices)
-        print("NOT FOUND FOR Vm MEASUREMENTS ERRORS: ", 100 * (len(set_diff) / len(real_outliers)), "%", "Real Outliers: ", len(real_outliers), "Predicted Outliers:", len(predicted_outlier_indices))
-        per_edge_outliers["Vm"] = list(predicted_outlier_indices)
+                    elif feature == "Va":
+                        X_tmp = self.X_train[:,1*NUM_NODES+node_idx].reshape(-1, 1)
+                        iso_f = self.IF_dict[branch_idx]["Va"]
+                        iso_f.fit(X_tmp)
+                        predictions = iso_f.predict(X_tmp)
 
-        # TODO Va
-        # Keep only meter relevant information and predict per meter
-        dataset = X_test[:, [NUM_NODES + node_idx]]
-        predictions = self.model_Va.predict(dataset)
-        predicted_outlier_indices = list(np.where(predictions == -1)[0])
-        real_outliers = outlier_dict["Va"]
-        set_diff = set(real_outliers) - set(predicted_outlier_indices)
-        print("NOT FOUND FOR Va MEASUREMENTS ERRORS: ", 100 * (len(set_diff) / len(real_outliers)), "%", "Real Outliers: ", len(real_outliers), "Predicted Outliers:", len(predicted_outlier_indices))
-        per_edge_outliers["Va"] = list(predicted_outlier_indices)
+                        predicted_outlier_indices = list(np.where(predictions == -1)[0])
+                        real_outliers = self.X_train_outlier_indices[branch_idx]["Va"]
+                        set_diff = set(real_outliers) - set(predicted_outlier_indices)
+                        print(f"{branch_idx}-NOT FOUND FOR Va MEASUREMENTS ERRORS: ", 100 * (len(set_diff) / len(real_outliers)), "%",
+                              "Real Outliers: ", len(real_outliers), "Predicted Outliers:", len(predicted_outlier_indices))
+                        self.predicted_outliers[branch_idx]["Va"] = predicted_outlier_indices
 
-        per_edge_outliers = self.divide_outlier_indices(per_edge_outliers)
-
-        return per_edge_outliers
-
-class KNNImputerMeasurements:
-
-    def __init__(self, meter):
-        self.KNNImputer         = KNNImputer(n_neighbors=10)
-        self.meter              = meter
-
-    def train_KNNImputers_PMU_caseA(self, X_train, X_train_outlier_index_dict):
-
-        outlier_indices = list(set(X_train_outlier_index_dict["Vm"] +
-                                   X_train_outlier_index_dict["Va"] +
-                                   X_train_outlier_index_dict["Im"] +
-                                   X_train_outlier_index_dict["ALL"]))
-
-        edge_idx = self.meter
-        node_idx = branch_data[self.meter]["sending_node"]
-
-        inliners = X_train[~np.isin(np.arange(len(X_train)), outlier_indices)]
-        print(inliners.shape)
-
-        inliners = inliners[:, [node_idx, NUM_NODES+node_idx, 2*NUM_NODES+edge_idx, 2*NUM_NODES+NUM_BRANCHES+edge_idx]]
-        self.KNNImputer.fit(inliners)
+                    elif feature == "Im":
+                        X_tmp = self.X_train[:,2*NUM_NODES+branch_idx].reshape(-1, 1)
+                        iso_f = self.IF_dict[branch_idx]["Im"]
+                        iso_f.fit(X_tmp)
+                        predictions = iso_f.predict(X_tmp)
+                        predicted_outlier_indices = list(np.where(predictions == -1)[0])
+                        real_outliers = self.X_train_outlier_indices[branch_idx]["Im"]
+                        set_diff = set(real_outliers) - set(predicted_outlier_indices)
+                        print(f"{branch_idx}-NOT FOUND FOR Im MEASUREMENTS ERRORS: ", 100 * (len(set_diff) / len(real_outliers)), "%",
+                              "Real Outliers: ", len(real_outliers), "Predicted Outliers:", len(predicted_outlier_indices))
+                        self.predicted_outliers[branch_idx]["Im"] = predicted_outlier_indices
 
 
-    def impute_values_PMU_caseA(self, X_test, X_test_outlier_index_dict, compare_np):
+        elif self.meterType == "PMU_caseB":
+            for node_idx in self.feature_list:
+                for feature in ["Vm", "Va", "Im"]:
+                    if feature == "Vm": X_tmp = self.X_train[:, node_idx]
+                    elif feature == "Va": X_tmp = self.X_train[:, NUM_NODES+node_idx]
+                    elif feature == "Im": X_tmp = self.X_train[:, 2*NUM_NODES+node_idx]
 
-        edge_idx = self.meter
-        node_idx = branch_data[self.meter]["sending_node"]
+    def predict(self):
 
-        # TODO Get indices of meter only
-        X_train    = X_test[:, [node_idx, NUM_NODES + node_idx, 2 * NUM_NODES + edge_idx, 2 * NUM_NODES + NUM_BRANCHES + edge_idx]]
-        compare_np = compare_np[:, [node_idx, NUM_NODES + node_idx, 2 * NUM_NODES + edge_idx, 2 * NUM_NODES + NUM_BRANCHES + edge_idx]]
+        if self.meterType == "PMU_caseA":
+            for branch_idx in self.feature_list:
+                for feature in ["Vm", "Va", "Im"]:
+                    node_idx = branch_data[branch_idx]["sending_node"]
+                    #TODO Validation - Testing sets
+                    if feature == "Vm":
+                        X_tmp = self.X_val[:, node_idx].reshape(-1, 1)
+                        iso_f = self.IF_dict[branch_idx]["Vm"]
+                        predictions = iso_f.predict(X_tmp)
+                        predicted_outlier_indices = list(np.where(predictions == -1)[0])
+                        real_outliers = self.X_val_outlier_indices[branch_idx]["Vm"]
+                        set_diff = set(real_outliers) - set(predicted_outlier_indices)
+                        print(f"{branch_idx}-NOT FOUND FOR Vm -validation- MEASUREMENTS ERRORS: ", 100 * (len(set_diff) / len(real_outliers)), "%",
+                              "Real Outliers: ", len(real_outliers), "Predicted Outliers:", len(predicted_outlier_indices))
+                        self.X_val_outlier_indices[branch_idx]["Vm"] = predicted_outlier_indices
 
-        # TODO Vm
-        outlier_indices = X_test_outlier_index_dict["Vm"]
-        X_train[outlier_indices, 0] = np.nan
-        X_train_Vm = self.KNNImputer.transform(X_train)
-        original_Vm = compare_np[outlier_indices, 0].flatten().tolist()
-        imputed_Vm  = X_train_Vm[outlier_indices, 0].flatten().tolist()
-        mape = sum([abs(original_Vm[i] - imputed_Vm[i]) / original_Vm[i] for i in range(len(original_Vm))])/len(original_Vm)
-        print("MAPE Imputed Vm: ", mape, " - Imputed values: ", len(imputed_Vm))
+                        X_tmp = self.X_test[:, node_idx].reshape(-1, 1)
+                        iso_f = self.IF_dict[branch_idx]["Vm"]
+                        predictions = iso_f.predict(X_tmp)
+                        predicted_outlier_indices = list(np.where(predictions == -1)[0])
+                        real_outliers = self.X_test_outlier_indices[branch_idx]["Vm"]
+                        set_diff = set(real_outliers) - set(predicted_outlier_indices)
+                        print(f"{branch_idx}-NOT FOUND FOR Vm -test- MEASUREMENTS ERRORS: ", 100 * (len(set_diff) / len(real_outliers)), "%",
+                              "Real Outliers: ", len(real_outliers), "Predicted Outliers:", len(predicted_outlier_indices))
+                        self.X_test_outlier_indices[branch_idx]["Vm"] = predicted_outlier_indices
 
-        # TODO Va
-        outlier_indices = X_test_outlier_index_dict["Va"]
-        X_train[outlier_indices, 1] = np.nan
-        X_train_Va = self.KNNImputer.transform(X_train)
-        original_Va = compare_np[outlier_indices, 1].flatten().tolist()
-        imputed_Va = X_train_Va[outlier_indices, 1].flatten().tolist()
-        mae = sum([abs(original_Va[i] - imputed_Va[i]) for i in range(len(original_Va))]) / len(original_Va)
-        print("MAE Imputed Va: ", mae, " - Imputed values: ", len(imputed_Va))
+                    elif feature == "Va":
+                        X_tmp = self.X_val[:, NUM_NODES+node_idx].reshape(-1, 1)
+                        iso_f = self.IF_dict[branch_idx]["Va"]
+                        predictions = iso_f.predict(X_tmp)
+                        predicted_outlier_indices = list(np.where(predictions == -1)[0])
+                        real_outliers = self.X_val_outlier_indices[branch_idx]["Va"]
+                        set_diff = set(real_outliers) - set(predicted_outlier_indices)
+                        print(f"{branch_idx}-NOT FOUND FOR Va -validation- MEASUREMENTS ERRORS: ", 100 * (len(set_diff) / len(real_outliers)), "%",
+                              "Real Outliers: ", len(real_outliers), "Predicted Outliers:", len(predicted_outlier_indices))
+                        self.X_val_outlier_indices[branch_idx]["Va"] = predicted_outlier_indices
 
-        # TODO Im
-        outlier_indices = X_test_outlier_index_dict["Im"]
-        X_train[outlier_indices, 2] = np.nan
-        X_train_Im = self.KNNImputer.transform(X_train)
-        original_Im = compare_np[outlier_indices, 2].flatten().tolist()
-        imputed_Im = X_train_Im[outlier_indices, 2].flatten().tolist()
-        mape = sum([abs(original_Im[i] - imputed_Im[i]) / original_Im[i] for i in range(len(original_Im))]) / len(original_Im)
-        print("MAPE Imputed Im: ", mape, " - Imputed values: ", len(imputed_Im))
+                        X_tmp = self.X_test[:, NUM_NODES+node_idx].reshape(-1, 1)
+                        iso_f = self.IF_dict[branch_idx]["Va"]
+                        predictions = iso_f.predict(X_tmp)
+                        predicted_outlier_indices = list(np.where(predictions == -1)[0])
+                        real_outliers = self.X_test_outlier_indices[branch_idx]["Va"]
+                        set_diff = set(real_outliers) - set(predicted_outlier_indices)
+                        print(f"{branch_idx}-NOT FOUND FOR Va -test- MEASUREMENTS ERRORS: ", 100 * (len(set_diff) / len(real_outliers)), "%",
+                              "Real Outliers: ", len(real_outliers), "Predicted Outliers:", len(predicted_outlier_indices))
+                        self.X_test_outlier_indices[branch_idx]["Va"] = predicted_outlier_indices
 
-        # Impute values on original frame X_dataset
-        Im_outlier_indices = X_test_outlier_index_dict["Im"]
-        Vm_outlier_indices = X_test_outlier_index_dict["Vm"]
-        Va_outlier_indices = X_test_outlier_index_dict["Va"]
+                    elif feature == "Im":
+                        X_tmp = self.X_val[:, 2*NUM_NODES + branch_idx].reshape(-1, 1)
+                        iso_f = self.IF_dict[branch_idx]["Im"]
+                        predictions = iso_f.predict(X_tmp)
+                        predicted_outlier_indices = list(np.where(predictions == -1)[0])
+                        real_outliers = self.X_val_outlier_indices[branch_idx]["Im"]
+                        set_diff = set(real_outliers) - set(predicted_outlier_indices)
+                        print(f"{branch_idx}-NOT FOUND FOR Im -validation- MEASUREMENTS ERRORS: ",
+                              100 * (len(set_diff) / len(real_outliers)), "%",
+                              "Real Outliers: ", len(real_outliers), "Predicted Outliers:",
+                              len(predicted_outlier_indices))
+                        self.X_val_outlier_indices[branch_idx]["Im"] = predicted_outlier_indices
 
-        X_test[Im_outlier_indices, 2*NUM_NODES + edge_idx]   = imputed_Im
-        X_test[Vm_outlier_indices, node_idx]                 = imputed_Vm
-        X_test[Va_outlier_indices, NUM_NODES + node_idx]     = imputed_Va
+                        X_tmp = self.X_test[:, 2*NUM_NODES + branch_idx].reshape(-1, 1)
+                        iso_f = self.IF_dict[branch_idx]["Im"]
+                        predictions = iso_f.predict(X_tmp)
+                        predicted_outlier_indices = list(np.where(predictions == -1)[0])
+                        real_outliers = self.X_test_outlier_indices[branch_idx]["Im"]
+                        set_diff = set(real_outliers) - set(predicted_outlier_indices)
+                        print(f"{branch_idx}-NOT FOUND FOR Im -test- MEASUREMENTS ERRORS: ",
+                              100 * (len(set_diff) / len(real_outliers)), "%",
+                              "Real Outliers: ", len(real_outliers), "Predicted Outliers:",
+                              len(predicted_outlier_indices))
+                        self.X_test_outlier_indices[branch_idx]["Im"] = predicted_outlier_indices
 
-        return X_test
+        return self.X_val_outlier_indices, self.X_test_outlier_indices
+
+class KNN_Imputer:
+
+    def __init__(self, meterType, feature_list,
+                 X_train, y_train, X_train_indices,
+                 X_val, y_val, X_val_indices,
+                 X_test, y_test, X_test_indices,
+                 orig_datasets):
+        self.X_train            = X_train
+        self.y_train            = y_train
+        self.X_val              = X_val
+        self.y_val              = y_val
+        self.X_test             = X_test
+        self.y_test             = y_test
+        self.X_train_indices    = X_train_indices
+        self.X_val_indices      = X_val_indices
+        self.X_test_indices     = X_test_indices
+        self.features_list      = feature_list
+        self.meterType          = meterType
+        self.X_train_orig, self.y_train_orig, self.X_val_orig, self.y_val_orig, \
+            self.X_test_orig, self.y_test_orig = orig_datasets
+        self.X_train_imputed, self.X_val_imputed, self.X_test_imputed = self.X_train.copy(), \
+            self.X_val.copy(), self.X_test.copy()
+
+        if self.meterType == "PMU_caseA":
+            self.knn_dict = {
+                i: {
+                    "Vm": KNNImputer(n_neighbors=10),
+                    "Va": KNNImputer(n_neighbors=10),
+                    "Im": KNNImputer(n_neighbors=10),
+
+                } for i in self.features_list
+            }
+
+
+    def fit_knns(self):
+
+        for edge_idx in self.features_list:
+            if self.meterType == "PMU_caseA":
+                sending_node_idx = branch_data[edge_idx]["sending_node"]
+                feature_indices = [sending_node_idx, NUM_NODES+sending_node_idx, 2*NUM_NODES+edge_idx, 2*NUM_NODES+NUM_BRANCHES+edge_idx]
+                for feature in ["Vm", "Va", "Im"]:
+                    if feature == "Vm":
+                        X_tmp = self.X_train[:, feature_indices].copy()
+                        outlier_indices = self.X_train_indices[edge_idx]["Vm"]
+                        inliners = X_tmp[~np.isin(np.arange(len(X_tmp)), outlier_indices)]
+                        self.knn_dict[edge_idx]["Vm"].fit(inliners)
+                        X_tmp[outlier_indices, 0] = np.nan
+                        X_train_Vm = self.knn_dict[edge_idx]["Vm"].transform(X_tmp)
+                        original   = self.X_train_orig[outlier_indices, sending_node_idx]
+                        imputed    = X_train_Vm[outlier_indices, 0]
+                        mape = np.mean(np.abs((original - imputed) / original))
+                        print(f"MAPE for {edge_idx}-Vm", mape)
+                        self.X_train_imputed[outlier_indices, 0] = X_train_Vm[outlier_indices, 0]
+
+                    elif feature == "Va":
+                        X_tmp = self.X_train[:, feature_indices].copy()
+                        outlier_indices = self.X_train_indices[edge_idx]["Va"]
+                        inliners = X_tmp[~np.isin(np.arange(len(X_tmp)), outlier_indices)]
+                        self.knn_dict[edge_idx]["Va"].fit(inliners)
+                        X_tmp[outlier_indices, 1] = np.nan
+                        X_train_Va = self.knn_dict[edge_idx]["Va"].transform(X_tmp)
+                        original   = self.X_train_orig[outlier_indices, NUM_NODES+sending_node_idx]
+                        imputed    = X_train_Va[outlier_indices, 1]
+                        mae = np.mean(np.abs((original - imputed) / len(original)))
+                        print(f"MAE for {edge_idx}-Va", mae)
+                        self.X_train_imputed[outlier_indices, 1] = X_train_Va[outlier_indices, 1]
+
+                    elif feature == "Im":
+                        X_tmp = self.X_train[:, feature_indices].copy()
+                        outlier_indices = self.X_train_indices[edge_idx]["Im"]
+                        inliners = X_tmp[~np.isin(np.arange(len(X_tmp)), outlier_indices)]
+                        self.knn_dict[edge_idx]["Im"].fit(inliners)
+                        X_tmp[outlier_indices, 2] = np.nan
+                        X_train_Im = self.knn_dict[edge_idx]["Im"].transform(X_tmp)
+                        original   = self.X_train_orig[outlier_indices, 2*NUM_NODES+edge_idx]
+                        imputed    = X_train_Im[outlier_indices, 2]
+                        # Example: original and imputed are NumPy arrays
+                        mask = original != 0  # Only keep non-zero original values
+                        # Apply MAPE formula on valid entries
+                        mape = np.mean(np.abs((original[mask] - imputed[mask]) / original[mask]))
+                        print(f"MAPE for {edge_idx}-Im", mape)
+                        self.X_train_imputed[outlier_indices, 2] = X_train_Im[outlier_indices, 2]
+
+    def impute_test_set(self):
+
+        for edge_idx in self.features_list:
+            if self.meterType == "PMU_caseA":
+                sending_node_idx = branch_data[edge_idx]["sending_node"]
+                feature_indices = [sending_node_idx, NUM_NODES+sending_node_idx, 2*NUM_NODES+edge_idx, 2*NUM_NODES+NUM_BRANCHES+edge_idx]
+                for feature in ["Vm", "Va", "Im"]:
+                    if feature == "Vm":
+                        X_tmp = self.X_test[:, feature_indices].copy()
+                        outlier_indices = self.X_test_indices[edge_idx]["Vm"]
+                        inliners = X_tmp[~np.isin(np.arange(len(X_tmp)), outlier_indices)]
+                        self.knn_dict[edge_idx]["Vm"].fit(inliners)
+                        X_tmp[outlier_indices, 0] = np.nan
+                        X_test_Vm = self.knn_dict[edge_idx]["Vm"].transform(X_tmp)
+                        original   = self.X_test_orig[outlier_indices, sending_node_idx]
+                        imputed    = X_test_Vm[outlier_indices, 0]
+                        mape = np.mean(np.abs((original - imputed) / original))
+                        print(f"MAPE for {edge_idx}-Vm", mape)
+                        self.X_test_imputed[outlier_indices, sending_node_idx] = X_test_Vm[outlier_indices, 0]
+
+                    elif feature == "Va":
+                        X_tmp = self.X_test[:, feature_indices].copy()
+                        outlier_indices = self.X_test_indices[edge_idx]["Va"]
+                        inliners = X_tmp[~np.isin(np.arange(len(X_tmp)), outlier_indices)]
+                        self.knn_dict[edge_idx]["Va"].fit(inliners)
+                        X_tmp[outlier_indices, 1] = np.nan
+                        X_test_Va = self.knn_dict[edge_idx]["Va"].transform(X_tmp)
+                        original   = self.X_test_orig[outlier_indices, NUM_NODES+sending_node_idx]
+                        imputed    = X_test_Va[outlier_indices, 1]
+                        mae = np.mean(np.abs((original - imputed) / len(original)))
+                        print(f"MAE for {edge_idx}-Va", mae)
+                        self.X_test_imputed[outlier_indices, NUM_NODES+sending_node_idx] = X_test_Va[outlier_indices, 1]
+
+                    elif feature == "Im":
+                        X_tmp = self.X_test[:, feature_indices].copy()
+                        outlier_indices = self.X_test_indices[edge_idx]["Im"]
+                        inliners = X_tmp[~np.isin(np.arange(len(X_tmp)), outlier_indices)]
+                        self.knn_dict[edge_idx]["Im"].fit(inliners)
+                        X_tmp[outlier_indices, 2] = np.nan
+                        X_test_Im = self.knn_dict[edge_idx]["Im"].transform(X_tmp)
+                        original   = self.X_test_orig[outlier_indices, 2*NUM_NODES+edge_idx]
+                        imputed    = X_test_Im[outlier_indices, 2]
+                        # Example: original and imputed are NumPy arrays
+                        mask = original != 0  # Only keep non-zero original values
+                        # Apply MAPE formula on valid entries
+                        mape = np.mean(np.abs((original[mask] - imputed[mask]) / original[mask]))
+                        print(f"MAPE for {edge_idx}-Im", mape)
+                        self.X_test_imputed[outlier_indices, 2*NUM_NODES+edge_idx] = X_test_Im[outlier_indices, 2]
+
+        return self.X_test_imputed
 
 if __name__ == "__main__":
 
-    meter = 75
+    meterType = "PMU_caseA"
 
-    # TODO Conventional
-    X_train = np.load("datasets/95UKGDPMU_caseA_input.npy")
-    y_train  = np.load("datasets/95UKGDPMU_caseA_output.npy")
+    bdi = BadDataInjector(meterType=meterType,feature_list=[32, 27, 7, 3])
+    X_train_outliers, y_train, X_train_indices, X_val_outliers, y_val, X_val_indices, X_test_outliers, y_test, \
+        X_test_indices, X_train_orig, y_train_orig, X_val_orig, y_val_orig, X_test_orig, y_test_orig = bdi.generate_datasets()
 
-    X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2)
+    bdd = IF_BadDataDetector(meterType=meterType,
+                             feature_list=[32, 27, 7, 3],
+                             X_train=X_train_outliers,
+                             y_train=y_train,
+                             X_train_outlier_indices=X_train_indices,
+                             X_val=X_val_outliers,
+                             y_val=y_val,
+                             X_val_outlier_indices=X_val_indices,
+                             X_test=X_test_outliers,
+                             y_test=y_test,
+                             X_test_outlier_indices=X_test_indices)
+    bdd.train_IF()
+    X_val_outlier_indices, X_test_outlier_indices = bdd.predict()
+    print("X_test indices: ", X_test_outlier_indices)
 
-    X_old   = X_test.copy()
+    ki = KNN_Imputer(meterType=meterType,
+                             feature_list=[32, 27, 7, 3],
+                             X_train=X_train_outliers,
+                             y_train=y_train,
+                             X_train_indices=X_train_indices,
+                             X_val=X_val_outliers,
+                             y_val=y_val,
+                             X_val_indices=X_val_indices,
+                             X_test=X_test_outliers,
+                             y_test=y_test,
+                             X_test_indices=X_test_indices,
+                             orig_datasets = [X_train_orig, y_train_orig, X_val_orig, y_val_orig, X_test_orig, y_test_orig])
+    ki.fit_knns()
+    X_test_imputed = ki.impute_test_set()
 
-    #TODO - Outlier injection into the datasets X_train, X_test
-    out_inj_X_train = OutlierInjector(X_train)
-    X_train_outlier_arr, X_train_outlier_index_dict = out_inj_X_train.inject_outliers_PMUcaseA([meter], prob_m=0.01, prob_a=0.01)
-    out_inj_X_test = OutlierInjector(X_test)
-    X_test_outlier, X_test_outlier_index_dict = out_inj_X_test.inject_outliers_PMUcaseA([meter], prob_m=0.01, prob_a=0.01)
-    print("X_test shape: ", X_test.shape)
-    print("y_test shape: ", y_test.shape)
-    print("X_test outlier shape: ", X_test_outlier.shape)
-    #TODO - Isolation Forest Outlier Detection - Gets outlier X_train dataset as input
-    iso_detector = IF_OutlierDetection(meter)
-    iso_detector.train_isolation_forest_PMU_caseA(X_train_outlier_arr)
-    per_edge_outliers = iso_detector.predict_outliers_PMU_caseA(X_test_outlier, X_test_outlier_index_dict)
+    #TODO scale values
+    scaler = StandardScaler()
+    X_train_orig      = scaler.fit_transform(X_train_orig)
+    X_val_orig        = scaler.transform(X_val_orig)
+    X_test_orig       = scaler.transform(X_test_orig)
+    X_test_outliers  = scaler.transform(X_test_outliers)
+    X_test_imputed    = scaler.transform(X_test_imputed)
+
+    #TODO Files to store
+    np.save(X_train_PMU_caseA, X_train_orig)
+    np.save(y_train_PMU_caseA, y_train_orig)
+    np.save(X_val_PMU_caseA, X_val_orig)
+    np.save(y_val_PMU_caseA, y_val_orig)
+    np.save(X_test_PMU_caseA, X_test_orig)
+    np.save(y_test_PMU_caseA, y_test_orig)
+    np.save(X_test_PMU_caseA_outliers, X_test_outliers)
+    np.save(X_test_PMU_caseA_imputed, X_test_imputed)
+    print(X_test_outliers.shape)
+
+    #X_val_PMU_caseA
+    #y_val_PMU_caseA
+    #X_test_PMU_caseA
+    #X_test_PMU_caseA_imputed
+    #y_test_PMU_caseA
 
 
-    #TODO - KNN imputer to impute values
-    knn_imp = KNNImputerMeasurements(meter)
-    knn_imp.train_KNNImputers_PMU_caseA(X_train_outlier_arr, X_train_outlier_index_dict)
-    X_test_imputed = knn_imp.impute_values_PMU_caseA(X_test_outlier, X_test_outlier_index_dict,compare_np=X_old)
 
-    #TODO - From X_imputed and t_test, we need to remove the indices of all PMU measurements wrong
-    X_test_imputed = X_test_imputed[~np.isin(np.arange(len(X_test_imputed)), per_edge_outliers["ALL"])]
-    y_test_imputed = y_test[~np.isin(np.arange(len(y_test)), per_edge_outliers["ALL"])]
-    print("X_test imputed shape: ", X_test_imputed.shape)
-    print("y_test imputed shape: ", y_test_imputed.shape)
-    #TODO Here add y_test ALL_outlier indices exclusion
+
+
 

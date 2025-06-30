@@ -1,7 +1,7 @@
 import sys
 
 #TODO Basic configurations
-dataset = "IEEE33"
+dataset = "95UKGD"
 #meterType = "PMU_caseA" # PMU_caseA, PMU_caseB, conventional
 #meterType = "PMU_caseB"
 #meterType = "conventional"
@@ -337,7 +337,7 @@ elif dataset == "95UKGD":
                "PV_profile 6", "PV_profile 7"],
         "WD": ["WD 1"],
         "MV": ["R210 Load", "X84_1 MV Load_x", "X84_1 MV Load_y"],
-        "LV": ["R1", "R2", "R3", "R4", "R5", "R6"]
+        "LV": [f"LV {str(i+1)}" for i in range(100)]
     }
 
 elif dataset == "IEEE33":
@@ -417,7 +417,6 @@ X_test_PMU_caseA            = f"datasets/{dataset}_PMU_caseA_X_test.npy"
 X_test_PMU_caseA_outliers   = f"datasets/{dataset}_PMU_caseA_X_test_outliers.npy"
 X_test_PMU_caseA_imputed    = f"datasets/{dataset}_PMU_caseA_X_test_imputed.npy"
 y_test_PMU_caseA            = f"datasets/{dataset}_PMU_caseA_y_test.npy"
-y_test_PMU_caseA_imputed    = f"datasets/{dataset}_PMU_caseA_y_test_imputed.npy"
 
 #TODO Data files for PMU case B
 PMU_caseB_input   = f"datasets/{dataset}PMU_caseB_input.npy"

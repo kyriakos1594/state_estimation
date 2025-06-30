@@ -395,12 +395,14 @@ class DSSE_TrainModel:
 class DSSE_Estimator_TrainProcess:
 
     def __init__(self, meterType, model, X_train, y_train, train_labels, X_val, y_val, val_labels,
-                 X_test, y_test, test_labels, old_PMUs=[], FS="RF", method="max", iterative_fs=False):
+                 X_test, y_test, test_labels, X_test_outliers, X_test_imputed, old_PMUs=[],
+                 FS="RF", method="max", iterative_fs=False):
 
         self.meterType = meterType
         self.model = model
         self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test = X_train, y_train, X_val, y_val, X_test, y_test
         self.train_labels, self.val_labels, self.test_labels = train_labels, val_labels, test_labels
+        self.X_test_outliers, self.X_test_imputed = X_test_outliers, X_test_imputed
         self.FS = FS
         self.method = method
         self.iterative_fs = iterative_fs
@@ -580,7 +582,7 @@ class DSSE_Estimator_TrainProcess:
             #        all_indices) + ", MAPE_v: " + str(mape_magnitudes) + ", MAE_a: " + str(mae_angles) + "\n")
             #   wf.close()
 
-            if not ((mape_magnitudes <= MAPE_v_threshold) and (1000 <= MAE_a_threshold)):
+            if not ((mape_magnitudes <= MAPE_v_threshold) and (mae_angles <= MAE_a_threshold)):
 
                 for feature in features:
                     if feature not in self.old_PMUs:
@@ -662,7 +664,7 @@ class DSSE_Estimator_TrainProcess:
                         print(f"""Branch {feature} already in TI PMU set""")
                         mape_magnitudes, mae_angles = 1000, 1000
 
-                    if (mape_magnitudes <= MAPE_v_threshold) and (1000 <= MAE_a_threshold): break
+                    if (mape_magnitudes <= MAPE_v_threshold) and (mae_angles <= MAE_a_threshold): break
 
             return used_feature_indices
 
@@ -698,15 +700,19 @@ class DSSE_Estimator_TrainProcess:
                                           val_labels=self.val_labels,
                                           X_test=self.X_test,
                                           y_test=self.y_test,
-                                          test_labels=self.test_labels)
+                                          test_labels=self.test_labels,
+                                          X_test_outliers=self.X_test_outliers,
+                                          X_test_imputed=self.X_test_imputed)
 
 
-        edge_indexes, train_loader, val_loader, test_loader = DSSE_GNN_PP.generate_dataset(output="magnitudes")
-        DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
+        edge_indexes, train_loader, val_loader, test_loader, test_outlier_loader, test_imputed_loader = DSSE_GNN_PP.generate_dataset(output="magnitudes")
+        DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader,
+                                        test_outlier_loader=test_outlier_loader, test_imputed_loader=test_imputed_loader)
         mape_v = DSSE_GNN_TRAIN._evaluate(criterion="MAPE")
 
-        edge_indexes, train_loader, val_loader, test_loader = DSSE_GNN_PP.generate_dataset(output="angles")
-        DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
+        edge_indexes, train_loader, val_loader, test_loader, test_outlier_loader, test_imputed_loader = DSSE_GNN_PP.generate_dataset(output="angles")
+        DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader,
+                                        test_outlier_loader=test_outlier_loader, test_imputed_loader=test_imputed_loader)
         mae_a = DSSE_GNN_TRAIN._evaluate(criterion="MAE")
 
         print(f"""For old TI PMUs {self.old_PMUs}, we got MAPE_v: {str(mape_v)} and MAE_a {str(mae_a)}""")
@@ -717,7 +723,7 @@ class DSSE_Estimator_TrainProcess:
         #    wf.write("Used branches (i-1): " + str(self.old_PMUs) + f""", #PMUs {str(len(self.old_PMUs))}""" + ", MAPE_v: " + str(mape_v) + ", MAE_a: " + str(mae_a) + "\n")
         #    wf.close()
 
-        if ((mape_v > MAPE_v_threshold) or (10000 > MAE_a_threshold)):
+        if ((mape_v > MAPE_v_threshold) or (mae_a > MAE_a_threshold)):
 
             new_PMUs = self.old_PMUs
 
@@ -737,14 +743,19 @@ class DSSE_Estimator_TrainProcess:
                                                       val_labels=self.val_labels,
                                                       X_test=self.X_test,
                                                       y_test=self.y_test,
-                                                      test_labels=self.test_labels)
+                                                      test_labels=self.test_labels,
+                                                      X_test_outliers=self.X_test_outliers,
+                                                      X_test_imputed=self.X_test_imputed
+                    )
 
-                    edge_indexes, train_loader, val_loader, test_loader = DSSE_GNN_PP.generate_dataset(output="magnitudes")
-                    DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
+                    edge_indexes, train_loader, val_loader, test_loader, test_outlier_loader, test_imputed_loader = DSSE_GNN_PP.generate_dataset(output="magnitudes")
+                    DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader,
+                                                    test_outlier_loader=test_outlier_loader, test_imputed_loader=test_imputed_loader)
                     mape_v = DSSE_GNN_TRAIN._evaluate(criterion="MAPE")
 
-                    edge_indexes, train_loader, val_loader, test_loader = DSSE_GNN_PP.generate_dataset(output="angles")
-                    DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
+                    edge_indexes, train_loader, val_loader, test_loader, test_outlier_loader, test_imputed_loader = DSSE_GNN_PP.generate_dataset(output="angles")
+                    DSSE_GNN_TRAIN = Train_GNN_DSSE(meterType=self.meterType, train_loader=train_loader, val_loader=val_loader, test_loader=test_loader,
+                                                    test_outlier_loader=test_outlier_loader, test_imputed_loader=test_imputed_loader)
                     mae_a = DSSE_GNN_TRAIN._evaluate(criterion="MAE")
 
                     print(f"""For new PMUs {new_PMUs}, we got MAPE_v: {str(mape_v)} and MAE_a {str(mae_a)}""")
@@ -755,7 +766,7 @@ class DSSE_Estimator_TrainProcess:
                     #    wf.write("Used branches (i-1): " + str(new_PMUs) + f""", #PMUs {str(len(new_PMUs))}""" + ", MAPE_v: " + str(mape_v) + ", MAE_a: " + str(mae_a) + "\n")
                     #    wf.close()
 
-                    if ((mape_v <= MAPE_v_threshold) and (10000 <= MAE_a_threshold)):
+                    if ((mape_v <= MAPE_v_threshold) and (mae_a <= MAE_a_threshold)):
                         return new_PMUs
 
             return new_PMUs
@@ -771,7 +782,7 @@ class DSSE_Estimator_TrainProcess:
 class DSSE_GNN_Preprocess:
 
     def __init__(self, meterType, selected_edges, X_train, y_train, train_labels, X_val, y_val, val_labels,
-                 X_test, y_test, test_labels):
+                 X_test, y_test, test_labels, X_test_outliers, X_test_imputed):
         self.meterType = meterType
         self.X_train = X_train
         self.y_train = y_train
@@ -782,6 +793,8 @@ class DSSE_GNN_Preprocess:
         self.train_labels = train_labels
         self.val_labels = val_labels
         self.test_labels = test_labels
+        self.X_test_outliers = X_test_outliers
+        self.X_test_imputed  = X_test_imputed
         self.selected_edges = selected_edges
         if self.meterType == "PMU_caseA":
             self.num_features_per_edge = 2
@@ -898,6 +911,8 @@ class DSSE_GNN_Preprocess:
         train_node_data, train_edge_data = self.preprocess_data_PMU_caseA(self.X_train, self.selected_edges, num_edges, num_features, num_nodes, num_features)
         val_node_data, val_edge_data = self.preprocess_data_PMU_caseA(self.X_val, self.selected_edges, num_edges, num_features, num_nodes, num_features)
         test_node_data, test_edge_data = self.preprocess_data_PMU_caseA(self.X_test, self.selected_edges, num_edges, num_features, num_nodes, num_features)
+        test_outlier_node_data, test_outlier_edge_data = self.preprocess_data_PMU_caseA(self.X_test_outliers, self.selected_edges, num_edges, num_features, num_nodes, num_features)
+        test_imputed_node_data, test_imputed_edge_data = self.preprocess_data_PMU_caseA(self.X_test_imputed, self.selected_edges, num_edges, num_features, num_nodes, num_features)
 
         edge_index = self.define_graph()
 
@@ -915,7 +930,6 @@ class DSSE_GNN_Preprocess:
             #edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
             #edge_mask = torch.tensor([i for i in range(NUM_BRANCHES) if (i in open_branches)])
             train_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
-
         self.train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
 
@@ -932,14 +946,12 @@ class DSSE_GNN_Preprocess:
             #edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
             #edge_mask = torch.tensor([i for i in range(NUM_BRANCHES) if (i in open_branches)])
             val_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
-
         self.val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
 
 
         test_data = []
         for i in range(self.X_test.shape[0]):
             tmp_edge_attr = torch.tensor(test_edge_data[i].reshape(-1, self.num_features_per_edge), dtype=torch.float)
-
             tmp_node_attr = torch.tensor(test_node_data[i].reshape(-1, self.num_features_per_node), dtype=torch.float)
 
             if output == "magnitudes": label = torch.tensor(self.y_test[i, :NUM_NODES], dtype=torch.float)
@@ -950,10 +962,29 @@ class DSSE_GNN_Preprocess:
             #edge_index = self.edge_index[:, [i for i in range(NUM_BRANCHES) if (i not in open_branches)]]
             #edge_mask = torch.tensor([i for i in range(NUM_BRANCHES) if (i in open_branches)])
             test_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
-
         self.test_loader = DataLoader(test_data, batch_size=BATCH_SIZE, shuffle=True)
 
-        return self.edge_index, self.train_loader, self.val_loader, self.test_loader
+        test_outlier_data = []
+        for i in range(self.X_test_outliers.shape[0]):
+            tmp_edge_attr = torch.tensor(test_outlier_edge_data[i].reshape(-1, self.num_features_per_edge), dtype=torch.float)
+            tmp_node_attr = torch.tensor(test_outlier_node_data[i].reshape(-1, self.num_features_per_node), dtype=torch.float)
+
+            if output == "magnitudes": label = torch.tensor(self.y_test[i, :NUM_NODES], dtype=torch.float)
+            elif output == "angles": label = torch.tensor(self.y_test[i, NUM_NODES:], dtype=torch.float)
+            test_outlier_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
+        self.test_outlier_loader = DataLoader(test_outlier_data, batch_size=BATCH_SIZE, shuffle=True)
+
+        test_imputed_data = []
+        for i in range(self.X_test_imputed.shape[0]):
+            tmp_edge_attr = torch.tensor(test_imputed_edge_data[i].reshape(-1, self.num_features_per_edge), dtype=torch.float)
+            tmp_node_attr = torch.tensor(test_imputed_node_data[i].reshape(-1, self.num_features_per_node), dtype=torch.float)
+
+            if output == "magnitudes": label = torch.tensor(self.y_test[i, :NUM_NODES], dtype=torch.float)
+            elif output == "angles": label = torch.tensor(self.y_test[i, NUM_NODES:], dtype=torch.float)
+            test_imputed_data.append(Data(x=tmp_node_attr, edge_index=self.edge_index, edge_attr=tmp_edge_attr, y=label))
+        self.test_imputed_loader = DataLoader(test_imputed_data, batch_size=BATCH_SIZE, shuffle=True)
+
+        return self.edge_index, self.train_loader, self.val_loader, self.test_loader, self.test_outlier_loader, self.test_imputed_loader
 
     def generate_dataset_GNN_PMU_caseB(self, output="magnitudes"):
         num_edges = len(branch_data)
@@ -1067,22 +1098,26 @@ class DSSE_GNN_Preprocess:
     def generate_dataset(self, output="magnitudes"):
 
         if self.meterType == "PMU_caseA":
-            edge_index, train_loader, val_loader, test_loader = self.generate_dataset_GNN_PMU_caseA(output="magnitudes")
+            edge_index, train_loader, val_loader, test_loader, test_outlier_loader, test_imputed_loader = self.generate_dataset_GNN_PMU_caseA(output="magnitudes")
         elif self.meterType == "PMU_caseB":
             edge_index, train_loader, val_loader, test_loader = self.generate_dataset_GNN_PMU_caseB(output="magnitudes")
+            test_outlier_loader, test_imputed_loader = None, None
         elif self.meterType == "conventional":
             edge_index, train_loader, val_loader, test_loader = self.generate_dataset_GNN_conventional(output="magnitudes")
+            test_outlier_loader, test_imputed_loader = None, None
 
-        return edge_index, train_loader, val_loader, test_loader
+        return edge_index, train_loader, val_loader, test_loader, test_outlier_loader, test_imputed_loader
 
 class Train_GNN_DSSE:
 
-    def __init__(self, meterType, train_loader, val_loader, test_loader):
+    def __init__(self, meterType, train_loader, val_loader, test_loader, test_outlier_loader, test_imputed_loader):
         self.meterType = meterType
         self.device = device
         self.train_loader = train_loader
         self.val_loader   = val_loader
         self.test_loader  = test_loader
+        self.test_outlier_loader = test_outlier_loader
+        self.test_imputed_loader = test_imputed_loader
         if self.meterType == "PMU_caseA":
 
             #TODO Vanilla GATCONV
@@ -1096,7 +1131,7 @@ class Train_GNN_DSSE:
             #TODO Transformer based
             self.model = SE_TEGNN_WithEdges(device=self.device, num_nodes=NUM_NODES, num_features=2,output_dim=NUM_NODES,
                                               proj_dim=5, embedding_dim=4, heads=4, num_decoder_layers=1,
-                                              edge_attr_dim=2, gat_layers=2, GATConv_dim=16,
+                                              edge_attr_dim=2, gat_layers=2, GATConv_dim=12,
                                               ff_hid_dim=48).to(self.device)
 
 
@@ -1230,17 +1265,107 @@ class Train_GNN_DSSE:
 
         print(f""" - Evaluation (Test Set) Loss: {test_loss / len(self.test_loader)}""")
 
+        if criterion == "MAPE": print("NO OUTLIERS - MAPE_v: ", mape)
+        elif criterion == "MAE": print("NO OUTLIERS - MAE_a: ", mae)
+
+        if self.test_outlier_loader is not None:
+            test_outlier_loss = 0
+            mape_outlier_list = []
+            mae_outlier_list = []
+            mae_outlier, mape_outlier = 0, 0
+
+            for batch_test_outlier in self.test_outlier_loader:
+                batch_test = batch_test_outlier.to(self.device)
+                out_test = self.model(batch_test)
+
+                out_flat = out_test.view(-1, self.output_dim)
+                y_flat = batch_test.y.view(-1, self.output_dim)
+
+                loss = self.criterion(out_flat, y_flat)
+                test_outlier_loss += loss.item()
+
+                if criterion == "MAPE":
+                    for i in range(out_flat.shape[0]):
+                        p = list(out_flat[i, :])
+                        p = [i.item() for i in p]
+                        a = list(y_flat[i, :])
+                        a = [i.item() for i in a]
+                        length = len(a)
+                        tmp_mape_list = [100 * (abs(a[j] - p[j]) / abs(a[j])) for j in range(length)]
+                        mape_outlier_list = mape_outlier_list + tmp_mape_list
+                    mape_outlier = sum(mape_outlier_list) / len(mape_outlier_list)
+
+                elif criterion == "MAE":
+                    for i in range(out_flat.shape[0]):
+                        p = list(out_flat[i, :])
+                        p = [i.item() for i in p]
+                        a = list(y_flat[i, :])
+                        a = [i.item() for i in a]
+                        length = len(a)
+                        tmp_mae_list = [abs(a[j] - p[j]) for j in range(length)]
+                        mae_outlier_list = mae_outlier_list + tmp_mae_list
+                    mae_outlier = sum(mae_outlier_list) / len(mae_outlier_list)
+
+            print(f""" - Evaluation (Test OUTLIER Set) Loss: {test_outlier_loss / len(self.test_outlier_loader)}""")
+
+            if criterion == "MAPE": print("INCLUDING OUTLIERS - MAPE_v: ", mape_outlier)
+            elif criterion == "MAE": print("INCLUDING OUTLIERS - MAE_a: ", mae_outlier)
+
+        if self.test_imputed_loader is not None:
+            test_imputed_loss = 0
+            mape_imputed_list = []
+            mae_imputed_list = []
+            mae_imputed, mape_imputed = 0, 0
+
+            for batch_test_imputed in self.test_imputed_loader:
+                batch_test = batch_test_imputed.to(self.device)
+                out_test = self.model(batch_test)
+
+                out_flat = out_test.view(-1, self.output_dim)
+                y_flat = batch_test.y.view(-1, self.output_dim)
+
+                loss = self.criterion(out_flat, y_flat)
+                test_imputed_loss += loss.item()
+
+                if criterion == "MAPE":
+                    for i in range(out_flat.shape[0]):
+                        p = list(out_flat[i, :])
+                        p = [i.item() for i in p]
+                        a = list(y_flat[i, :])
+                        a = [i.item() for i in a]
+                        length = len(a)
+                        tmp_mape_list = [100 * (abs(a[j] - p[j]) / abs(a[j])) for j in range(length)]
+                        mape_imputed_list = mape_imputed_list + tmp_mape_list
+                    mape_imputed = sum(mape_imputed_list) / len(mape_imputed_list)
+
+                elif criterion == "MAE":
+                    for i in range(out_flat.shape[0]):
+                        p = list(out_flat[i, :])
+                        p = [i.item() for i in p]
+                        a = list(y_flat[i, :])
+                        a = [i.item() for i in a]
+                        length = len(a)
+                        tmp_mae_list = [abs(a[j] - p[j]) for j in range(length)]
+                        mae_imputed_list = mae_imputed_list + tmp_mae_list
+                    mae_imputed = sum(mae_imputed_list) / len(mae_imputed_list)
+
+            print(f""" - Evaluation (Test IMPUTED Set) Loss: {test_imputed_loss / len(self.test_imputed_loader)}""")
+
+            if criterion == "MAPE": print("IMPUTED OUTLIERS - MAPE_v: ", mape_imputed)
+            elif criterion == "MAE": print("IMPUTED OUTLIERS - MAE_a: ", mae_imputed)
+
+
         if criterion == "MAPE":
-            print("MAPE_v: ", mape)
+            #print("MAPE_v: ", mape)
             return mape
         elif criterion == "MAE":
-            print("MAE_a: ", mae)
+            #print("MAE_a: ", mae)
             return mae
 
 
 if __name__ == "__main__":
 
-    meterType = "PMU_caseB"
+    meterType = "PMU_caseA"
     if meterType == "conventional":
         if dataset == "IEEE33":
             old_PMUs = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25, 15, 10]  #TODO Update
@@ -1257,7 +1382,8 @@ if __name__ == "__main__":
             old_PMUs = [79]  #TODO Update
     elif meterType == "PMU_caseA":
         if dataset == "IEEE33":
-            old_PMUs = [32, 27]
+            #old_PMUs = [32, 27]        #TODO Initial PMUs
+            old_PMUs = [32, 27, 7, 3]   #TODO PMUs for outlier TEGNN
         elif dataset == "MESOGEIA":
             old_PMUs = [130] #TODO Update
         elif dataset == "95UKGD":
@@ -1271,12 +1397,14 @@ if __name__ == "__main__":
     print(meterType)
     if meterType == "PMU_caseA":
         (X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs,
-         y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs,
-         y_test_imputed_labels) = PreProc.preprocess_meter_type(meterType)
+         y_test_labels, X_test_outliers, X_test_imputed) = PreProc.preprocess_meter_type(meterType)
+        print(X_test.shape)
+        print(X_test_outliers.shape)
+        print(X_test_imputed.shape)
+
     else:
         (X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs,
-         y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs,
-         y_test_imputed_labels) = PreProc.preprocess_meter_type(meterType)
+         y_test_labels, X_test_outliers, X_test_imputed) = PreProc.preprocess_meter_type(meterType)
 
     print("X_train shape: ", X_train.shape)
     print("y_train shape: ", y_train_outputs.shape)
@@ -1299,6 +1427,8 @@ if __name__ == "__main__":
                                           X_test=X_test,
                                           y_test=y_test_outputs,
                                           test_labels = y_test_labels,
+                                          X_test_outliers = X_test_outliers,
+                                          X_test_imputed = X_test_imputed,
                                           old_PMUs=old_PMUs,
                                           FS="RF",
                                           method="rfe")

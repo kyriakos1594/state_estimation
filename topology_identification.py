@@ -39,7 +39,6 @@ from model import (TI_SimpleNNEdges, TI_GATWithEdgeAttrs, TI_GATWithEdgeAttrNode
                    TI_TEGNN_NoEdges)
 from torch.utils.data import DataLoader as DL_NN, TensorDataset as TD_NN
 from IEEE_datasets.IEEE33 import config_dict
-from outlier_classes import OutlierInjector, IF_OutlierDetection, KNNImputerMeasurements
 import joblib
 from tensorflow.keras.callbacks import EarlyStopping
 
@@ -204,7 +203,6 @@ class Preprocess:
 
         self.train_test_split_dataset(meterType)
 
-
     def custom_one_hot_encode(self, labels):
 
         one_hot_encoded_labels = []
@@ -217,7 +215,6 @@ class Preprocess:
         one_hot_encoded_labels = np.array(one_hot_encoded_labels)
 
         return one_hot_encoded_labels
-
 
     def read_data_PMU_caseA(self):
 
@@ -339,87 +336,21 @@ class Preprocess:
         # Second split: train and validation
         X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.20, random_state=42)  # 0.25 x 0.8 = 0.2
 
-        #TODO Uncomment to produce outliers
-        if type == "PMU_caseA_outliers":
 
-            meter = 75
-
-            X_old = X_test.copy()
-
-            # TODO - Outlier injection into the datasets X_train, X_test
-            out_inj_X_train = OutlierInjector(X_train)
-            X_train_outlier_arr, X_train_outlier_index_dict = out_inj_X_train.inject_outliers_PMUcaseA([meter],
-                                                                                                       prob_m=0.01,
-                                                                                                       prob_a=0.01)
-            out_inj_X_test = OutlierInjector(X_test)
-            X_test_outlier, X_test_outlier_index_dict = out_inj_X_test.inject_outliers_PMUcaseA([meter],
-                                                                                                prob_m=0.01,
-                                                                                                prob_a=0.01)
-            print("X_test shape: ", X_test.shape)
-            print("y_test shape: ", y_test.shape)
-            print("X_test outlier shape: ", X_test_outlier.shape)
-            # TODO - Isolation Forest Outlier Detection - Gets outlier X_train dataset as input
-            iso_detector = IF_OutlierDetection(meter)
-            iso_detector.train_isolation_forest_PMU_caseA(X_train_outlier_arr)
-            per_edge_outliers = iso_detector.predict_outliers_PMU_caseA(X_test_outlier, X_test_outlier_index_dict)
-
-            # TODO - KNN imputer to impute values
-            knn_imp = KNNImputerMeasurements(meter)
-            knn_imp.train_KNNImputers_PMU_caseA(X_train_outlier_arr, X_train_outlier_index_dict)
-            X_test_imputed = knn_imp.impute_values_PMU_caseA(X_test_outlier, X_test_outlier_index_dict,
-                                                             compare_np=X_old)
-
-            # TODO - From X_imputed and t_test, we need to remove the indices of all PMU measurements wrong
-            X_test_imputed = X_test_imputed[~np.isin(np.arange(len(X_test_imputed)), per_edge_outliers["ALL"])]
-            y_test_imputed = y_test[~np.isin(np.arange(len(y_test)), per_edge_outliers["ALL"])]
-            print("X_test imputed shape: ", X_test_imputed.shape)
-            print("y_test imputed shape: ", y_test_imputed.shape)
-            # TODO Here add y_test ALL_outlier indices exclusion
-
-            np.save("datasets/95UKGD_PMU_caseA_X_train_unscaled.npy", X_train)
-            np.save("datasets/95UKGD_PMU_caseA_y_train_unscaled.npy", y_train)
-            np.save("datasets/95UKGD_PMU_caseA_X_val_unscaled.npy", X_val)
-            np.save("datasets/95UKGD_PMU_caseA_y_val_unscaled.npy", y_val)
-            np.save("datasets/95UKGD_PMU_caseA_X_test_unscaled.npy", X_test)
-            np.save("datasets/95UKGD_PMU_caseA_y_test_unscaled.npy", y_test)
+        scaler   = StandardScaler()
+        X_old    = X_train.copy()
+        X_train  = scaler.fit_transform(X_train)
+        X_val    = scaler.transform(X_val)
+        X_test   = scaler.transform(X_test)
+        #joblib.dump(scaler, 'scalers/MESOGEIA_NN_PMUB_METERS_StandardScaler_all_features.pkl')
 
 
-            #TODO Divide below code into 2 separate
-            scaler          = StandardScaler()
-            X_train         = scaler.fit_transform(X_train)
-            X_val           = scaler.transform(X_val)
-            X_test          = scaler.transform(X_test)
-            X_test_outlier  = scaler.transform(X_test_outlier)
-            X_test_imputed  = scaler.transform(X_test_imputed)
-
-            np.save(X_train_file, X_train)
-            np.save(y_train_file, y_train)
-            np.save(X_val_file, X_val)
-            np.save(y_val_file, y_val)
-            np.save(X_test_file, X_test)
-            np.save(y_test_file, y_test)
-            np.save(X_test_PMU_caseA_outliers, X_test_outlier)
-            np.save(X_test_PMU_caseA_imputed, X_test_imputed)
-            np.save(y_test_PMU_caseA_imputed, y_test_imputed)
-
-            print(X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test_outlier.shape, X_test_imputed.shape, y_test_imputed.shape)
-
-
-        else:
-            scaler   = StandardScaler()
-            X_old    = X_train.copy()
-            X_train  = scaler.fit_transform(X_train)
-            X_val    = scaler.transform(X_val)
-            X_test   = scaler.transform(X_test)
-            #joblib.dump(scaler, 'scalers/MESOGEIA_NN_PMUB_METERS_StandardScaler_all_features.pkl')
-
-
-            np.save(X_train_file, X_train)
-            np.save(y_train_file, y_train)
-            np.save(X_val_file, X_val)
-            np.save(y_val_file, y_val)
-            np.save(X_test_file, X_test)
-            np.save(y_test_file, y_test)
+        np.save(X_train_file, X_train)
+        np.save(y_train_file, y_train)
+        np.save(X_val_file, X_val)
+        np.save(y_val_file, y_val)
+        np.save(X_test_file, X_test)
+        np.save(y_test_file, y_test)
 
     def preprocess_data(self, type):
 
@@ -431,11 +362,8 @@ class Preprocess:
             y_val = np.load(y_val_PMU_caseA)
             X_test = np.load(X_test_PMU_caseA)
             y_test = np.load(y_test_PMU_caseA)
-
-            #TODO Read outlier datasets
-            #X_test_outliers = np.load(X_test_PMU_caseA_outliers)
-            #X_test_imputed  = np.load(X_test_PMU_caseA_imputed)
-            #y_test_imputed  = np.load(y_test_PMU_caseA_imputed)
+            X_test_outliers = np.load(X_test_PMU_caseA_outliers)
+            X_test_imputed  = np.load(X_test_PMU_caseA_imputed)
 
         elif type == "PMU_caseB":
             X_train = np.load(X_train_PMU_caseB)
@@ -444,6 +372,8 @@ class Preprocess:
             y_val = np.load(y_val_PMU_caseB)
             X_test = np.load(X_test_PMU_caseB)
             y_test = np.load(y_test_PMU_caseB)
+            X_test_outliers = None
+            X_test_imputed = None
 
         elif type == "conventional":
             X_train = np.load(X_train_conventional)
@@ -452,6 +382,8 @@ class Preprocess:
             y_val = np.load(y_val_conventional)
             X_test = np.load(X_test_conventional)
             y_test = np.load(y_test_conventional)
+            X_test_outliers = None
+            X_test_imputed = None
 
         else:
             print("Please enter known meter Type")
@@ -467,43 +399,40 @@ class Preprocess:
         y_test_outputs = y_test[:, :2 * NUM_NODES]
         y_test_labels = y_test[:, 2 * NUM_NODES:]
 
-        if type == "PMU_caseA!":
-            y_test_imputed_outputs = y_test_imputed[:, :2 * NUM_NODES]
-            y_test_imputed_labels = y_test_imputed[:, 2 * NUM_NODES:]
-
 
         if type == "PMU_caseA":
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs,\
-                y_test_labels, None, None, None, None #X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels
+                y_test_labels, X_test_outliers, X_test_imputed
         else:
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
-                y_test_labels, None, None, None, None
-
+                y_test_labels, X_test_outliers, X_test_imputed
 
     def preprocess_meter_type(self, type):
         if type == "PMU_caseA":
             # TODO Case A - Store then read for each measurement Vm, Va, Im, Ia
             #self.store_data_PMU_caseA()
             X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
-                y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels = self.preprocess_data("PMU_caseA")
+                y_test_labels, X_test_outliers, X_test_imputed = self.preprocess_data("PMU_caseA")
         elif type == "PMU_caseB":
             # TODO Case B - Store then read for each measurement Vm, Va, Iinjm, Iinja
             #self.store_data_PMU_caseB()
-            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels, a, b, c, d = self.preprocess_data("PMU_caseB")
+            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
+                y_test_labels, X_test_outliers, X_test_imputed = self.preprocess_data("PMU_caseB")
         elif type == "conventional":
             # TODO Case B - Store then read for each measurement Vm, Pinj, Qinj
             #self.store_data_conventional()
-            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, y_test_labels, a, b, c, d = self.preprocess_data("conventional")
+            X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
+                y_test_labels, X_test_outliers, X_test_imputed = self.preprocess_data("conventional")
         else:
             print("Please enter known meter type")
             sys.exit(0)
 
         if type == "PMU_caseA":
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
-                y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs, y_test_imputed_labels
+                y_test_labels, X_test_outliers, X_test_imputed
         else:
             return X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs, \
-                y_test_labels, a, b, c, d
+                y_test_labels, X_test_outliers, X_test_imputed
 
 class BuildModel:
 
@@ -872,13 +801,12 @@ class PreProcFS:
 class TIPredictorTrainProcess:
 
     def __init__(self, meterType, threshold, model, X_train, y_train, X_val, y_val, X_test, y_test, FS="RF",
-                 method="sum", iterative_fs=False, X_test_outliers=None, X_test_imputed=None, y_test_imputed=None):
+                 method="sum", iterative_fs=False):
 
         self.meterType = meterType
         self.threshold = threshold
         self.model = model
         self.X_train, self.y_train, self.X_val, self.y_val, self.X_test, self.y_test = X_train, y_train, X_val, y_val, X_test, y_test
-        self.X_test_outliers, self.X_test_imputed, self.y_test_imputed = X_test_outliers, X_test_imputed, y_test_imputed
         if self.meterType == "PMU_caseA":
             self.num_features = 2
         elif self.meterType == "PMU_caseB":
@@ -1025,14 +953,10 @@ class TIPredictorTrainProcess:
                 X_test_TI = self.X_test
                 y_test_labels = self.y_test
 
-                X_test_outliers = self.X_test_outliers
-                X_test_imputed  = self.X_test_imputed
-                y_test_imputed  = self.y_test_imputed
-
 
                 print("EDGE Indices: ", used_feature_indices)
                 GTIP = GraphTIPreprocess_IV(self.meterType, used_feature_indices, X_train_TI, y_train_labels, X_val_TI,
-                                            y_val_labels, X_test_TI, y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed)
+                                            y_val_labels, X_test_TI, y_test_labels)
 
                 if self.meterType == "PMU_caseA":
                     edges, train_loader, validation_loader, test_loader, test_outliers_loader, \
@@ -1463,7 +1387,7 @@ class TrainGNN_TI:
             #                                                  heads=4).to(self.device)
             self.model          = TI_TEGNN_WithEdges(self.device,num_nodes=NUM_NODES,num_features=2,proj_dim=4,
                                                      embedding_dim=2,heads=4,num_decoder_layers=1,edge_attr_dim=2,
-                                                     gat_layers=3,GATConv_dim=16,output_dim=self.num_classes).to(self.device)
+                                                     gat_layers=4,GATConv_dim=12,output_dim=self.num_classes).to(self.device)
         elif self.meterType =="PMU_caseB":
             #self.model          = TI_GATNoEdgeAttrs(num_features=4, num_classes=self.num_classes, heads=4,
             #                                        num_gat_layers=2, gat_dim=16).to(self.device)
@@ -1764,7 +1688,7 @@ class TrainNN_TI:
 
 if __name__ == "__main__":
 
-    #meterType = "PMU_caseB"
+    #meterType = "PMU_caseA"
     #meterType = "PMU_caseB"
     meterType = "conventional"
 
@@ -1775,12 +1699,12 @@ if __name__ == "__main__":
 
     PreProc = Preprocess()
     (X_train, y_train_outputs, y_train_labels, X_val, y_val_outputs, y_val_labels, X_test, y_test_outputs,
-     y_test_labels, X_test_outliers, X_test_imputed, y_test_imputed_outputs,
-     y_test_imputed_labels) = PreProc.preprocess_meter_type(meterType)
+     y_test_labels, X_test_outliers, X_test_imputed) = PreProc.preprocess_meter_type(meterType)
+
+    print(X_train.shape, y_train_outputs.shape, y_train_labels.shape, X_val.shape)
+
     TI_PTP = TIPredictorTrainProcess(meterType, threshold, model, X_train, y_train_labels,
-                                     X_val, y_val_labels, X_test, y_test_labels, PP, subPP,
-                                     X_test_outliers=X_test_outliers, X_test_imputed=X_test_imputed,
-                                     y_test_imputed=y_test_imputed_labels)
+                                     X_val, y_val_labels, X_test, y_test_labels, PP, subPP)
     TI_PTP.execute()
 
 
