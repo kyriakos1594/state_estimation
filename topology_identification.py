@@ -849,16 +849,13 @@ class TIPredictorTrainProcess:
             FS = PreProcFS(self.meterType, self.FS, self.method, self.X_train, self.y_train)
             #features = FS.execute()
             if self.meterType == "PMU_caseA":
-                features = IEEE33_PMU_caseA_TI_features
-                #features = features
+                features = UKGD95_PMU_caseA_TI_features
                 print("TI Feature Selection Order - Branches: ", features)
             elif self.meterType == "PMU_caseB":
-                features = IEEE33_PMU_caseB_TI_features
-                #features = features
+                features = UKGD95_PMU_caseB_TI_features
                 print("TI Feature Selection Order - Nodes: ", features)
             elif self.meterType == "conventional":
-                features = IEEE33_conventional_TI_features
-                #features = features
+                features = UKGD95_conventional_TI_features
                 print("TI Feature Selection Order - Nodes: ", features)
 
             #TODO For every Currenct branch input feature add the magnitude and its angle
@@ -924,14 +921,13 @@ class TIPredictorTrainProcess:
             #Ib_features = GLOBAL_BRANCH_LIST
             #Ib_features = []
             if self.meterType == "PMU_caseA":
-                Ib_features = IEEE33_PMU_caseA_TI_features
+                Ib_features = UKGD95_PMU_caseA_TI_features
                 print("TI Feature Selection Order - Branches: ", Ib_features)
             elif self.meterType == "PMU_caseB":
-                Ib_features = IEEE33_PMU_caseB_TI_features
-                #Ib_features = Ib_features
+                Ib_features = UKGD95_PMU_caseB_TI_features
                 print("TI Feature Selection Order - Nodes: ", Ib_features)
             elif self.meterType == "conventional":
-                Ib_features = IEEE33_conventional_TI_features
+                Ib_features = UKGD95_conventional_TI_features
                 print("TI Feature Selection Order - Nodes: ", Ib_features)
             print("TI Feature Selection Order: ", Ib_features)
 
@@ -939,10 +935,8 @@ class TIPredictorTrainProcess:
             # If the magnitude is at index X, then angle is at index X+35
             used_feature_indices = []
             for i in Ib_features:
-                #print("Chose Ibranch: ", i)
                 used_feature_indices.append(i)
                 #TODO FOr a certain meter only
-                #used_feature_indices = [27, 11, 7, 28, 13, 21, 24, 12, 29, 6, 9, 8, 26, 30, 17, 20, 16, 32, 14, 31, 25]
 
                 X_train_TI = self.X_train
                 y_train_labels = self.y_train
